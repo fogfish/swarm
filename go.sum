@@ -1,0 +1,4 @@
+github.com/fogfish/it v0.9.1 h1:Pu+qgqBV2ilZDzZzPIbUIhMIkdpHgbGUsdEwVQvBxNQ=
+github.com/fogfish/it v0.9.1/go.mod h1:NQJG4Ygvek85y7zGj0Gny8+6ygAnHjfBORhI7TdQhp4=
+github.com/fogfish/logger v1.0.0 h1:loxio8S6RZ6DZ8yNUp86vVK4v4gRezYT0qnAFiVrb8U=
+github.com/fogfish/logger v1.0.0/go.mod h1:o9Url3zZMjg87bOJKZTdWIX3aRmClY+3Ld97Jc2Podg=
