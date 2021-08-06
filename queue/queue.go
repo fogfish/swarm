@@ -14,46 +14,75 @@ type tMailbox struct {
 	channel chan []byte
 }
 
+type tRecv struct {
+	build func() <-chan *swarm.Message
+	value <-chan *swarm.Message
+	socks map[swarm.Category]chan []byte
+}
+
+type tSend struct {
+	build func() chan<- *swarm.Message
+	value chan<- *swarm.Message
+	socks map[swarm.Category]chan []byte
+}
+
 type Queue struct {
 	sync.Mutex
 
-	sys swarm.System
-
-	ctrl chan tMailbox
-	recv map[swarm.Category]chan []byte
-	send map[swarm.Category]chan []byte
-	emit chan<- *swarm.Message
+	System swarm.System
+	ctrl   chan tMailbox
+	recv   *tRecv
+	send   *tSend
 }
 
 //
-func New(sys swarm.System, recv <-chan *swarm.Message, emit chan<- *swarm.Message) *Queue {
-	q := &Queue{
-		sys: sys,
+func New(
+	sys swarm.System,
+	recv func() <-chan *swarm.Message,
+	send func() chan<- *swarm.Message,
+) *Queue {
+	return &Queue{
+		System: sys,
+		ctrl:   nil,
 
-		recv: make(map[swarm.Category]chan []byte),
-		send: make(map[swarm.Category]chan []byte),
-		emit: emit,
+		recv: &tRecv{
+			build: recv,
+			value: nil,
+			socks: make(map[swarm.Category]chan []byte),
+		},
+
+		send: &tSend{
+			build: send,
+			value: nil,
+			socks: make(map[swarm.Category]chan []byte),
+		},
 	}
-	q.dispatch(recv)
-	return q
+	// q.dispatch(recv)
+	// return q
 }
 
 //
 //
-func (q *Queue) dispatch(recv <-chan *swarm.Message) {
+func (q *Queue) dispatch() {
 	q.ctrl = make(chan tMailbox)
+	recv := q.recv.value
 
-	q.sys.Spawn(func(ctx context.Context) {
-		logger.Notice("start dispatch loop %p", q)
+	q.System.Spawn(func(ctx context.Context) {
+		logger.Notice("init %p dispatch", q)
 		mailboxes := map[swarm.Category]chan []byte{}
 
 		for {
 			select {
+			//
 			case <-ctx.Done():
-				logger.Notice("stop dispatch loop %p", q)
+				logger.Notice("free %p dispatch", q)
 				return
+
+			//
 			case mbox := <-q.ctrl:
 				mailboxes[mbox.id] = mbox.channel
+
+			//
 			case message := <-recv:
 				mbox, exists := mailboxes[message.Category]
 				if !exists {
@@ -72,7 +101,12 @@ func (q *Queue) Recv(cat swarm.Category) <-chan []byte {
 	q.Lock()
 	defer q.Unlock()
 
-	mbox, exists := q.recv[cat]
+	if q.recv.value == nil {
+		q.recv.value = q.recv.build()
+		q.dispatch()
+	}
+
+	mbox, exists := q.recv.socks[cat]
 	if exists {
 		return mbox
 	}
@@ -80,7 +114,7 @@ func (q *Queue) Recv(cat swarm.Category) <-chan []byte {
 	mbox = make(chan []byte)
 	q.ctrl <- tMailbox{id: cat, channel: mbox}
 
-	q.recv[cat] = mbox
+	q.recv.socks[cat] = mbox
 	return mbox
 }
 
@@ -89,26 +123,30 @@ func (q *Queue) Send(cat swarm.Category) chan<- []byte {
 	q.Lock()
 	defer q.Unlock()
 
-	sock, exists := q.send[cat]
+	if q.send.value == nil {
+		q.send.value = q.send.build()
+	}
+
+	sock, exists := q.send.socks[cat]
 	if exists {
 		return sock
 	}
 
 	sock = make(chan []byte)
-	q.sys.Spawn(func(ctx context.Context) {
-		logger.Notice("start send loop %p for %s", q, cat)
+	q.System.Spawn(func(ctx context.Context) {
+		logger.Notice("init %p send type %s", q, cat)
 
 		for {
 			select {
 			case <-ctx.Done():
-				logger.Notice("stop send loop %p for %s", q, cat)
+				logger.Notice("free %p send type %s", q, cat)
 				return
 			case object := <-sock:
-				q.emit <- &swarm.Message{Category: cat, Object: object}
+				q.send.value <- &swarm.Message{Category: cat, Object: object}
 			}
 		}
 	})
 
-	q.send[cat] = sock
+	q.send.socks[cat] = sock
 	return sock
 }

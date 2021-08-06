@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/queue/ephemeral"
+	"github.com/fogfish/swarm/queue/sqs"
 )
 
 /*
@@ -55,39 +55,34 @@ func TestOneChannelMultipleReader(t *testing.T) {
 // 	fmt.Printf("%+v\n", v)
 // }
 
-func TestX(t *testing.T) {
+/*
+	TODO:
+
 	sys := swarm.New("sys")
 	q, _ := ephemeral.New(sys)
 
-	/*
-		TODO:
+	q.Recv("cat")
+	q.Send("cat")
 
-		sys := swarm.New("sys")
-		q, _ := ephemeral.New(sys)
+	TODO:
+		- register queue at system
 
-		q.Recv("cat")
-		q.Send("cat")
+*/
 
-		TODO:
-			- register queue at system
+func TestX(t *testing.T) {
+	sys := swarm.New("sys")
+	// q, _ := ephemeral.New(sys)
+	a, _ := sqs.New(sys, "test")
 
-	*/
+	// go actor(q.Recv("cat"))
 
-	go actor(q.Recv("cat"))
-
-	// sys.Listen("xxx")
-
-	send := q.Send("cat")
-	send <- []byte("axx")
-	send <- []byte("bxx")
-	q.Send("catx") <- []byte("cxx")
+	// send := q.Send("cat")
+	// send <- []byte("axx")
+	// send <- []byte("bxx")
+	a.Send("catx") <- []byte("cxx")
 
 	time.Sleep(1 * time.Second)
 	sys.Stop()
-
-	// &swarm.Message{Category: "cat", Object: }
-	// send <- &swarm.Message{Category: "cat", Object: []byte("bxx")}
-	// send <- &swarm.Message{Category: "cat", Object: []byte("cxx")}
 
 	time.Sleep(5 * time.Second)
 }

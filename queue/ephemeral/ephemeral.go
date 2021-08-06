@@ -16,22 +16,22 @@ https://medium.com/capital-one-tech/building-an-unbounded-channel-in-go-789e175c
 
 */
 
-type qEphemeral struct {
+type ephemeral struct {
 	*queue.Queue
 }
 
 //
 func New(sys swarm.System) (swarm.Queue, error) {
-	q := &qEphemeral{}
+	q := &ephemeral{}
 
-	recv, send := q.create(sys)
-	q.Queue = queue.New(sys, recv, send)
+	// recv, send := q.create(sys)
+	// q.Queue = queue.New(sys, recv, send)
 
 	return q, nil
 }
 
 //
-func (q *qEphemeral) create(sys swarm.System) (<-chan *swarm.Message, chan<- *swarm.Message) {
+func (q *ephemeral) create(sys swarm.System) (<-chan *swarm.Message, chan<- *swarm.Message) {
 	recv := make(chan *swarm.Message)
 	send := make(chan *swarm.Message)
 
