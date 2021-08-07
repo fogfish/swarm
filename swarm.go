@@ -35,6 +35,11 @@ queue <- swarm.Enfold(interface{}).WithXXX(...)
 
 sys.Connect("target").Send("category") <- []byte("xxx")
 
+* How to handle (abstract) message attributes in the context of typed
+channels?
+ - message ack receipt
+ - check esq (payload + receipt)
+ - object + digest
 
 */
 type Message struct {

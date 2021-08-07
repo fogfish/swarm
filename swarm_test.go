@@ -74,6 +74,8 @@ func TestX(t *testing.T) {
 	// q, _ := ephemeral.New(sys)
 	a, _ := sqs.New(sys, "test")
 
+	go actor(a.Recv("catx"))
+
 	// go actor(q.Recv("cat"))
 
 	// send := q.Send("cat")
@@ -81,10 +83,10 @@ func TestX(t *testing.T) {
 	// send <- []byte("bxx")
 	a.Send("catx") <- []byte("cxx")
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(5 * time.Second)
 	sys.Stop()
 
-	time.Sleep(5 * time.Second)
+	// time.Sleep(5 * time.Second)
 }
 
 func actor(mbox <-chan []byte) {

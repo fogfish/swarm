@@ -24,8 +24,13 @@ type ephemeral struct {
 func New(sys swarm.System) (swarm.Queue, error) {
 	q := &ephemeral{}
 
-	// recv, send := q.create(sys)
-	// q.Queue = queue.New(sys, recv, send)
+	recv, send := q.create(sys)
+
+	q.Queue = queue.New(
+		sys,
+		func() <-chan *swarm.Message { return recv },
+		func() chan<- *swarm.Message { return send },
+	)
 
 	return q, nil
 }
@@ -37,6 +42,8 @@ func (q *ephemeral) create(sys swarm.System) (<-chan *swarm.Message, chan<- *swa
 
 	sys.Spawn(func(ctx context.Context) {
 		logger.Notice("start ephemeral queue %p", q)
+		defer close(recv)
+		defer close(send)
 
 		// TODO: linked list
 		q := []*swarm.Message{}
