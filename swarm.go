@@ -51,6 +51,11 @@ type Queue interface {
 		Creates endpoints to send messages and receive errors.
 	*/
 	Send(Category) (chan<- Msg, <-chan Msg)
+
+	// TODO:
+	// - Err (chan<- error) handle transport errors
+	// - consider send failure as transport error (coupled design vs generic)
+	// - consider ack as additional channel (?)
 }
 
 /*
@@ -84,15 +89,32 @@ type system struct {
 
 /*
 
+Config
+*/
+type Config func(sys *system)
+
+/*
+
 New creates new queueing system
 */
-func New(id string) System {
-	ctx, cancel := context.WithCancel(context.Background())
+func New(id string, opts ...Config) System {
+	sys := &system{id: id, context: context.Background()}
 
-	return &system{
-		id:      id,
-		context: ctx,
-		cancel:  cancel,
+	for _, opt := range opts {
+		opt(sys)
+	}
+
+	sys.context, sys.cancel = context.WithCancel(sys.context)
+	return sys
+}
+
+/*
+
+WithContext ...
+*/
+func WithContext(ctx context.Context) Config {
+	return func(sys *system) {
+		sys.context = ctx
 	}
 }
 
