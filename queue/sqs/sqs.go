@@ -8,29 +8,43 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
 	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/backoff"
 	"github.com/fogfish/swarm/queue"
 )
 
-type awssqs struct {
+/*
+
+Queue ...
+*/
+type Queue struct {
 	*queue.Queue
 
-	sqs *sqs.SQS
+	SQS sqsiface.SQSAPI
 	url *string
 }
 
-//
-func New(sys swarm.System, id string) (swarm.Queue, error) {
-	api, err := session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("Failed to create aws client %w", err)
+/*
+
+Config ...
+*/
+type Config func(*Queue)
+
+/*
+
+New ...
+*/
+func New(sys swarm.System, id string, opts ...Config) (swarm.Queue, error) {
+	q := &Queue{}
+	if err := q.newSession(); err != nil {
+		return nil, err
 	}
 
-	q := &awssqs{sqs: sqs.New(api)}
+	for _, opt := range opts {
+		opt(q)
+	}
 
 	if err := q.lookupQueue(id); err != nil {
 		return nil, err
@@ -41,8 +55,21 @@ func New(sys swarm.System, id string) (swarm.Queue, error) {
 }
 
 //
-func (q *awssqs) lookupQueue(id string) error {
-	spec, err := q.sqs.GetQueueUrl(
+func (q *Queue) newSession() error {
+	api, err := session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+	})
+	if err != nil {
+		return fmt.Errorf("Failed to create aws client %w", err)
+	}
+
+	q.SQS = sqs.New(api)
+	return nil
+}
+
+//
+func (q *Queue) lookupQueue(id string) error {
+	spec, err := q.SQS.GetQueueUrl(
 		&sqs.GetQueueUrlInput{
 			QueueName: aws.String(id),
 		},
@@ -57,7 +84,7 @@ func (q *awssqs) lookupQueue(id string) error {
 }
 
 //
-func (q *awssqs) newSend() chan<- *queue.Bag {
+func (q *Queue) newSend() chan<- *queue.Bag {
 	sock := make(chan *queue.Bag)
 
 	q.System.Go(func(ctx context.Context) {
@@ -90,8 +117,8 @@ func (q *awssqs) newSend() chan<- *queue.Bag {
 	return sock
 }
 
-func (q *awssqs) send(msg *queue.Bag) error {
-	_, err := q.sqs.SendMessage(
+func (q *Queue) send(msg *queue.Bag) error {
+	_, err := q.SQS.SendMessage(
 		&sqs.SendMessageInput{
 			MessageAttributes: map[string]*sqs.MessageAttributeValue{
 				"Target":   mkMsgAttr(msg.Target),
@@ -106,7 +133,7 @@ func (q *awssqs) send(msg *queue.Bag) error {
 }
 
 //
-func (q *awssqs) newRecv() (<-chan *queue.Bag, chan<- *queue.Bag) {
+func (q *Queue) newRecv() (<-chan *queue.Bag, chan<- *queue.Bag) {
 	sock := make(chan *queue.Bag)
 	acks := make(chan *queue.Bag)
 	delay := 1 * time.Microsecond
@@ -125,7 +152,7 @@ func (q *awssqs) newRecv() (<-chan *queue.Bag, chan<- *queue.Bag) {
 			//
 			case <-time.After(delay):
 				// TODO: retry
-				result, err := q.sqs.ReceiveMessage(
+				result, err := q.SQS.ReceiveMessage(
 					&sqs.ReceiveMessageInput{
 						MessageAttributeNames: []*string{aws.String("All")},
 						QueueUrl:              q.url,
@@ -171,7 +198,7 @@ func (q *awssqs) newRecv() (<-chan *queue.Bag, chan<- *queue.Bag) {
 				switch v := bag.Object.(type) {
 				case *queue.Msg:
 					// TODO: retry
-					_, err := q.sqs.DeleteMessage(
+					_, err := q.SQS.DeleteMessage(
 						&sqs.DeleteMessageInput{
 							QueueUrl:      q.url,
 							ReceiptHandle: aws.String(string(v.Receipt)),

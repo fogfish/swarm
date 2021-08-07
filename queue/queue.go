@@ -101,11 +101,11 @@ func (q *Queue) dispatch() {
 			//
 			case message := <-recv:
 				mbox, exists := mailboxes[message.Category]
-				if !exists {
+				if exists {
+					mbox <- message.Object
+				} else {
 					logger.Notice("Category %s is not supported by queue %s ", message.Category, q.ID)
-					break
 				}
-				mbox <- message.Object
 			}
 		}
 	})

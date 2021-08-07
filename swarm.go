@@ -122,3 +122,15 @@ Stop ...
 func (sys *system) Stop() {
 	sys.cancel()
 }
+
+/*
+
+Must ensures successful creation of queue
+*/
+func Must(q Queue, err error) Queue {
+	if err != nil {
+		panic(err)
+	}
+
+	return q
+}
