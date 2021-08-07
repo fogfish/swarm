@@ -81,16 +81,50 @@ func TestX(t *testing.T) {
 	// send := q.Send("cat")
 	// send <- []byte("axx")
 	// send <- []byte("bxx")
-	a.Send("catx") <- []byte("cxx")
+	ax, ar := a.Send("catx")
+	go erractor(ar)
 
-	time.Sleep(5 * time.Second)
+	ax <- swarm.Bytes("cxx")
+
+	time.Sleep(60 * time.Minute)
 	sys.Stop()
 
 	// time.Sleep(5 * time.Second)
 }
 
-func actor(mbox <-chan []byte) {
+func actor(mbox <-chan swarm.Msg, ack chan<- swarm.Msg) {
 	for x := range mbox {
-		fmt.Printf("%+v\n", x)
+		fmt.Printf("%+v\n", string(x.Bytes()))
+		ack <- x
 	}
 }
+
+func erractor(mbox <-chan swarm.Msg) {
+	for x := range mbox {
+		fmt.Printf("error >>> %+v\n", string(x.Bytes()))
+	}
+}
+
+/*
+type M interface {
+	Bytes() []byte
+}
+
+type X []byte
+
+func (x X) Bytes() []byte {
+	return x
+}
+
+
+
+func x(a M) M {
+	return a
+}
+
+func TestX(t *testing.T) {
+	v := x(X([]byte("xxxxx")))
+
+	fmt.Println(bytes.NewBuffer(v.Bytes()))
+}
+*/

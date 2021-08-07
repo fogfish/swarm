@@ -21,42 +21,43 @@ type ephemeral struct {
 }
 
 //
-func New(sys swarm.System) (swarm.Queue, error) {
+func New(sys swarm.System, id string) (swarm.Queue, error) {
 	q := &ephemeral{}
 
 	recv, send := q.create(sys)
 
 	q.Queue = queue.New(
 		sys,
-		func() <-chan *swarm.Message { return recv },
-		func() chan<- *swarm.Message { return send },
+		id,
+		func() (<-chan *queue.Bag, chan<- *queue.Bag) { return recv, nil },
+		func() chan<- *queue.Bag { return send },
 	)
 
 	return q, nil
 }
 
 //
-func (q *ephemeral) create(sys swarm.System) (<-chan *swarm.Message, chan<- *swarm.Message) {
-	recv := make(chan *swarm.Message)
-	send := make(chan *swarm.Message)
+func (q *ephemeral) create(sys swarm.System) (<-chan *queue.Bag, chan<- *queue.Bag) {
+	recv := make(chan *queue.Bag)
+	send := make(chan *queue.Bag)
 
-	sys.Spawn(func(ctx context.Context) {
-		logger.Notice("start ephemeral queue %p", q)
+	sys.Go(func(ctx context.Context) {
+		logger.Notice("start ephemeral queue %s", q.ID)
 		defer close(recv)
 		defer close(send)
 
 		// TODO: linked list
-		q := []*swarm.Message{}
+		mq := []*queue.Bag{}
 
-		head := func() *swarm.Message {
-			if len(q) == 0 {
+		head := func() *queue.Bag {
+			if len(mq) == 0 {
 				return nil
 			}
-			return q[0]
+			return mq[0]
 		}
 
-		emit := func() chan<- *swarm.Message {
-			if len(q) == 0 {
+		emit := func() chan<- *queue.Bag {
+			if len(mq) == 0 {
 				return nil
 			}
 			return send
@@ -64,13 +65,18 @@ func (q *ephemeral) create(sys swarm.System) (<-chan *swarm.Message, chan<- *swa
 
 		for {
 			select {
+			//
 			case <-ctx.Done():
-				logger.Notice("stop ephemeral queue %p", q)
+				logger.Notice("stop ephemeral queue %s", q.ID)
 				return
+
+			//
 			case v := <-recv:
-				q = append(q, v)
+				mq = append(mq, v)
+
+			//
 			case emit() <- head():
-				q = q[1:]
+				mq = mq[1:]
 			}
 		}
 	})
