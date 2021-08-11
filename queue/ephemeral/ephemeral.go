@@ -36,7 +36,24 @@ func New(sys swarm.System, id string) (swarm.Queue, error) {
 	return q, nil
 }
 
-//
+// TODO: linked list
+type unbound []*queue.Bag
+
+func (q unbound) head() *queue.Bag {
+	if len(q) == 0 {
+		return nil
+	}
+	return q[0]
+}
+
+func (q unbound) emit(ch chan<- *queue.Bag) chan<- *queue.Bag {
+	if len(q) == 0 {
+		return nil
+	}
+	return ch
+}
+
+// TODO: define collection of channel types
 func (q *ephemeral) create(sys swarm.System) (<-chan *queue.Bag, chan<- *queue.Bag) {
 	recv := make(chan *queue.Bag)
 	send := make(chan *queue.Bag)
@@ -46,23 +63,7 @@ func (q *ephemeral) create(sys swarm.System) (<-chan *queue.Bag, chan<- *queue.B
 		defer close(recv)
 		defer close(send)
 
-		// TODO: linked list
-		mq := []*queue.Bag{}
-
-		head := func() *queue.Bag {
-			if len(mq) == 0 {
-				return nil
-			}
-			return mq[0]
-		}
-
-		emit := func() chan<- *queue.Bag {
-			if len(mq) == 0 {
-				return nil
-			}
-			return send
-		}
-
+		mq := unbound{}
 		for {
 			select {
 			//
@@ -75,7 +76,7 @@ func (q *ephemeral) create(sys swarm.System) (<-chan *queue.Bag, chan<- *queue.B
 				mq = append(mq, v)
 
 			//
-			case emit() <- head():
+			case mq.emit(send) <- mq.head():
 				mq = mq[1:]
 			}
 		}
