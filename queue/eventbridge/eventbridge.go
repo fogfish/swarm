@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/eventbridge/eventbridgeiface"
 	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
+	"github.com/fogfish/swarm/backoff"
 	"github.com/fogfish/swarm/queue"
 )
 
@@ -20,6 +21,7 @@ Queue ...
 */
 type Queue struct {
 	*queue.Queue
+	adapter *queue.Adapter
 
 	Bus   eventbridgeiface.EventBridgeAPI
 	Start func(interface{})
@@ -33,10 +35,26 @@ type Config func(*Queue)
 
 /*
 
+PolicyIO configures retry of queue I/O
+
+	sqs.New(sys, "q", sqs.PolicyIO(backoff.Exp(...)) )
+
+*/
+func PolicyIO(policy backoff.Seq) Config {
+	return func(q *Queue) {
+		q.adapter.SetPolicyIO(policy)
+	}
+}
+
+/*
+
 New ...
 */
 func New(sys swarm.System, id string, opts ...Config) (swarm.Queue, error) {
-	q := &Queue{Start: lambda.Start}
+	q := &Queue{
+		adapter: queue.Adapt(sys, "eventbridge", id),
+		Start:   lambda.Start,
+	}
 	if err := q.newSession(); err != nil {
 		return nil, err
 	}
@@ -45,7 +63,7 @@ func New(sys swarm.System, id string, opts ...Config) (swarm.Queue, error) {
 		opt(q)
 	}
 
-	q.Queue = queue.New(sys, id, q.newRecv, q.newSend)
+	q.Queue = queue.New(sys, id, q.newRecv, q.spawnSendIO)
 	return q, nil
 }
 
@@ -62,9 +80,12 @@ func (q *Queue) newSession() error {
 	return nil
 }
 
-//
-func (q *Queue) newSend() chan<- *queue.Bag {
-	return q.Sender("eventbridge", q.send)
+/*
+
+spawnSendIO create go routine for emiting messages
+*/
+func (q *Queue) spawnSendIO() chan<- *queue.Bag {
+	return q.adapter.SendIO(q.send)
 }
 
 func (q *Queue) send(msg *queue.Bag) error {
@@ -90,6 +111,7 @@ func (q *Queue) newRecv() (<-chan *queue.Bag, chan<- *queue.Bag) {
 	go func() {
 		logger.Notice("init aws eventbridge recv %s", q.ID)
 
+		// Note: this indirect synonym for lambda start
 		q.Start(
 			func(evt events.CloudWatchEvent) error {
 				sock <- &queue.Bag{

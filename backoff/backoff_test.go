@@ -10,7 +10,7 @@ import (
 )
 
 func TestConst(t *testing.T) {
-	seq := backoff.Const(1*time.Millisecond, 3)
+	seq := backoff.Const(1*time.Millisecond, 3).Seq()
 
 	it.Ok(t).
 		If(len(seq)).Equal(3).
@@ -19,7 +19,7 @@ func TestConst(t *testing.T) {
 }
 
 func TestLinera(t *testing.T) {
-	seq := backoff.Linear(1*time.Millisecond, 3)
+	seq := backoff.Linear(1*time.Millisecond, 3).Seq()
 
 	it.Ok(t).
 		If(len(seq)).Equal(3).
@@ -28,7 +28,7 @@ func TestLinera(t *testing.T) {
 }
 
 func TestExp(t *testing.T) {
-	seq := backoff.Exp(1*time.Millisecond, 3, 0.5)
+	seq := backoff.Exp(1*time.Millisecond, 3, 0.5).Seq()
 
 	it.Ok(t).
 		If(len(seq)).Equal(3).
@@ -37,7 +37,10 @@ func TestExp(t *testing.T) {
 }
 
 func TestDeadline(t *testing.T) {
-	seq := backoff.Const(1*time.Millisecond, 10).Deadline(5 * time.Millisecond)
+	seq := backoff.
+		Const(1*time.Millisecond, 10).
+		Deadline(5 * time.Millisecond).
+		Seq()
 
 	it.Ok(t).
 		If(len(seq)).Equal(5)
