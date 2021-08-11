@@ -1,10 +1,14 @@
 package eventbridge_test
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
 
+	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/eventbridge"
 	"github.com/aws/aws-sdk-go/service/eventbridge/eventbridgeiface"
@@ -15,10 +19,10 @@ import (
 
 const (
 	subject = "eventbridge.test"
-	message = "{\"some\": \"message\"}"
+	message = "{\"some\":\"message\"}"
 )
 
-func TestSend(t *testing.T) {
+func T_estSend(t *testing.T) {
 	side := make(chan string)
 	sys := swarm.New("test")
 	queue := swarm.Must(sut.New(sys, "swarm-test", mock(side)))
@@ -43,25 +47,24 @@ func TestSend(t *testing.T) {
 	time.Sleep(3 * time.Second)
 }
 
-/*
-func TestSend(t *testing.T) {
+func TestRecv(t *testing.T) {
+	side := make(chan string)
 
 	sys := swarm.New("test")
-	queue := swarm.Must(sut.New(sys, "swarm-test"))
+	queue := swarm.Must(sut.New(sys, "test", mockLambda(side)))
 
-	a, _ := queue.Send("eventbridge.test.a")
-	b, _ := queue.Send("eventbridge.test.b")
-	c, _ := queue.Send("eventbridge.test.c")
+	t.Run("Success", func(t *testing.T) {
+		msg, ack := queue.Recv(subject)
+		val := <-msg
+		ack <- val
 
-	a <- swarm.Bytes(message)
-	b <- swarm.Bytes(message)
-	c <- swarm.Bytes(message)
+		it.Ok(t).
+			If(string(val.Bytes())).Equal(message).
+			If(<-side).Equal("ack")
+	})
 
-	time.Sleep(2 * time.Second)
 	sys.Stop()
-	time.Sleep(3 * time.Second)
 }
-*/
 
 /*
 
@@ -93,4 +96,33 @@ func (m *mockEventBridge) PutEvents(s *eventbridge.PutEventsInput) (*eventbridge
 
 	m.loopback <- aws.StringValue(s.Entries[0].Detail)
 	return &eventbridge.PutEventsOutput{}, nil
+}
+
+/*
+
+mock AWS Lambda Handler
+
+*/
+
+func mockLambda(loopback chan string) sut.Config {
+	return func(q *sut.Queue) {
+		q.Start = func(handler interface{}) {
+			time.Sleep(1 * time.Second)
+			msg, _ := json.Marshal(
+				events.CloudWatchEvent{
+					ID:         "abc-def",
+					DetailType: subject,
+					Detail:     json.RawMessage(message),
+				},
+			)
+
+			h := lambda.NewHandler(handler)
+			_, err := h.Invoke(context.Background(), msg)
+			if err != nil {
+				panic(err)
+			}
+
+			loopback <- "ack"
+		}
+	}
 }

@@ -21,7 +21,8 @@ Queue ...
 type Queue struct {
 	*queue.Queue
 
-	Bus eventbridgeiface.EventBridgeAPI
+	Bus   eventbridgeiface.EventBridgeAPI
+	Start func(interface{})
 }
 
 /*
@@ -35,7 +36,7 @@ type Config func(*Queue)
 New ...
 */
 func New(sys swarm.System, id string, opts ...Config) (swarm.Queue, error) {
-	q := &Queue{}
+	q := &Queue{Start: lambda.Start}
 	if err := q.newSession(); err != nil {
 		return nil, err
 	}
@@ -89,7 +90,7 @@ func (q *Queue) newRecv() (<-chan *queue.Bag, chan<- *queue.Bag) {
 	go func() {
 		logger.Notice("init aws eventbridge recv %s", q.ID)
 
-		lambda.Start(
+		q.Start(
 			func(evt events.CloudWatchEvent) error {
 				sock <- &queue.Bag{
 					Source:   evt.Source,
