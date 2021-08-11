@@ -170,6 +170,7 @@ func (q *Queue) newRecv() <-chan *queue.Bag {
 					// TODO: check memory issue with range
 					for _, msg := range seq {
 						// TODO: send is blocked here until actor consumes the message.
+						//       https://go101.org/article/channel-closing.html
 						sock <- mkMsgBag(msg)
 					}
 				}
