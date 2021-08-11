@@ -50,7 +50,7 @@ func New(sys swarm.System, id string, opts ...Config) (swarm.Queue, error) {
 		return nil, err
 	}
 
-	q.Queue = queue.New(sys, id, q.newRecv, q.newSend)
+	q.Queue = queue.New(sys, id, q.newRecvAcks, q.newSend)
 	return q, nil
 }
 
@@ -133,9 +133,16 @@ func (q *Queue) send(msg *queue.Bag) error {
 }
 
 //
-func (q *Queue) newRecv() (<-chan *queue.Bag, chan<- *queue.Bag) {
+func (q *Queue) newRecvAcks() (<-chan *queue.Bag, chan<- *queue.Bag) {
+	sock := q.newRecv()
+	acks := q.newAcks()
+
+	return sock, acks
+}
+
+//
+func (q *Queue) newRecv() <-chan *queue.Bag {
 	sock := make(chan *queue.Bag)
-	acks := make(chan *queue.Bag)
 	delay := 1 * time.Microsecond
 
 	q.System.Go(func(ctx context.Context) {
@@ -152,35 +159,28 @@ func (q *Queue) newRecv() (<-chan *queue.Bag, chan<- *queue.Bag) {
 			//
 			case <-time.After(delay):
 				// TODO: retry
-				result, err := q.SQS.ReceiveMessage(
-					&sqs.ReceiveMessageInput{
-						MessageAttributeNames: []*string{aws.String("All")},
-						QueueUrl:              q.url,
-						MaxNumberOfMessages:   aws.Int64(1),
-					},
-				)
+				seq, err := q.recv()
 				if err != nil {
 					logger.Error("Unable to receive message %v", err)
 					break
 				}
 
-				if len(result.Messages) > 0 {
+				if len(seq) > 0 {
 					// TODO: check memory issue with range
-					for _, msg := range result.Messages {
-						sock <- &queue.Bag{
-							Target:   msgAttr(msg, "Target"),
-							Source:   msgAttr(msg, "Source"),
-							Category: swarm.Category(msgAttr(msg, "Category")),
-							Object: &queue.Msg{
-								Payload: []byte(*msg.Body),
-								Receipt: *msg.ReceiptHandle,
-							},
-						}
+					for _, msg := range seq {
+						sock <- mkMsgBag(msg)
 					}
 				}
 			}
 		}
 	})
+
+	return sock
+}
+
+//
+func (q *Queue) newAcks() chan<- *queue.Bag {
+	acks := make(chan *queue.Bag)
 
 	q.System.Go(func(ctx context.Context) {
 		logger.Notice("init aws sqs acks %s", q.ID)
@@ -212,10 +212,24 @@ func (q *Queue) newRecv() (<-chan *queue.Bag, chan<- *queue.Bag) {
 				}
 			}
 		}
-
 	})
 
-	return sock, acks
+	return acks
+}
+
+func (q *Queue) recv() ([]*sqs.Message, error) {
+	result, err := q.SQS.ReceiveMessage(
+		&sqs.ReceiveMessageInput{
+			MessageAttributeNames: []*string{aws.String("All")},
+			QueueUrl:              q.url,
+			MaxNumberOfMessages:   aws.Int64(1),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return result.Messages, nil
 }
 
 func mkMsgAttr(value string) *sqs.MessageAttributeValue {
@@ -232,4 +246,16 @@ func msgAttr(msg *sqs.Message, key string) string {
 	}
 
 	return *val.StringValue
+}
+
+func mkMsgBag(msg *sqs.Message) *queue.Bag {
+	return &queue.Bag{
+		Target:   msgAttr(msg, "Target"),
+		Source:   msgAttr(msg, "Source"),
+		Category: swarm.Category(msgAttr(msg, "Category")),
+		Object: &queue.Msg{
+			Payload: []byte(*msg.Body),
+			Receipt: *msg.ReceiptHandle,
+		},
+	}
 }
