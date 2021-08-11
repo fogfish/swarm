@@ -99,12 +99,14 @@ func (q *Queue) dispatch() {
 				mailboxes[mbox.id] = mbox.channel
 
 			//
-			case message := <-recv:
-				mbox, exists := mailboxes[message.Category]
-				if exists {
-					mbox <- message.Object
-				} else {
-					logger.Notice("Category %s is not supported by queue %s ", message.Category, q.ID)
+			case message, ok := <-recv:
+				if ok {
+					mbox, exists := mailboxes[message.Category]
+					if exists {
+						mbox <- message.Object
+					} else {
+						logger.Notice("Category %s is not supported by queue %s ", message.Category, q.ID)
+					}
 				}
 			}
 		}
