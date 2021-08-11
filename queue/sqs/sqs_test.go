@@ -2,6 +2,7 @@ package sqs_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -40,7 +41,7 @@ func TestSend(t *testing.T) {
 	})
 
 	sys.Stop()
-	time.After(3 * time.Second)
+	time.Sleep(3 * time.Second)
 }
 
 func TestRecv(t *testing.T) {
@@ -126,4 +127,27 @@ func (m *mockSQS) ReceiveMessage(s *sqs.ReceiveMessageInput) (*sqs.ReceiveMessag
 func (m *mockSQS) DeleteMessage(s *sqs.DeleteMessageInput) (*sqs.DeleteMessageOutput, error) {
 	m.loopback <- aws.StringValue(s.ReceiptHandle)
 	return &sqs.DeleteMessageOutput{}, nil
+}
+
+/*
+
+Benchmark: 256 bytes
+
+*/
+
+func BenchmarkSend(b *testing.B) {
+	msg := swarm.Bytes(strings.Repeat("x", 256))
+	sys := swarm.New("test")
+	queue := swarm.Must(sut.New(sys, "test"))
+	send, _ := queue.Send(subject)
+	// recv, acks := queue.Recv(subject)
+
+	b.Run("", func(b *testing.B) {
+		for n := 0; n < b.N; n++ {
+			send <- msg
+			// acks <- <-recv
+		}
+	})
+
+	sys.Stop()
 }

@@ -33,3 +33,16 @@
 ---
 
 TODO
+
+Supported queues:
+* In-memory ephemeral
+* AWS SQS
+* AWS EventBridge
+
+
+How to benchmark I/O:
+
+```
+cd queue/sqs
+go test -run=^$ -bench=.
+```
