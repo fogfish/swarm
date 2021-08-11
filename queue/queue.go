@@ -88,6 +88,7 @@ func (q *Queue) dispatch() {
 		mailboxes := map[swarm.Category]chan swarm.Msg{}
 
 		// TODO: this is a temporary solution to pass tests
+		//       mbox <- message.Object fails when system is shutdown
 		defer func() {
 			if r := recover(); r != nil {
 				fmt.Println("Recovered in f", r)

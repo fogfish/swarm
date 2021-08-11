@@ -3,6 +3,7 @@ package sqs_test
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
@@ -17,7 +18,6 @@ const (
 	message = "some message"
 )
 
-/*
 func TestSend(t *testing.T) {
 	side := make(chan string)
 	sys := swarm.New("test")
@@ -40,9 +40,8 @@ func TestSend(t *testing.T) {
 	})
 
 	sys.Stop()
-	time.After(1 * time.Second)
+	time.After(3 * time.Second)
 }
-*/
 
 func TestRecv(t *testing.T) {
 	side := make(chan string)
@@ -68,7 +67,7 @@ func TestRecv(t *testing.T) {
 	})
 
 	sys.Stop()
-	// time.Sleep(5 * time.Second)
+	time.Sleep(3 * time.Second)
 }
 
 /*
