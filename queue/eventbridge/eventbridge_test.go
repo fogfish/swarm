@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/eventbridge/eventbridgeiface"
 	"github.com/fogfish/it"
 	"github.com/fogfish/swarm"
+	"github.com/fogfish/swarm/backoff"
 	sut "github.com/fogfish/swarm/queue/eventbridge"
 )
 
@@ -21,6 +22,20 @@ const (
 	subject = "eventbridge.test"
 	message = "{\"some\":\"message\"}"
 )
+
+func TestNew(t *testing.T) {
+	side := make(chan string)
+	sys := swarm.New("test")
+
+	swarm.Must(
+		sut.New(sys, "swarm-test",
+			mock(side),
+			sut.PolicyIO(backoff.Const(1*time.Second, 3)),
+		),
+	)
+
+	sys.Stop()
+}
 
 func TestSend(t *testing.T) {
 	side := make(chan string)
