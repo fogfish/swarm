@@ -22,7 +22,7 @@ const (
 	message = "{\"some\":\"message\"}"
 )
 
-func T_estSend(t *testing.T) {
+func TestSend(t *testing.T) {
 	side := make(chan string)
 	sys := swarm.New("test")
 	queue := swarm.Must(sut.New(sys, "swarm-test", mock(side)))
