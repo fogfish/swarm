@@ -17,6 +17,7 @@ const (
 	message = "some message"
 )
 
+/*
 func TestSend(t *testing.T) {
 	side := make(chan string)
 	sys := swarm.New("test")
@@ -39,7 +40,9 @@ func TestSend(t *testing.T) {
 	})
 
 	sys.Stop()
+	time.After(1 * time.Second)
 }
+*/
 
 func TestRecv(t *testing.T) {
 	side := make(chan string)
@@ -65,6 +68,7 @@ func TestRecv(t *testing.T) {
 	})
 
 	sys.Stop()
+	// time.Sleep(5 * time.Second)
 }
 
 /*

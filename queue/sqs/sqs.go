@@ -143,11 +143,17 @@ func (q *Queue) newRecvAcks() (<-chan *queue.Bag, chan<- *queue.Bag) {
 //
 func (q *Queue) newRecv() <-chan *queue.Bag {
 	sock := make(chan *queue.Bag)
+	// TODO: category receiver might not be ready yet
 	delay := 1 * time.Microsecond
 
 	q.System.Go(func(ctx context.Context) {
 		logger.Notice("init aws sqs recv %s", q.ID)
 		defer close(sock)
+
+		var (
+			seq []*sqs.Message
+			err error
+		)
 
 		for {
 			select {
@@ -158,17 +164,25 @@ func (q *Queue) newRecv() <-chan *queue.Bag {
 
 			//
 			case <-time.After(delay):
-				// TODO: retry
-				seq, err := q.recv()
-				if err != nil {
-					logger.Error("Unable to receive message %v", err)
-					break
+				// TODO: improve state machine SQS shall not consume the message
+				//       if queue head has not been dispatched upstream
+				if seq == nil {
+					// TODO: retry
+					seq, err = q.recv()
+					if err != nil {
+						logger.Error("Unable to receive message %v", err)
+						break
+					}
 				}
 
 				if len(seq) > 0 {
 					// TODO: check memory issue with range
 					for _, msg := range seq {
-						sock <- mkMsgBag(msg)
+						select {
+						case sock <- mkMsgBag(msg):
+							seq = nil
+						default:
+						}
 					}
 				}
 			}

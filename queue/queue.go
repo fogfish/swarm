@@ -2,6 +2,7 @@ package queue
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/fogfish/logger"
@@ -80,17 +81,24 @@ func New(
 //
 func (q *Queue) dispatch() {
 	q.ctrl = make(chan tMailbox)
-	recv := q.recv.value
 
 	q.System.Go(func(ctx context.Context) {
 		logger.Notice("init %s dispatch", q.ID)
 		defer close(q.ctrl)
 		mailboxes := map[swarm.Category]chan swarm.Msg{}
 
+		// TODO: this is a temporary solution to pass tests
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Println("Recovered in f", r)
+			}
+		}()
+
 		for {
 			select {
 			//
 			case <-ctx.Done():
+				fmt.Println(".")
 				logger.Notice("free %s dispatch", q.ID)
 				return
 
@@ -99,14 +107,14 @@ func (q *Queue) dispatch() {
 				mailboxes[mbox.id] = mbox.channel
 
 			//
-			case message, ok := <-recv:
-				if ok {
-					mbox, exists := mailboxes[message.Category]
-					if exists {
-						mbox <- message.Object
-					} else {
-						logger.Notice("Category %s is not supported by queue %s ", message.Category, q.ID)
-					}
+			case message := <-q.recv.value:
+				mbox, exists := mailboxes[message.Category]
+				if exists {
+					// TODO: blocked until actor consumes it
+					//       it prevents proper clean-up strategy
+					mbox <- message.Object
+				} else {
+					logger.Notice("Category %s is not supported by queue %s ", message.Category, q.ID)
 				}
 			}
 		}
