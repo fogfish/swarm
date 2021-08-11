@@ -9,21 +9,24 @@ import (
 
 Seq is a sequence of delays
 */
-type Seq []time.Duration
+type Seq func() []time.Duration
 
 /*
 
 Const is a sequence of constant delays
 */
 func Const(delay time.Duration, n int) Seq {
-	seq := make([]time.Duration, n)
-	seq[0] = delay
+	return func() []time.Duration {
 
-	for i := 1; i < n; i++ {
-		seq[i] = delay
+		seq := make([]time.Duration, n)
+		seq[0] = delay
+
+		for i := 1; i < n; i++ {
+			seq[i] = delay
+		}
+
+		return seq
 	}
-
-	return seq
 }
 
 /*
@@ -31,14 +34,16 @@ func Const(delay time.Duration, n int) Seq {
 Linear is a sequence of constant delays
 */
 func Linear(delay time.Duration, n int) Seq {
-	seq := make([]time.Duration, n)
-	seq[0] = delay
+	return func() []time.Duration {
+		seq := make([]time.Duration, n)
+		seq[0] = delay
 
-	for i := 1; i < n; i++ {
-		seq[i] = seq[i-1] + delay
+		for i := 1; i < n; i++ {
+			seq[i] = seq[i-1] + delay
+		}
+
+		return seq
 	}
-
-	return seq
 }
 
 /*
@@ -46,12 +51,14 @@ func Linear(delay time.Duration, n int) Seq {
 Exp is a sequence of exponential delays
 */
 func Exp(delay time.Duration, n int, factor float64) Seq {
-	seq := make([]time.Duration, n)
-	seq[0] = delay
-	for i := 1; i < n; i++ {
-		seq[i] = seq[i-1] + interval(factor, rand.Float64(), seq[i-1])
+	return func() []time.Duration {
+		seq := make([]time.Duration, n)
+		seq[0] = delay
+		for i := 1; i < n; i++ {
+			seq[i] = seq[i-1] + interval(factor, rand.Float64(), seq[i-1])
+		}
+		return seq
 	}
-	return seq
 }
 
 func interval(randomizationFactor, random float64, currentInterval time.Duration) time.Duration {
@@ -67,19 +74,30 @@ func interval(randomizationFactor, random float64, currentInterval time.Duration
 
 /*
 
+Seq of time delays
+*/
+func (seq Seq) Seq() []time.Duration {
+	return seq()
+}
+
+/*
+
 Deadline defines a total time for the delay
 */
 func (seq Seq) Deadline(t time.Duration) Seq {
-	var sum time.Duration
+	return func() []time.Duration {
+		var sum time.Duration
+		delays := seq()
 
-	for i := 0; i < len(seq); i++ {
-		sum = sum + seq[i]
-		if sum > t {
-			return seq[0:i]
+		for i := 0; i < len(delays); i++ {
+			sum = sum + delays[i]
+			if sum > t {
+				return delays[0:i]
+			}
 		}
-	}
 
-	return seq
+		return delays
+	}
 }
 
 /*
@@ -87,7 +105,7 @@ func (seq Seq) Deadline(t time.Duration) Seq {
 Retry function
 */
 func (seq Seq) Retry(f func() error) (err error) {
-	for _, t := range seq {
+	for _, t := range seq() {
 		if err = f(); err == nil {
 			return
 		}

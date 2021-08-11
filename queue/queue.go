@@ -3,11 +3,9 @@ package queue
 import (
 	"context"
 	"sync"
-	"time"
 
 	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/backoff"
 )
 
 type tMailbox struct {
@@ -231,46 +229,4 @@ func (q *Queue) Send(cat swarm.Category) (chan<- swarm.Msg, <-chan swarm.Msg) {
 	q.send.socks[cat] = sock
 	q.send.fails[cat] = fail
 	return sock, fail
-}
-
-/*
-
-Sender ...
-*/
-func (q *Queue) Sender(service string, f func(msg *Bag) error) chan<- *Bag {
-	log := logger.With(logger.Note{
-		"type": service,
-		"q":    q.ID,
-	})
-
-	sock := make(chan *Bag)
-
-	q.System.Go(func(ctx context.Context) {
-		log.Notice("init send")
-		defer close(sock)
-
-		for {
-			select {
-			//
-			case <-ctx.Done():
-				log.Notice("free send")
-				return
-
-			//
-			case msg := <-sock:
-				// TODO: queue config
-				err := backoff.
-					Exp(10*time.Millisecond, 10, 0.5).
-					Deadline(30 * time.Second).
-					Retry(func() error { return f(msg) })
-
-				if err != nil {
-					msg.StdErr <- msg.Object
-					log.Debug("failed to send message %v", err)
-				}
-			}
-		}
-	})
-
-	return sock
 }

@@ -11,16 +11,16 @@ package main
 import (
 	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/queue/eventbridge"
+	"github.com/fogfish/swarm/queue/sqs"
 )
 
 func main() {
 	sys := swarm.New("test")
-	queue := swarm.Must(eventbridge.New(sys, "swarm-test"))
+	queue := swarm.Must(sqs.New(sys, "swarm-test"))
 
-	go actor("a").handle(queue.Recv("eventbridge.test.a"))
-	go actor("b").handle(queue.Recv("eventbridge.test.b"))
-	go actor("c").handle(queue.Recv("eventbridge.test.c"))
+	go actor("a").handle(queue.Recv("sqs.test.a"))
+	go actor("b").handle(queue.Recv("sqs.test.b"))
+	go actor("c").handle(queue.Recv("sqs.test.c"))
 
 	sys.Wait()
 }
