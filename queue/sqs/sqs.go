@@ -11,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
 	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/backoff"
 	"github.com/fogfish/swarm/queue"
 )
 
@@ -56,14 +55,14 @@ func New(sys swarm.System, id string, opts ...Config) (swarm.Queue, error) {
 
 //
 func (q *Queue) newSession() error {
-	api, err := session.NewSessionWithOptions(session.Options{
+	awscli, err := session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	})
 	if err != nil {
 		return fmt.Errorf("Failed to create aws client %w", err)
 	}
 
-	q.SQS = sqs.New(api)
+	q.SQS = sqs.New(awscli)
 	return nil
 }
 
@@ -85,36 +84,39 @@ func (q *Queue) lookupQueue(id string) error {
 
 //
 func (q *Queue) newSend() chan<- *queue.Bag {
-	sock := make(chan *queue.Bag)
+	return q.Sender("sqs", q.send)
+	/*
+		sock := make(chan *queue.Bag)
 
-	q.System.Go(func(ctx context.Context) {
-		logger.Notice("init aws sqs send %s", q.ID)
-		defer close(sock)
+		q.System.Go(func(ctx context.Context) {
+			logger.Notice("init aws sqs send %s", q.ID)
+			defer close(sock)
 
-		for {
-			select {
-			//
-			case <-ctx.Done():
-				logger.Notice("free aws sqs send %s", q.ID)
-				return
+			for {
+				select {
+				//
+				case <-ctx.Done():
+					logger.Notice("free aws sqs send %s", q.ID)
+					return
 
-			//
-			case msg := <-sock:
-				// TODO: queue config
-				err := backoff.
-					Exp(10*time.Millisecond, 10, 0.5).
-					Deadline(30 * time.Second).
-					Retry(func() error { return q.send(msg) })
+				//
+				case msg := <-sock:
+					// TODO: queue config
+					err := backoff.
+						Exp(10*time.Millisecond, 10, 0.5).
+						Deadline(30 * time.Second).
+						Retry(func() error { return q.send(msg) })
 
-				if err != nil {
-					msg.StdErr <- msg.Object
-					logger.Debug("failed to send sqs message %v", err)
+					if err != nil {
+						msg.StdErr <- msg.Object
+						logger.Debug("failed to send sqs message %v", err)
+					}
 				}
 			}
-		}
-	})
+		})
 
-	return sock
+		return sock
+	*/
 }
 
 func (q *Queue) send(msg *queue.Bag) error {

@@ -1,8 +1,17 @@
+//
+// Copyright (C) 2021 Dmitry Kolesnikov
+//
+// This file may be modified and distributed under the terms
+// of the Apache License Version 2.0. See the LICENSE file for details.
+// https://github.com/fogfish/swarm
+//
+
 package swarm
 
 import (
 	"context"
 	"sync"
+	"time"
 )
 
 /*
@@ -56,6 +65,7 @@ type Queue interface {
 	// - Err (chan<- error) handle transport errors
 	// - consider send failure as transport error (coupled design vs generic)
 	// - consider ack as additional channel (?)
+	// - consider Listen() <- chan error
 }
 
 /*
@@ -77,6 +87,11 @@ type System interface {
 	 stop system and all active go routines
 	*/
 	Stop()
+
+	/*
+	 wait system
+	*/
+	Wait()
 }
 
 type system struct {
@@ -142,7 +157,18 @@ func (sys *system) Go(f func(context.Context)) {
 Stop ...
 */
 func (sys *system) Stop() {
+	// TODO: use event based approach to control shutdown
+	time.Sleep(5 * time.Second)
 	sys.cancel()
+	time.Sleep(5 * time.Second)
+}
+
+/*
+
+Wait ...
+*/
+func (sys *system) Wait() {
+	<-sys.context.Done()
 }
 
 /*

@@ -2,11 +2,12 @@ package queue
 
 import (
 	"context"
-	"fmt"
 	"sync"
+	"time"
 
 	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
+	"github.com/fogfish/swarm/backoff"
 )
 
 type tMailbox struct {
@@ -90,8 +91,8 @@ func (q *Queue) dispatch() {
 		// TODO: this is a temporary solution to pass tests
 		//       mbox <- message.Object fails when system is shutdown
 		defer func() {
-			if r := recover(); r != nil {
-				fmt.Println("Recovered in f", r)
+			if err := recover(); err != nil {
+				logger.Error("fail %s dispatch: %v", q.ID, err)
 			}
 		}()
 
@@ -99,7 +100,6 @@ func (q *Queue) dispatch() {
 			select {
 			//
 			case <-ctx.Done():
-				fmt.Println(".")
 				logger.Notice("free %s dispatch", q.ID)
 				return
 
@@ -115,6 +115,7 @@ func (q *Queue) dispatch() {
 					//       it prevents proper clean-up strategy
 					mbox <- message.Object
 				} else {
+					// TODO: at boot time category handler might not be registered yet
 					logger.Notice("Category %s is not supported by queue %s ", message.Category, q.ID)
 				}
 			}
@@ -205,6 +206,14 @@ func (q *Queue) Send(cat swarm.Category) (chan<- swarm.Msg, <-chan swarm.Msg) {
 		defer close(sock)
 		defer close(fail)
 
+		// TODO: this is a temporary solution to pass tests
+		//       mbox <- message.Object fails when system is shutdown
+		defer func() {
+			if err := recover(); err != nil {
+				logger.Error("fail %s send type %s: %v", q.ID, cat, err)
+			}
+		}()
+
 		for {
 			select {
 			//
@@ -222,4 +231,46 @@ func (q *Queue) Send(cat swarm.Category) (chan<- swarm.Msg, <-chan swarm.Msg) {
 	q.send.socks[cat] = sock
 	q.send.fails[cat] = fail
 	return sock, fail
+}
+
+/*
+
+Sender ...
+*/
+func (q *Queue) Sender(service string, f func(msg *Bag) error) chan<- *Bag {
+	log := logger.With(logger.Note{
+		"type": service,
+		"q":    q.ID,
+	})
+
+	sock := make(chan *Bag)
+
+	q.System.Go(func(ctx context.Context) {
+		log.Notice("init send")
+		defer close(sock)
+
+		for {
+			select {
+			//
+			case <-ctx.Done():
+				log.Notice("free send")
+				return
+
+			//
+			case msg := <-sock:
+				// TODO: queue config
+				err := backoff.
+					Exp(10*time.Millisecond, 10, 0.5).
+					Deadline(30 * time.Second).
+					Retry(func() error { return f(msg) })
+
+				if err != nil {
+					msg.StdErr <- msg.Object
+					log.Debug("failed to send message %v", err)
+				}
+			}
+		}
+	})
+
+	return sock
 }
