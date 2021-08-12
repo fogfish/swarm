@@ -78,7 +78,7 @@ See [examples](example) folder for executable examples and code snippets for you
 ## Supported queues
 
 - [x] Ephemeral (in-memory) built-in queue
-  - [ ] 
+  - [ ] sending/receiving message
 - [x] AWS EventBridge
   - [x] [sending message](example/eventbridge/send/eventbridge.go)
   - [x] [receiving message](example/eventbridge/recv/eventbridge.go) through lambda handler
