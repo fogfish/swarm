@@ -51,8 +51,8 @@ The latest version of the library is available at `main` branch of this reposito
 
 ```go
 import (
-	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/queue/sqs"
+  "github.com/fogfish/swarm"
+  "github.com/fogfish/swarm/queue/sqs"
 )
 
 // spawn queue client
@@ -67,7 +67,7 @@ snd <- swarm.Bytes("{\"type\": \"a\", \"some\": \"message\"}")
 rcv, ack := queue.Recv("message-of-type-a")
 for msg := range rcv {
   // do something with message
-	ack <- msg
+  ack <- msg
 }
 
 sys.Stop()
