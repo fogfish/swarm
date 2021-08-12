@@ -27,22 +27,28 @@ Utility methods to implement integrations with queueing systems
 
 queue system policy
 */
-type tPolicy struct {
-	io            backoff.Seq
-	frequencyPoll time.Duration
+type Policy struct {
+	IO            backoff.Seq
+	PollFrequency time.Duration
+	TimeToFlight  time.Duration
 }
 
-func defaultPolicy() *tPolicy {
-	return &tPolicy{
+func defaultPolicy() *Policy {
+	return &Policy{
 		/*
 		 by default all i/o is shield by exponential backoff retries.
 		*/
-		io: backoff.Exp(10*time.Millisecond, 10, 0.5),
+		IO: backoff.Exp(10*time.Millisecond, 10, 0.5),
 
 		/*
 		 frequency to poll queueing api
 		*/
-		frequencyPoll: 10 * time.Millisecond,
+		PollFrequency: 10 * time.Millisecond,
+
+		/*
+		 in-flight message timeout
+		*/
+		TimeToFlight: 5 * time.Second,
 	}
 }
 
@@ -54,7 +60,7 @@ type Adapter struct {
 	System swarm.System
 	ID     string
 
-	policy *tPolicy
+	Policy *Policy
 	logger logger.Logger
 }
 
@@ -67,28 +73,13 @@ func Adapt(sys swarm.System, service string, id string) *Adapter {
 		System: sys,
 		ID:     id,
 
-		policy: defaultPolicy(),
+		Policy: defaultPolicy(),
+
 		logger: logger.With(logger.Note{
 			"type": service,
 			"q":    id,
 		}),
 	}
-}
-
-/*
-
-SetPolicyIO defines policy for queue I/O operations.
-*/
-func (q *Adapter) SetPolicyIO(policy backoff.Seq) {
-	q.policy.io = policy
-}
-
-/*
-
-SetPolicyPoll defines frequency of queue I/O operations
-*/
-func (q *Adapter) SetPolicyPoll(frequency time.Duration) {
-	q.policy.frequencyPoll = frequency
 }
 
 /*
@@ -112,7 +103,7 @@ func (q *Adapter) SendIO(f func(msg *Bag) error) chan<- *Bag {
 
 			//
 			case msg := <-sock:
-				err := q.policy.io.Retry(func() error { return f(msg) })
+				err := q.Policy.IO.Retry(func() error { return f(msg) })
 				if err != nil {
 					msg.StdErr <- msg.Object
 					q.logger.Debug("failed to send message %v", err)
@@ -130,7 +121,7 @@ RecvIO create go routine to adapt async i/o over Golang channel to synchronous
 calls of queueing system interface
 */
 func (q *Adapter) RecvIO(f func() (*Bag, error)) <-chan *Bag {
-	freq := q.policy.frequencyPoll
+	freq := q.Policy.PollFrequency
 	sock := make(chan *Bag)
 
 	q.System.Go(func(ctx context.Context) {
@@ -147,7 +138,7 @@ func (q *Adapter) RecvIO(f func() (*Bag, error)) <-chan *Bag {
 			//
 			case <-time.After(freq):
 				var msg *Bag
-				err := q.policy.io.Retry(
+				err := q.Policy.IO.Retry(
 					func() (e error) {
 						msg, e = f()
 						return
@@ -194,7 +185,7 @@ func (q *Adapter) ConfIO(f func(msg *Msg) error) chan<- *Bag {
 			case bag := <-conf:
 				switch msg := bag.Object.(type) {
 				case *Msg:
-					err := q.policy.io.Retry(func() error { return f(msg) })
+					err := q.Policy.IO.Retry(func() error { return f(msg) })
 					if err != nil {
 						q.logger.Error("Unable to conf message %v", err)
 					}
