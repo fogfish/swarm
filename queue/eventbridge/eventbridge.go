@@ -101,7 +101,7 @@ func (q *Queue) spawnSendIO() chan<- *queue.Bag {
 }
 
 func (q *Queue) send(msg *queue.Bag) error {
-	_, err := q.Bus.PutEvents(&eventbridge.PutEventsInput{
+	ret, err := q.Bus.PutEvents(&eventbridge.PutEventsInput{
 		Entries: []*eventbridge.PutEventsRequestEntry{
 			{
 				EventBusName: aws.String(q.ID),
@@ -112,7 +112,15 @@ func (q *Queue) send(msg *queue.Bag) error {
 		},
 	})
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	if *ret.FailedEntryCount > 0 {
+		return fmt.Errorf("%v: %v", ret.Entries[0].ErrorCode, ret.Entries[0].ErrorMessage)
+	}
+
+	return nil
 }
 
 //

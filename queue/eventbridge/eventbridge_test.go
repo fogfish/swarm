@@ -110,7 +110,9 @@ func (m *mockEventBridge) PutEvents(s *eventbridge.PutEventsInput) (*eventbridge
 	}
 
 	m.loopback <- aws.StringValue(s.Entries[0].Detail)
-	return &eventbridge.PutEventsOutput{}, nil
+	return &eventbridge.PutEventsOutput{
+		FailedEntryCount: aws.Int64(0),
+	}, nil
 }
 
 /*
