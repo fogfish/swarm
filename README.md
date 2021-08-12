@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./doc/swarm.svg" height="180" />
+  <img src="./doc/swarm.svg" height="256" />
   <h3 align="center">swarm</h3>
   <p align="center"><strong>...</strong></p>
 
