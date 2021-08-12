@@ -40,7 +40,7 @@ PolicyIO configures retry of queue I/O
 */
 func PolicyIO(policy backoff.Seq) Config {
 	return func(q *Queue) {
-		q.adapter.SetPolicyIO(policy)
+		q.adapter.Policy.IO = policy
 	}
 }
 
@@ -53,7 +53,7 @@ PolicyPoll configures frequency of polling loop
 */
 func PolicyPoll(frequency time.Duration) Config {
 	return func(q *Queue) {
-		q.adapter.SetPolicyPoll(frequency)
+		q.adapter.Policy.PollFrequency = frequency
 	}
 }
 

@@ -153,17 +153,61 @@ Benchmark: 256 bytes
 
 func BenchmarkSend(b *testing.B) {
 	msg := swarm.Bytes(strings.Repeat("x", 256))
-	sys := swarm.New("test")
-	queue := swarm.Must(sut.New(sys, "test"))
-	send, _ := queue.Send(subject)
-	// recv, acks := queue.Recv(subject)
+	sys := swarm.New("bench")
 
-	b.Run("", func(b *testing.B) {
-		for n := 0; n < b.N; n++ {
-			send <- msg
-			// acks <- <-recv
-		}
-	})
+	n := 4
+	q := make([]chan<- swarm.Msg, n)
+
+	for i := 0; i < n; i++ {
+		mq := swarm.Must(sut.New(sys, "swarm-test"))
+		q[i], _ = mq.Send(subject)
+	}
+
+	for i := 0; i < n; i++ {
+		b.Run(fmt.Sprintf("n-%d", i), func(b *testing.B) {
+			for n := 0; n < b.N; n++ {
+				for j := 0; j <= i; j++ {
+					q[j] <- msg
+				}
+			}
+		})
+	}
+
+	sys.Stop()
+}
+
+func BenchmarkRecv(b *testing.B) {
+	sys := swarm.New("bench")
+
+	n := 4
+	q := make([]<-chan swarm.Msg, n)
+	a := make([]chan<- swarm.Msg, n)
+
+	for i := 0; i < n; i++ {
+		mq := swarm.Must(
+			sut.New(sys, "swarm-test",
+				sut.PolicyPoll(1*time.Nanosecond),
+			),
+		)
+		q[i], a[i] = mq.Recv(subject)
+	}
+
+	for i := 0; i < n; i++ {
+		b.Run(fmt.Sprintf("n-%d", i), func(b *testing.B) {
+			m := make([]swarm.Msg, n)
+			for n := 0; n < b.N; n++ {
+
+				for j := 0; j <= i; j++ {
+					m[j] = <-q[j]
+				}
+
+				for j := 0; j <= i; j++ {
+					a[j] <- m[j]
+				}
+
+			}
+		})
+	}
 
 	sys.Stop()
 }

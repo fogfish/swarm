@@ -1,7 +1,9 @@
 package eventbridge
 
 import (
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -42,7 +44,17 @@ PolicyIO configures retry of queue I/O
 */
 func PolicyIO(policy backoff.Seq) Config {
 	return func(q *Queue) {
-		q.adapter.SetPolicyIO(policy)
+		q.adapter.Policy.IO = policy
+	}
+}
+
+/*
+
+PolicyTimeToFlight configures ack timeout
+*/
+func PolicyTimeToFlight(t time.Duration) Config {
+	return func(q *Queue) {
+		q.adapter.Policy.TimeToFlight = t
 	}
 }
 
@@ -106,12 +118,12 @@ func (q *Queue) send(msg *queue.Bag) error {
 //
 func (q *Queue) newRecv() (<-chan *queue.Bag, chan<- *queue.Bag) {
 	sock := make(chan *queue.Bag)
-	acks := make(chan *queue.Bag)
+	conf := make(chan *queue.Bag)
 
 	go func() {
 		logger.Notice("init aws eventbridge recv %s", q.ID)
 
-		// Note: this indirect synonym for lambda start
+		// Note: this indirect synonym for lambda.Start
 		q.Start(
 			func(evt events.CloudWatchEvent) error {
 				sock <- &queue.Bag{
@@ -123,13 +135,16 @@ func (q *Queue) newRecv() (<-chan *queue.Bag, chan<- *queue.Bag) {
 					},
 				}
 
-				<-acks
-				// TODO: ack timeout
-				return nil
+				select {
+				case <-conf:
+					return nil
+				case <-time.After(q.adapter.Policy.TimeToFlight):
+					return errors.New("message ack timeout: " + evt.ID)
+				}
 			},
 		)
 		q.System.Stop()
 	}()
 
-	return sock, acks
+	return sock, conf
 }

@@ -1,4 +1,5 @@
 <p align="center">
+  <img src="./doc/swarm.svg" height="180" />
   <h3 align="center">swarm</h3>
   <p align="center"><strong>...</strong></p>
 
@@ -44,5 +45,5 @@ How to benchmark I/O:
 
 ```
 cd queue/sqs
-go test -run=^$ -bench=.
+go test -run=^$ -bench=. -benchtime 100x
 ```
