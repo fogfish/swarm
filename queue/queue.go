@@ -78,6 +78,12 @@ func New(
 
 //
 //
+func (q *Queue) Sys() swarm.System {
+	return q.System
+}
+
+//
+//
 func (q *Queue) dispatch() {
 	q.ctrl = make(chan tMailbox)
 

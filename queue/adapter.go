@@ -105,6 +105,8 @@ func (q *Adapter) SendIO(f func(msg *Bag) error) chan<- *Bag {
 			case msg := <-sock:
 				err := q.Policy.IO.Retry(func() error { return f(msg) })
 				if err != nil {
+					// TODO: the progress of sender is blocked until
+					//       failed message is consumed
 					msg.StdErr <- msg.Object
 					q.logger.Debug("failed to send message %v", err)
 				}

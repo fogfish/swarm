@@ -52,12 +52,17 @@ Queue ...
 */
 type Queue interface {
 	/*
+		Swarm System of Queue
+	*/
+	Sys() System
+
+	/*
 		Creates endpoints to receive messages and acknowledge its consumption.
 	*/
 	Recv(Category) (<-chan Msg, chan<- Msg)
 
 	/*
-		Creates endpoints to send messages and receive errors.
+		Creates endpoints to send messages and channel for errors.
 	*/
 	Send(Category) (chan<- Msg, <-chan Msg)
 
