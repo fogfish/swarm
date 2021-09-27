@@ -134,6 +134,8 @@ func (q *Queue) newRecv() (<-chan *queue.Bag, chan<- *queue.Bag) {
 		// Note: this indirect synonym for lambda.Start
 		q.Start(
 			func(evt events.CloudWatchEvent) error {
+				logger.Debug("cloudwatch event %+v", evt)
+
 				sock <- &queue.Bag{
 					Source:   evt.Source,
 					Category: swarm.Category(evt.DetailType),
