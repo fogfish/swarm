@@ -88,7 +88,8 @@ SendIO create go routine to adapt async i/o over Golang channel to synchronous
 calls of queueing system interface
 */
 func (q *Adapter) SendIO(f func(msg *Bag) error) chan<- *Bag {
-	sock := make(chan *Bag)
+	// TODO: configurable queue
+	sock := make(chan *Bag, 100)
 
 	q.System.Go(func(ctx context.Context) {
 		q.logger.Notice("init send")
@@ -103,6 +104,13 @@ func (q *Adapter) SendIO(f func(msg *Bag) error) chan<- *Bag {
 
 			//
 			case msg := <-sock:
+				// the control message to ensure that channels are free
+				raw := msg.Object.Bytes()
+				if string(raw[:3]) == "+++" {
+					msg.StdErr <- msg.Object
+					continue
+				}
+
 				err := q.Policy.IO.Retry(func() error { return f(msg) })
 				if err != nil {
 					// TODO: the progress of sender is blocked until

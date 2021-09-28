@@ -3,6 +3,7 @@ package queue
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
@@ -23,7 +24,6 @@ type tRecv struct {
 type tSend struct {
 	build func() chan<- *Bag
 	value chan<- *Bag
-	abort <-chan *Bag
 	socks map[swarm.Category]chan swarm.Msg
 	fails map[swarm.Category]chan swarm.Msg
 }
@@ -202,8 +202,9 @@ func (q *Queue) Send(cat swarm.Category) (chan<- swarm.Msg, <-chan swarm.Msg) {
 		return sock, q.send.fails[cat]
 	}
 
-	sock = make(chan swarm.Msg)
-	fail := make(chan swarm.Msg)
+	// TODO: configurable queue
+	sock = make(chan swarm.Msg, 100)
+	fail := make(chan swarm.Msg, 100)
 
 	q.System.Go(func(ctx context.Context) {
 		logger.Notice("init %s send type %s", q.ID, cat)
@@ -235,4 +236,29 @@ func (q *Queue) Send(cat swarm.Category) (chan<- swarm.Msg, <-chan swarm.Msg) {
 	q.send.socks[cat] = sock
 	q.send.fails[cat] = fail
 	return sock, fail
+}
+
+/*
+
+Wait until queue idle
+*/
+func (q *Queue) Wait() {
+	for {
+		time.Sleep(100 * time.Millisecond)
+		inflight := 0
+		for _, sock := range q.send.socks {
+			inflight += len(sock)
+		}
+		for _, fail := range q.send.fails {
+			inflight += len(fail)
+		}
+		if inflight == 0 {
+			break
+		}
+	}
+
+	// emit control message to ensure that queue is idle
+	ctrl := make(chan swarm.Msg)
+	q.send.value <- q.mkBag("", swarm.Bytes("+++"), ctrl)
+	<-ctrl
 }

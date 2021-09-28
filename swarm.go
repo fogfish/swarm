@@ -62,9 +62,14 @@ type Queue interface {
 	Recv(Category) (<-chan Msg, chan<- Msg)
 
 	/*
-		Creates endpoints to send messages and channel for errors.
+		Creates endpoints to send messages and channel to consume errors.
 	*/
 	Send(Category) (chan<- Msg, <-chan Msg)
+
+	/*
+		Wait queue to be idle
+	*/
+	Wait()
 
 	// TODO:
 	// - Err (chan<- error) handle transport errors
