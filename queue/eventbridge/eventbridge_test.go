@@ -58,8 +58,8 @@ func TestSend(t *testing.T) {
 			If(<-err).Equal(swarm.Bytes(message))
 	})
 
+	queue.Wait()
 	sys.Stop()
-	time.Sleep(3 * time.Second)
 }
 
 func TestRecv(t *testing.T) {
