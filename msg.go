@@ -1,6 +1,4 @@
-package queue
-
-import "github.com/fogfish/swarm"
+package swarm
 
 /*
 
@@ -13,7 +11,7 @@ type Msg struct {
 }
 
 var (
-	_ swarm.Msg = (*Msg)(nil)
+	_ MsgV0 = (*Msg)(nil)
 )
 
 /*
@@ -26,17 +24,24 @@ func (msg *Msg) Bytes() []byte {
 
 /*
 
-Bag is a product type of message and its attributes
+Bag is an internal message envelop containing message and routing attributes
+
+TODO: Identity id
+ - System
+ - Actor
+ - Category (type)
+ - ==> Or category:system/actor
+
 */
 type Bag struct {
-	// message attributes
+	// routing attributes
 	Target   string
 	Source   string
-	Category swarm.Category
+	Category Category
 
 	// message payload
-	Object swarm.Msg
+	Object MsgV0
 
 	//
-	StdErr chan<- swarm.Msg
+	StdErr chan<- MsgV0
 }

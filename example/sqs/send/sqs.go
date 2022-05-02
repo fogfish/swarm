@@ -10,16 +10,20 @@ package main
 
 import (
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/queue/sqs"
+	"github.com/fogfish/swarm/queue"
 )
 
 func main() {
-	sys := swarm.New("test")
-	queue := swarm.Must(sqs.New(sys, "swarm-test"))
+	sys := queue.System("test")
+	q := queue.Must(queue.SQS(sys, "swarm-test"))
 
-	a, _ := queue.Send("sqs.test.a")
-	b, _ := queue.Send("sqs.test.b")
-	c, _ := queue.Send("sqs.test.c")
+	a, _ := q.Send("sqs.test.a")
+	b, _ := q.Send("sqs.test.b")
+	c, _ := q.Send("sqs.test.c")
+
+	if err := sys.Listen(); err != nil {
+		panic(err)
+	}
 
 	a <- swarm.Bytes("{\"type\": \"a\", \"some\": \"message\"}")
 	b <- swarm.Bytes("{\"type\": \"b\", \"some\": \"message\"}")

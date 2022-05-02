@@ -11,16 +11,20 @@ package main
 import (
 	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/queue/eventbridge"
+	"github.com/fogfish/swarm/queue"
 )
 
 func main() {
-	sys := swarm.New("test")
-	queue := swarm.Must(eventbridge.New(sys, "swarm-test"))
+	sys := queue.System("test")
+	queue := queue.Must(queue.EventBridge(sys, "swarm-test"))
 
 	go actor("a").handle(queue.Recv("eventbridge.test.a"))
 	go actor("b").handle(queue.Recv("eventbridge.test.b"))
 	go actor("c").handle(queue.Recv("eventbridge.test.c"))
+
+	if err := sys.Listen(); err != nil {
+		panic(err)
+	}
 
 	sys.Wait()
 }
@@ -28,7 +32,7 @@ func main() {
 //
 type actor string
 
-func (a actor) handle(rcv <-chan swarm.Msg, ack chan<- swarm.Msg) {
+func (a actor) handle(rcv <-chan swarm.MsgV0, ack chan<- swarm.MsgV0) {
 	for msg := range rcv {
 		logger.Debug("event on %s > %s", a, msg.Bytes())
 		ack <- msg

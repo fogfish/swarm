@@ -6,7 +6,7 @@
 // https://github.com/fogfish/swarm
 //
 
-package queue
+package adapter
 
 import (
 	"context"
@@ -14,84 +14,44 @@ import (
 
 	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/backoff"
 )
 
 /*
 
-Utility methods to implement integrations with queueing systems
-
-*/
-
-/*
-
-queue system policy
-*/
-type Policy struct {
-	IO            backoff.Seq
-	PollFrequency time.Duration
-	TimeToFlight  time.Duration
-}
-
-func defaultPolicy() *Policy {
-	return &Policy{
-		/*
-		 by default all i/o is shield by exponential backoff retries.
-		*/
-		IO: backoff.Exp(10*time.Millisecond, 10, 0.5),
-
-		/*
-		 frequency to poll queueing api
-		*/
-		PollFrequency: 10 * time.Millisecond,
-
-		/*
-		 in-flight message timeout
-		*/
-		TimeToFlight: 5 * time.Second,
-	}
-}
-
-/*
-
-Adapter to queueing systems
+Adapter to queueing systems implement utility function to convert pure
+api calls into channel messaging
 */
 type Adapter struct {
-	System swarm.System
-	ID     string
+	Policy *swarm.Policy
 
-	Policy *Policy
+	sys    swarm.System
 	logger logger.Logger
 }
 
-/*
-
-Adapt creates helper utility to adapt i/o with external queuing system
-*/
-func Adapt(sys swarm.System, service string, id string) *Adapter {
+func New(sys swarm.System, policy *swarm.Policy, logger logger.Logger) *Adapter {
 	return &Adapter{
-		System: sys,
-		ID:     id,
+		Policy: policy,
 
-		Policy: defaultPolicy(),
-
-		logger: logger.With(logger.Note{
-			"type": service,
-			"q":    id,
-		}),
+		sys:    sys,
+		logger: logger,
 	}
 }
 
 /*
 
-SendIO create go routine to adapt async i/o over Golang channel to synchronous
-calls of queueing system interface
+Send builds a channel to listen for incoming Bags and relay it to the function
 */
-func (q *Adapter) SendIO(f func(msg *Bag) error) chan<- *Bag {
-	// TODO: configurable queue
-	sock := make(chan *Bag, 100)
+/*
 
-	q.System.Go(func(ctx context.Context) {
+Send create go routine to adapt async i/o over Golang channel to synchronous
+calls of queueing system interface
+
+AdaptSend builds a channel to listen for incoming Bags and relay it to the function
+*/
+func Send(q *Adapter, f func(msg *swarm.Bag) error) chan<- *swarm.Bag {
+	sock := make(chan *swarm.Bag, q.Policy.QueueCapacity)
+
+	q.sys.Go(func(ctx context.Context) {
 		q.logger.Notice("init send")
 		defer close(sock)
 
@@ -104,6 +64,7 @@ func (q *Adapter) SendIO(f func(msg *Bag) error) chan<- *Bag {
 
 			//
 			case msg := <-sock:
+				// TODO: add message type control
 				// the control message to ensure that channels are free
 				raw := msg.Object.Bytes()
 				if string(raw[:3]) == "+++" {
@@ -111,7 +72,7 @@ func (q *Adapter) SendIO(f func(msg *Bag) error) chan<- *Bag {
 					continue
 				}
 
-				err := q.Policy.IO.Retry(func() error { return f(msg) })
+				err := q.Policy.BackoffIO.Retry(func() error { return f(msg) })
 				if err != nil {
 					// TODO: the progress of sender is blocked until
 					//       failed message is consumed
@@ -127,14 +88,14 @@ func (q *Adapter) SendIO(f func(msg *Bag) error) chan<- *Bag {
 
 /*
 
-RecvIO create go routine to adapt async i/o over Golang channel to synchronous
+Recv create go routine to adapt async i/o over Golang channel to synchronous
 calls of queueing system interface
 */
-func (q *Adapter) RecvIO(f func() (*Bag, error)) <-chan *Bag {
+func Recv(q *Adapter, f func() (*swarm.Bag, error)) <-chan *swarm.Bag {
 	freq := q.Policy.PollFrequency
-	sock := make(chan *Bag)
+	sock := make(chan *swarm.Bag)
 
-	q.System.Go(func(ctx context.Context) {
+	q.sys.Go(func(ctx context.Context) {
 		q.logger.Notice("init recv")
 		defer close(sock)
 
@@ -147,8 +108,8 @@ func (q *Adapter) RecvIO(f func() (*Bag, error)) <-chan *Bag {
 
 			//
 			case <-time.After(freq):
-				var msg *Bag
-				err := q.Policy.IO.Retry(
+				var msg *swarm.Bag
+				err := q.Policy.BackoffIO.Retry(
 					func() (e error) {
 						msg, e = f()
 						return
@@ -174,13 +135,13 @@ func (q *Adapter) RecvIO(f func() (*Bag, error)) <-chan *Bag {
 
 /*
 
-ConfIO create go routine to adapt async i/o over Golang channel to synchronous
+Conf create go routine to adapt async i/o over Golang channel to synchronous
 calls of queueing system interface
 */
-func (q *Adapter) ConfIO(f func(msg *Msg) error) chan<- *Bag {
-	conf := make(chan *Bag)
+func Conf(q *Adapter, f func(msg *swarm.Msg) error) chan<- *swarm.Bag {
+	conf := make(chan *swarm.Bag)
 
-	q.System.Go(func(ctx context.Context) {
+	q.sys.Go(func(ctx context.Context) {
 		q.logger.Notice("init conf")
 		defer close(conf)
 
@@ -194,8 +155,8 @@ func (q *Adapter) ConfIO(f func(msg *Msg) error) chan<- *Bag {
 			//
 			case bag := <-conf:
 				switch msg := bag.Object.(type) {
-				case *Msg:
-					err := q.Policy.IO.Retry(func() error { return f(msg) })
+				case *swarm.Msg:
+					err := q.Policy.BackoffIO.Retry(func() error { return f(msg) })
 					if err != nil {
 						q.logger.Error("Unable to conf message %v", err)
 					}

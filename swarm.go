@@ -8,11 +8,7 @@
 
 package swarm
 
-import (
-	"context"
-	"sync"
-	"time"
-)
+import "context"
 
 /*
 
@@ -30,7 +26,7 @@ Msg type is an abstract container for octet stream, exchanged via channels
 		msg.Bytes()
 	}
 */
-type Msg interface {
+type MsgV0 interface {
 	Bytes() []byte
 }
 
@@ -52,29 +48,31 @@ func (b Bytes) Bytes() []byte { return b }
 
 /*
 
+EventBus is an an abstraction of transport protocol(s) to send & recv events
+*/
+type EventBus interface {
+	ID() string
+
+	// Send connects to queueing broker and returns channel to send messages
+	Send() (chan<- *Bag, error)
+
+	// Recv connects to queueing broker and returns channel to recv messages
+	Recv() (<-chan *Bag, error)
+
+	// Conf connects to queueing broker and returns channel to confirm processed messages
+	Conf() (chan<- *Bag, error)
+}
+
+/*
+
 Queue ...
 */
 type Queue interface {
-	/*
-		Swarm System of Queue
-	*/
-	Sys() System
+	// Creates endpoints to receive messages and acknowledge its consumption.
+	Recv(Category) (<-chan MsgV0, chan<- MsgV0)
 
-	/*
-		Creates endpoints to receive messages and acknowledge its consumption.
-	*/
-	Recv(Category) (<-chan Msg, chan<- Msg)
-
-	/*
-		Creates endpoints to send messages and channel to consume errors.
-	*/
-	Send(Category) (chan<- Msg, <-chan Msg)
-
-	/*
-		Wait queue until all messages are flushed. Waiting is required in
-		serverless environment just before lambda going to sleep.
-	*/
-	Wait()
+	// Creates endpoints to send messages and channel to consume errors.
+	Send(Category) (chan<- MsgV0, <-chan MsgV0)
 
 	// TODO:
 	// - Err (chan<- error) handle transport errors
@@ -88,16 +86,11 @@ type Queue interface {
 System ...
 */
 type System interface {
+	// Queue creates new queuing endpoint
+	Queue(EventBus) Queue
 
-	/*
-		Unique System ID
-	*/
-	ID() string
-
-	/*
-		Spawn go routine in context of system
-	*/
-	Go(func(context.Context))
+	// Listen ...
+	Listen() error
 
 	/*
 	 Stop system and all active go routines
@@ -108,94 +101,33 @@ type System interface {
 	 Wait system to be stopped
 	*/
 	Wait()
-}
 
-type system struct {
-	sync.Mutex
-
-	id      string
-	context context.Context
-	cancel  context.CancelFunc
+	/*
+	  Spawn go routine in context of system
+	*/
+	Go(func(context.Context))
 }
 
 /*
 
 New creates new queueing system
 */
-func New(id string, opts ...Config) System {
-	sys := &system{id: id, context: context.Background()}
+// func New(id string) System {
+// 	return system.NewSystem(id)
+// }
 
-	for _, opt := range opts {
-		opt(sys)
-	}
+// /*
 
-	sys.context, sys.cancel = context.WithCancel(sys.context)
-	return sys
-}
+// Config of System Type
+// */
+// type Config func(sys *system)
 
-/*
+// /*
 
-Config of System Type
-*/
-type Config func(sys *system)
-
-/*
-
-WithContext config system with custom context
-*/
-func WithContext(ctx context.Context) Config {
-	return func(sys *system) {
-		sys.context = ctx
-	}
-}
-
-var (
-	_ System = (*system)(nil)
-)
-
-/*
-
-ID return unique system ID
-*/
-func (sys *system) ID() string {
-	return sys.id
-}
-
-/*
-
-Spawn go routine in context of system
-*/
-func (sys *system) Go(f func(context.Context)) {
-	go f(sys.context)
-}
-
-/*
-
-Stop ...
-*/
-func (sys *system) Stop() {
-	// TODO: use event based approach to control shutdown
-	time.Sleep(5 * time.Second)
-	sys.cancel()
-	time.Sleep(5 * time.Second)
-}
-
-/*
-
-Wait ...
-*/
-func (sys *system) Wait() {
-	<-sys.context.Done()
-}
-
-/*
-
-Must ensures successful creation of queue
-*/
-func Must(q Queue, err error) Queue {
-	if err != nil {
-		panic(err)
-	}
-
-	return q
-}
+// WithContext config system with custom context
+// */
+// func WithContext(ctx context.Context) Config {
+// 	return func(sys *system) {
+// 		sys.context = ctx
+// 	}
+// }

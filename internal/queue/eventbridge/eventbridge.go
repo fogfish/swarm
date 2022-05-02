@@ -13,8 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/eventbridge/eventbridgeiface"
 	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/backoff"
-	"github.com/fogfish/swarm/queue"
+	"github.com/fogfish/swarm/internal/queue/adapter"
 )
 
 /*
@@ -22,8 +21,12 @@ import (
 Queue ...
 */
 type Queue struct {
-	*queue.Queue
-	adapter *queue.Adapter
+	adapter *adapter.Adapter
+	id      string
+	sys     swarm.System
+
+	qrecv chan *swarm.Bag
+	qconf chan *swarm.Bag
 
 	Bus   eventbridgeiface.EventBridgeAPI
 	Start func(interface{})
@@ -31,56 +34,48 @@ type Queue struct {
 
 /*
 
-Config ...
-*/
-type Config func(*Queue)
-
-/*
-
-PolicyIO configures retry of queue I/O
-
-	sqs.New(sys, "q", sqs.PolicyIO(backoff.Exp(...)) )
-
-*/
-func PolicyIO(policy backoff.Seq) Config {
-	return func(q *Queue) {
-		q.adapter.Policy.IO = policy
-	}
-}
-
-/*
-
-PolicyTimeToFlight configures ack timeout
-*/
-func PolicyTimeToFlight(t time.Duration) Config {
-	return func(q *Queue) {
-		q.adapter.Policy.TimeToFlight = t
-	}
-}
-
-/*
-
 New ...
 */
-func New(sys swarm.System, id string, opts ...Config) (swarm.Queue, error) {
+func New(
+	sys swarm.System,
+	id string,
+	policy *swarm.Policy,
+	defSession ...*session.Session,
+) (*Queue, error) {
+	logger := logger.With(logger.Note{
+		"type": "eventbridge",
+		"q":    id,
+	})
 	q := &Queue{
-		adapter: queue.Adapt(sys, "eventbridge", id),
+		id:      id,
+		sys:     sys,
+		adapter: adapter.New(sys, policy, logger),
 		Start:   lambda.Start,
 	}
-	if err := q.newSession(); err != nil {
+	if err := q.newSession(defSession); err != nil {
 		return nil, err
 	}
 
-	for _, opt := range opts {
-		opt(q)
-	}
-
-	q.Queue = queue.New(sys, id, q.newRecv, q.spawnSendIO)
 	return q, nil
 }
 
 //
-func (q *Queue) newSession() error {
+func (q *Queue) MockSend(mock eventbridgeiface.EventBridgeAPI) {
+	q.Bus = mock
+}
+
+//
+func (q *Queue) MockRecv(mock func(interface{})) {
+	q.Start = mock
+}
+
+//
+func (q *Queue) newSession(defSession []*session.Session) error {
+	if len(defSession) != 0 {
+		q.Bus = eventbridge.New(defSession[0])
+		return nil
+	}
+
 	awscli, err := session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	})
@@ -92,19 +87,23 @@ func (q *Queue) newSession() error {
 	return nil
 }
 
+func (q *Queue) ID() string {
+	return q.id
+}
+
 /*
 
 spawnSendIO create go routine for emiting messages
 */
-func (q *Queue) spawnSendIO() chan<- *queue.Bag {
-	return q.adapter.SendIO(q.send)
+func (q *Queue) Send() (chan<- *swarm.Bag, error) {
+	return adapter.Send(q.adapter, q.send), nil
 }
 
-func (q *Queue) send(msg *queue.Bag) error {
+func (q *Queue) send(msg *swarm.Bag) error {
 	ret, err := q.Bus.PutEvents(&eventbridge.PutEventsInput{
 		Entries: []*eventbridge.PutEventsRequestEntry{
 			{
-				EventBusName: aws.String(q.ID),
+				EventBusName: aws.String(q.id),
 				Source:       aws.String(msg.Source),
 				DetailType:   aws.String(string(msg.Category)),
 				Detail:       aws.String(string(msg.Object.Bytes())),
@@ -123,23 +122,22 @@ func (q *Queue) send(msg *queue.Bag) error {
 	return nil
 }
 
-//
-func (q *Queue) newRecv() (<-chan *queue.Bag, chan<- *queue.Bag) {
-	sock := make(chan *queue.Bag)
-	conf := make(chan *queue.Bag)
+func (q *Queue) Recv() (<-chan *swarm.Bag, error) {
+	sock := make(chan *swarm.Bag)
+	conf := make(chan *swarm.Bag)
 
 	go func() {
-		logger.Notice("init aws eventbridge recv %s", q.ID)
+		logger.Notice("init aws eventbridge recv %s", q.id)
 
 		// Note: this indirect synonym for lambda.Start
 		q.Start(
 			func(evt events.CloudWatchEvent) error {
 				logger.Debug("cloudwatch event %+v", evt)
 
-				sock <- &queue.Bag{
+				sock <- &swarm.Bag{
 					Source:   evt.Source,
 					Category: swarm.Category(evt.DetailType),
-					Object: &queue.Msg{
+					Object: &swarm.Msg{
 						Payload: evt.Detail,
 						Receipt: evt.ID,
 					},
@@ -153,8 +151,13 @@ func (q *Queue) newRecv() (<-chan *queue.Bag, chan<- *queue.Bag) {
 				}
 			},
 		)
-		q.System.Stop()
+		q.sys.Stop()
 	}()
 
-	return sock, conf
+	q.qconf = conf
+	return sock, nil
+}
+
+func (q *Queue) Conf() (chan<- *swarm.Bag, error) {
+	return q.qconf, nil
 }

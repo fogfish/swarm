@@ -10,16 +10,20 @@ package main
 
 import (
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/queue/eventbridge"
+	"github.com/fogfish/swarm/queue"
 )
 
 func main() {
-	sys := swarm.New("test")
-	queue := swarm.Must(eventbridge.New(sys, "swarm-test"))
+	sys := queue.System("test")
+	queue := queue.Must(queue.EventBridge(sys, "swarm-test"))
 
 	a, _ := queue.Send("eventbridge.test.a")
 	b, _ := queue.Send("eventbridge.test.b")
 	c, _ := queue.Send("eventbridge.test.c")
+
+	if err := sys.Listen(); err != nil {
+		panic(err)
+	}
 
 	a <- swarm.Bytes("{\"type\": \"a\", \"some\": \"message\"}")
 	b <- swarm.Bytes("{\"type\": \"b\", \"some\": \"message\"}")

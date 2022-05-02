@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./doc/swarm.png" height="256" />
+  <img src="./doc/swarm-v2.png" height="256" />
   <h3 align="center">swarm</h3>
   <p align="center"><strong>Go channels for queueing systems</strong></p>
 
