@@ -25,7 +25,6 @@ func TestSend(
 	queue := sys.Queue(factory(sys, swarm.DefaultPolicy(), eff))
 
 	out, _ := queue.Send(Category)
-
 	sys.Listen()
 
 	t.Run("Success", func(t *testing.T) {
@@ -35,15 +34,13 @@ func TestSend(
 			If(<-eff).Equal(Message)
 	})
 
-	// t.Run("Failure", func(t *testing.T) {
-	// 	out, err := queue.Send("other")
-	// 	queue.Listen()
+	t.Run("Failure", func(t *testing.T) {
+		out, err := queue.Send("Some Other")
+		out <- swarm.Bytes(Message)
 
-	// 	out <- swarm.Bytes(message)
-
-	// 	it.Ok(t).
-	// 		If(<-err).Equal(swarm.Bytes(message))
-	// })
+		it.Ok(t).
+			If(<-err).Equal(swarm.Bytes(Message))
+	})
 
 	sys.Stop()
 }
@@ -58,13 +55,17 @@ func TestRecv(
 	sys := queue.System("qtest")
 	queue := sys.Queue(factory(sys, swarm.DefaultPolicy(), eff))
 
-	msg, _ := queue.Recv(Category)
-
+	msg, ack := queue.Recv(Category)
 	sys.Listen()
 
-	val := <-msg
-	it.Ok(t).
-		If(val.Bytes()).Equal([]byte(Message))
+	t.Run("Success", func(t *testing.T) {
+		val := <-msg
+		ack <- val
+
+		it.Ok(t).
+			If(val.Bytes()).Equal([]byte(Message)).
+			If(<-eff).Equal(Receipt)
+	})
 
 	sys.Stop()
 }

@@ -41,48 +41,9 @@ func mkQueue(sys swarm.System, policy *swarm.Policy, eff chan string) swarm.Even
 	return q
 }
 
-func TestSend(t *testing.T) {
+func TestSQS(t *testing.T) {
 	qtest.TestSend(t, mkQueue)
 	qtest.TestRecv(t, mkQueue)
-
-	// side := make(chan string, 1)
-	// sys := queue.System("test")
-
-	// queue := sys.Queue(sutq)
-	// out, _ := queue.Send(subject)
-
-	// sys.Listen()
-
-	// // go func() {
-	// out <- swarm.Bytes(message)
-	// it.Ok(t).
-	// 	If(<-side).Equal(message)
-
-	// 	it.Ok(t).
-	// 		If(<-side).Equal(message)
-	// }()
-
-	// t.Run("Success", func(t *testing.T) {
-	// 	fmt.Println("1. ===")
-	// 	out <- swarm.Bytes(message)
-
-	// 	it.Ok(t).
-	// 		If(<-side).Equal(message)
-	// })
-
-	// t.Run("Failure", func(t *testing.T) {
-	// 	out, err := queue.Send("other")
-	// 	queue.Listen()
-
-	// 	out <- swarm.Bytes(message)
-
-	// 	it.Ok(t).
-	// 		If(<-err).Equal(swarm.Bytes(message))
-	// })
-
-	// sys.Stop()
-
-	// time.Sleep(3 * time.Second)
 }
 
 // func TestRecv(t *testing.T) {
