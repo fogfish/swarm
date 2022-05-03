@@ -28,9 +28,22 @@ func TestSend(
 
 	sys.Listen()
 
-	out <- swarm.Bytes(Message)
-	it.Ok(t).
-		If(<-eff).Equal(Message)
+	t.Run("Success", func(t *testing.T) {
+		out <- swarm.Bytes(Message)
+
+		it.Ok(t).
+			If(<-eff).Equal(Message)
+	})
+
+	// t.Run("Failure", func(t *testing.T) {
+	// 	out, err := queue.Send("other")
+	// 	queue.Listen()
+
+	// 	out <- swarm.Bytes(message)
+
+	// 	it.Ok(t).
+	// 		If(<-err).Equal(swarm.Bytes(message))
+	// })
 
 	sys.Stop()
 }

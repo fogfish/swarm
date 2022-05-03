@@ -5,7 +5,6 @@ import (
 
 	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/queue"
 )
 
 /*
@@ -16,50 +15,33 @@ https://medium.com/capital-one-tech/building-an-unbounded-channel-in-go-789e175c
 
 */
 
-type ephemeral struct {
-	*queue.Queue
+type Queue struct {
+	id   string
+	send chan<- *swarm.Bag
+	recv <-chan *swarm.Bag
+	conf chan<- *swarm.Bag
 }
 
 //
-func New(sys swarm.System, id string) (swarm.Queue, error) {
-	q := &ephemeral{}
+func New(sys swarm.System, id string) (swarm.EventBus, error) {
+	recv, send := create(sys, id)
+	conf := blackhole(sys)
 
-	recv, send := q.create(sys)
-
-	q.Queue = queue.New(
-		sys,
-		id,
-		func() (<-chan *queue.Bag, chan<- *queue.Bag) { return recv, nil },
-		func() chan<- *queue.Bag { return send },
-	)
-
-	return q, nil
-}
-
-// TODO: linked list
-type unbound []*queue.Bag
-
-func (q unbound) head() *queue.Bag {
-	if len(q) == 0 {
-		return nil
-	}
-	return q[0]
-}
-
-func (q unbound) emit(ch chan<- *queue.Bag) chan<- *queue.Bag {
-	if len(q) == 0 {
-		return nil
-	}
-	return ch
+	return &Queue{
+		id:   id,
+		send: send,
+		recv: recv,
+		conf: conf,
+	}, nil
 }
 
 // TODO: define collection of channel types
-func (q *ephemeral) create(sys swarm.System) (<-chan *queue.Bag, chan<- *queue.Bag) {
-	recv := make(chan *queue.Bag)
-	send := make(chan *queue.Bag)
+func create(sys swarm.System, id string) (<-chan *swarm.Bag, chan<- *swarm.Bag) {
+	recv := make(chan *swarm.Bag)
+	send := make(chan *swarm.Bag)
 
 	sys.Go(func(ctx context.Context) {
-		logger.Notice("start ephemeral queue %s", q.ID)
+		logger.Notice("start ephemeral queue %s", id)
 		defer close(recv)
 		defer close(send)
 
@@ -68,7 +50,7 @@ func (q *ephemeral) create(sys swarm.System) (<-chan *queue.Bag, chan<- *queue.B
 			select {
 			//
 			case <-ctx.Done():
-				logger.Notice("stop ephemeral queue %s", q.ID)
+				logger.Notice("stop ephemeral queue %s", id)
 				return
 
 			//
@@ -83,4 +65,47 @@ func (q *ephemeral) create(sys swarm.System) (<-chan *queue.Bag, chan<- *queue.B
 	})
 
 	return send, recv
+}
+
+func blackhole(sys swarm.System) chan<- *swarm.Bag {
+	conf := make(chan *swarm.Bag)
+
+	sys.Go(func(ctx context.Context) {
+		for {
+			select {
+			//
+			case <-ctx.Done():
+				return
+
+			//
+			case <-conf:
+				continue
+			}
+		}
+	})
+
+	return conf
+}
+
+func (q *Queue) ID() string                       { return q.id }
+func (q *Queue) Send() (chan<- *swarm.Bag, error) { return q.send, nil }
+func (q *Queue) Recv() (<-chan *swarm.Bag, error) { return q.recv, nil }
+func (q *Queue) Conf() (chan<- *swarm.Bag, error) { return q.conf, nil }
+
+//
+// TODO: linked list
+type unbound []*swarm.Bag
+
+func (q unbound) head() *swarm.Bag {
+	if len(q) == 0 {
+		return nil
+	}
+	return q[0]
+}
+
+func (q unbound) emit(ch chan<- *swarm.Bag) chan<- *swarm.Bag {
+	if len(q) == 0 {
+		return nil
+	}
+	return ch
 }
