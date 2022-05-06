@@ -24,8 +24,30 @@ Msg type is an abstract container for octet stream, exchanged via channels
 		msg.Bytes()
 	}
 */
-type MsgV0 interface {
+type Event interface {
 	Bytes() []byte
+}
+
+/*
+
+Msg type defines external ingress message.
+It containers both payload and receipt to acknowledge
+*/
+type Msg struct {
+	Payload []byte
+	Receipt string
+}
+
+var (
+	_ Event = (*Msg)(nil)
+)
+
+/*
+
+Bytes returns message payload (octet stream)
+*/
+func (msg *Msg) Bytes() []byte {
+	return msg.Payload
 }
 
 /*
@@ -43,6 +65,30 @@ type Bytes []byte
 Bytes returns message payload (octet stream)
 */
 func (b Bytes) Bytes() []byte { return b }
+
+/*
+
+Bag is an internal message envelop containing message and routing attributes
+
+TODO: Identity id
+ - System
+ - Queue
+ - Category (type)
+ - ==> Or category:system/queue
+
+*/
+type Bag struct {
+	// routing attributes
+	Target   string
+	Source   string
+	Category Category
+
+	// message payload
+	Object Event
+
+	//
+	StdErr chan<- Event
+}
 
 /*
 
@@ -67,10 +113,10 @@ Queue ...
 */
 type Queue interface {
 	// Creates endpoints to receive messages and acknowledge its consumption.
-	Recv(Category) (<-chan MsgV0, chan<- MsgV0)
+	Recv(Category) (<-chan Event, chan<- Event)
 
 	// Creates endpoints to send messages and channel to consume errors.
-	Send(Category) (chan<- MsgV0, <-chan MsgV0)
+	Send(Category) (chan<- Event, <-chan Event)
 
 	// TODO:
 	// - Err (chan<- error) handle transport errors
@@ -99,33 +145,4 @@ type System interface {
 	 Wait system to be stopped
 	*/
 	Wait()
-
-	/*
-	  Spawn go routine in context of system
-	*/
-	// Go(func(context.Context))
 }
-
-/*
-
-New creates new queueing system
-*/
-// func New(id string) System {
-// 	return system.NewSystem(id)
-// }
-
-// /*
-
-// Config of System Type
-// */
-// type Config func(sys *system)
-
-// /*
-
-// WithContext config system with custom context
-// */
-// func WithContext(ctx context.Context) Config {
-// 	return func(sys *system) {
-// 		sys.context = ctx
-// 	}
-// }

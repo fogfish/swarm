@@ -32,7 +32,7 @@ func main() {
 //
 type actor string
 
-func (a actor) handle(rcv <-chan swarm.MsgV0, ack chan<- swarm.MsgV0) {
+func (a actor) handle(rcv <-chan swarm.Event, ack chan<- swarm.Event) {
 	for msg := range rcv {
 		logger.Debug("event on %s > %s", a, msg.Bytes())
 		ack <- msg
