@@ -10,12 +10,6 @@ package swarm
 
 /*
 
-Category of message (aka subject or topic), each message has unique type
-*/
-type Category string
-
-/*
-
 Msg type is an abstract container for octet stream, exchanged via channels
 
   ch <- swarm.Bytes("some message")
@@ -24,7 +18,7 @@ Msg type is an abstract container for octet stream, exchanged via channels
 		msg.Bytes()
 	}
 */
-type Event interface {
+type Object interface {
 	Bytes() []byte
 }
 
@@ -39,7 +33,7 @@ type Msg struct {
 }
 
 var (
-	_ Event = (*Msg)(nil)
+	_ Object = (*Msg)(nil)
 )
 
 /*
@@ -78,16 +72,15 @@ TODO: Identity id
 
 */
 type Bag struct {
-	// routing attributes
-	Target   string
-	Source   string
-	Category Category
+	Category string
+	System   string
+	Queue    string
 
 	// message payload
-	Object Event
+	Object Object
 
 	//
-	StdErr chan<- Event
+	StdErr chan<- Object
 }
 
 /*
@@ -113,10 +106,10 @@ Queue ...
 */
 type Queue interface {
 	// Creates endpoints to receive messages and acknowledge its consumption.
-	Recv(Category) (<-chan Event, chan<- Event)
+	Recv(string) (<-chan Object, chan<- Object)
 
 	// Creates endpoints to send messages and channel to consume errors.
-	Send(Category) (chan<- Event, <-chan Event)
+	Send(string) (chan<- Object, <-chan Object)
 
 	// TODO:
 	// - Err (chan<- error) handle transport errors

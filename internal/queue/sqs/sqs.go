@@ -111,9 +111,9 @@ func (q *Queue) send(msg *swarm.Bag) error {
 	_, err := q.SQS.SendMessage(
 		&sqs.SendMessageInput{
 			MessageAttributes: map[string]*sqs.MessageAttributeValue{
-				"Target":   {StringValue: aws.String(msg.Target), DataType: aws.String("String")},
-				"Source":   {StringValue: aws.String(msg.Source), DataType: aws.String("String")},
-				"Category": {StringValue: aws.String(string(msg.Category)), DataType: aws.String("String")},
+				"Category": {StringValue: aws.String(msg.Category), DataType: aws.String("String")},
+				"System":   {StringValue: aws.String(msg.System), DataType: aws.String("String")},
+				"Queue":    {StringValue: aws.String(msg.Queue), DataType: aws.String("String")},
 			},
 			MessageBody: aws.String(string(msg.Object.Bytes())),
 			QueueUrl:    q.url,
@@ -154,9 +154,9 @@ func (q *Queue) recv() (*swarm.Bag, error) {
 	head := result.Messages[0]
 
 	return &swarm.Bag{
-		Target:   attr(head, "Target"),
-		Source:   attr(head, "Source"),
-		Category: swarm.Category(attr(head, "Category")),
+		Category: attr(head, "Category"),
+		System:   attr(head, "System"),
+		Queue:    attr(head, "Queue"),
 		Object: &swarm.Msg{
 			Payload: []byte(*head.Body),
 			Receipt: *head.ReceiptHandle,

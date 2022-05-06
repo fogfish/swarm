@@ -10,8 +10,8 @@ import (
 )
 
 type tMailbox struct {
-	id      swarm.Category
-	channel chan swarm.Event
+	id      string
+	channel chan swarm.Object
 }
 
 /*
@@ -19,8 +19,8 @@ type tMailbox struct {
 msgSend is the pair of channel, exposed by the queue to clients to send messages
 */
 type msgSend struct {
-	msg chan swarm.Event // channel to send message out
-	err chan swarm.Event // channel to recv failed messages
+	msg chan swarm.Object // channel to send message out
+	err chan swarm.Object // channel to recv failed messages
 }
 
 /*
@@ -28,8 +28,8 @@ type msgSend struct {
 msgRecv is the pair of channel, exposed by the queue to clients to recv messages
 */
 type msgRecv struct {
-	msg chan swarm.Event // channel to recv message
-	ack chan swarm.Event // channel to send acknowledgement
+	msg chan swarm.Object // channel to recv message
+	ack chan swarm.Object // channel to send acknowledgement
 }
 
 /*
@@ -48,8 +48,8 @@ type Queue struct {
 	qRecv chan *swarm.Bag
 	qConf chan *swarm.Bag
 
-	recv map[swarm.Category]msgRecv
-	send map[swarm.Category]msgSend
+	recv map[string]msgRecv
+	send map[string]msgSend
 }
 
 func NewQueue(sys *system, queue swarm.EventBus) *Queue {
@@ -58,8 +58,8 @@ func NewQueue(sys *system, queue swarm.EventBus) *Queue {
 		id:    queue.ID(),
 		ctrl:  make(chan tMailbox, 10000),
 		queue: queue,
-		recv:  make(map[swarm.Category]msgRecv),
-		send:  make(map[swarm.Category]msgSend),
+		recv:  make(map[string]msgRecv),
+		send:  make(map[string]msgSend),
 	}
 }
 
@@ -68,7 +68,7 @@ func NewQueue(sys *system, queue swarm.EventBus) *Queue {
 func (q *Queue) dispatch() {
 	go func() {
 		logger.Notice("init %s dispatch", q.id)
-		mailboxes := map[swarm.Category]chan swarm.Event{}
+		mailboxes := map[string]chan swarm.Object{}
 
 		// Note: this is required to gracefull stop dispatcher when channel is closed
 		defer func() {
@@ -108,11 +108,11 @@ func (q *Queue) dispatch() {
 
 //
 //
-func (q *Queue) mkBag(cat swarm.Category, msg swarm.Event, err chan<- swarm.Event) *swarm.Bag {
+func (q *Queue) mkBag(cat string, msg swarm.Object, err chan<- swarm.Object) *swarm.Bag {
 	return &swarm.Bag{
-		Target:   q.id,     // subject
-		Source:   q.sys.id, // namespace
-		Category: cat,      // type
+		Category: cat,
+		System:   q.sys.id,
+		Queue:    q.id,
 		Object:   msg,
 		StdErr:   err,
 	}
@@ -124,7 +124,7 @@ Recv creates endpoints to receive messages and acknowledge its consumption.
 
 Note: singleton is required for scalability
 */
-func (q *Queue) Recv(cat swarm.Category) (<-chan swarm.Event, chan<- swarm.Event) {
+func (q *Queue) Recv(cat string) (<-chan swarm.Object, chan<- swarm.Object) {
 	q.Lock()
 	defer q.Unlock()
 
@@ -142,13 +142,13 @@ func (q *Queue) Recv(cat swarm.Category) (<-chan swarm.Event, chan<- swarm.Event
 
 spawnRecvTypeOf creates a dedicated go routine to proxy "typed" messages to queue
 */
-func spawnRecvOf(q *Queue, cat swarm.Category) (chan swarm.Event, chan swarm.Event) {
+func spawnRecvOf(q *Queue, cat string) (chan swarm.Object, chan swarm.Object) {
 	logger.Notice("init %s receiver for %s", q.id, cat)
 
-	mbox := make(chan swarm.Event)
-	acks := make(chan swarm.Event)
+	mbox := make(chan swarm.Object)
+	acks := make(chan swarm.Object)
 
-	pipe.ForEach(acks, func(object swarm.Event) {
+	pipe.ForEach(acks, func(object swarm.Object) {
 		q.qConf <- q.mkBag(cat, object, nil)
 	})
 
@@ -159,7 +159,7 @@ func spawnRecvOf(q *Queue, cat swarm.Category) (chan swarm.Event, chan swarm.Eve
 
 Send creates endpoints to send messages and receive errors.
 */
-func (q *Queue) Send(cat swarm.Category) (chan<- swarm.Event, <-chan swarm.Event) {
+func (q *Queue) Send(cat string) (chan<- swarm.Object, <-chan swarm.Object) {
 	q.Lock()
 	defer q.Unlock()
 
@@ -172,14 +172,14 @@ func (q *Queue) Send(cat swarm.Category) (chan<- swarm.Event, <-chan swarm.Event
 	return sock, fail
 }
 
-func spawnSendOf(q *Queue, cat swarm.Category) (chan swarm.Event, chan swarm.Event) {
+func spawnSendOf(q *Queue, cat string) (chan swarm.Object, chan swarm.Object) {
 	logger.Notice("init %s sender for %s", q.id, cat)
 
 	// TODO: configurable queue
-	sock := make(chan swarm.Event, 100)
-	fail := make(chan swarm.Event, 100)
+	sock := make(chan swarm.Object, 100)
+	fail := make(chan swarm.Object, 100)
 
-	pipe.ForEach(sock, func(object swarm.Event) {
+	pipe.ForEach(sock, func(object swarm.Object) {
 		q.qSend <- q.mkBag(cat, object, fail)
 	})
 
@@ -254,7 +254,7 @@ func (q *Queue) stopForSend() {
 		}
 
 		// emit control message to ensure that queue is idle
-		ctrl := make(chan swarm.Event)
+		ctrl := make(chan swarm.Object)
 		q.qSend <- q.mkBag("", swarm.Bytes("+++"), ctrl)
 		<-ctrl
 
