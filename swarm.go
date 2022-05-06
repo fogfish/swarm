@@ -8,8 +8,6 @@
 
 package swarm
 
-import "context"
-
 /*
 
 Category of message (aka subject or topic), each message has unique type
@@ -54,13 +52,13 @@ type EventBus interface {
 	ID() string
 
 	// Send connects to queueing broker and returns channel to send messages
-	Send() (chan<- *Bag, error)
+	Send() (chan *Bag, error)
 
 	// Recv connects to queueing broker and returns channel to recv messages
-	Recv() (<-chan *Bag, error)
+	Recv() (chan *Bag, error)
 
 	// Conf connects to queueing broker and returns channel to confirm processed messages
-	Conf() (chan<- *Bag, error)
+	Conf() (chan *Bag, error)
 }
 
 /*
@@ -105,7 +103,7 @@ type System interface {
 	/*
 	  Spawn go routine in context of system
 	*/
-	Go(func(context.Context))
+	// Go(func(context.Context))
 }
 
 /*

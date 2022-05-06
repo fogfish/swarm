@@ -1,10 +1,10 @@
 package system
 
 import (
-	"context"
 	"sync"
 	"time"
 
+	"github.com/fogfish/golem/pipe"
 	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
 )
@@ -44,9 +44,9 @@ type Queue struct {
 	ctrl chan tMailbox
 
 	queue swarm.EventBus
-	qSend chan<- *swarm.Bag
-	qRecv <-chan *swarm.Bag
-	qConf chan<- *swarm.Bag
+	qSend chan *swarm.Bag
+	qRecv chan *swarm.Bag
+	qConf chan *swarm.Bag
 
 	recv map[swarm.Category]msgRecv
 	send map[swarm.Category]msgSend
@@ -66,32 +66,32 @@ func NewQueue(sys *system, queue swarm.EventBus) *Queue {
 //
 //
 func (q *Queue) dispatch() {
-	q.sys.Go(func(ctx context.Context) {
+	go func() {
 		logger.Notice("init %s dispatch", q.id)
-		defer close(q.ctrl)
 		mailboxes := map[swarm.Category]chan swarm.MsgV0{}
 
-		// TODO: this is a temporary solution to pass tests
-		//       mbox <- message.Object fails when system is shutdown
+		// Note: this is required to gracefull stop dispatcher when channel is closed
 		defer func() {
 			if err := recover(); err != nil {
-				logger.Error("fail %s dispatch: %v", q.id, err)
 			}
+			logger.Notice("free %s dispatch", q.id)
 		}()
 
 		for {
 			select {
 			//
-			case <-ctx.Done():
-				logger.Notice("free %s dispatch", q.id)
-				return
-
-			//
-			case mbox := <-q.ctrl:
+			case mbox, ok := <-q.ctrl:
+				if !ok {
+					return
+				}
 				mailboxes[mbox.id] = mbox.channel
 
 			//
-			case message := <-q.qRecv:
+			case message, ok := <-q.qRecv:
+				if !ok {
+					return
+				}
+
 				mbox, exists := mailboxes[message.Category]
 				if exists {
 					// TODO: blocked until actor consumes it
@@ -103,7 +103,7 @@ func (q *Queue) dispatch() {
 				}
 			}
 		}
-	})
+	}()
 }
 
 //
@@ -143,26 +143,13 @@ func (q *Queue) Recv(cat swarm.Category) (<-chan swarm.MsgV0, chan<- swarm.MsgV0
 spawnRecvTypeOf creates a dedicated go routine to proxy "typed" messages to queue
 */
 func spawnRecvOf(q *Queue, cat swarm.Category) (chan swarm.MsgV0, chan swarm.MsgV0) {
+	logger.Notice("init %s receiver for %s", q.id, cat)
+
 	mbox := make(chan swarm.MsgV0)
 	acks := make(chan swarm.MsgV0)
 
-	q.sys.Go(func(ctx context.Context) {
-		logger.Notice("init %s receiver for %s", q.id, cat)
-		defer close(mbox)
-		defer close(acks)
-
-		for {
-			select {
-			//
-			case <-ctx.Done():
-				logger.Notice("free %s receiver for %s", q.id, cat)
-				return
-
-			//
-			case object := <-acks:
-				q.qConf <- q.mkBag(cat, object, nil)
-			}
-		}
+	pipe.ForEach(acks, func(object swarm.MsgV0) {
+		q.qConf <- q.mkBag(cat, object, nil)
 	})
 
 	return mbox, acks
@@ -186,35 +173,14 @@ func (q *Queue) Send(cat swarm.Category) (chan<- swarm.MsgV0, <-chan swarm.MsgV0
 }
 
 func spawnSendOf(q *Queue, cat swarm.Category) (chan swarm.MsgV0, chan swarm.MsgV0) {
+	logger.Notice("init %s sender for %s", q.id, cat)
+
 	// TODO: configurable queue
 	sock := make(chan swarm.MsgV0, 100)
 	fail := make(chan swarm.MsgV0, 100)
 
-	q.sys.Go(func(ctx context.Context) {
-		logger.Notice("init %s sender for %s", q.id, cat)
-		defer close(sock)
-		defer close(fail)
-
-		// TODO: this is a temporary solution to pass tests
-		//       mbox <- message.Object fails when system is shutdown
-		defer func() {
-			if err := recover(); err != nil {
-				logger.Error("queue %s sender for %s failed %v", q.id, cat, err)
-			}
-		}()
-
-		for {
-			select {
-			//
-			case <-ctx.Done():
-				logger.Notice("free %s sender for %s", q.id, cat)
-				return
-
-			//
-			case object := <-sock:
-				q.qSend <- q.mkBag(cat, object, fail)
-			}
-		}
+	pipe.ForEach(sock, func(object swarm.MsgV0) {
+		q.qSend <- q.mkBag(cat, object, fail)
 	})
 
 	return sock, fail
@@ -222,6 +188,18 @@ func spawnSendOf(q *Queue, cat swarm.Category) (chan swarm.MsgV0, chan swarm.Msg
 
 // Wait activates queue transport protocol
 func (q *Queue) Listen() error {
+	if err := q.listenForSend(); err != nil {
+		return err
+	}
+
+	if err := q.listenForRecv(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (q *Queue) listenForSend() error {
 	if len(q.send) > 0 {
 		ch, err := q.queue.Send()
 		if err != nil {
@@ -229,9 +207,10 @@ func (q *Queue) Listen() error {
 		}
 		q.qSend = ch
 	}
+	return nil
+}
 
-	// on receive, we need to listen when all consumers are connected
-	// basically when sys.Wait() is called
+func (q *Queue) listenForRecv() error {
 	if len(q.recv) > 0 {
 		rcv, err := q.queue.Recv()
 		if err != nil {
@@ -246,7 +225,6 @@ func (q *Queue) Listen() error {
 		q.qConf = cnf
 		q.dispatch()
 	}
-
 	return nil
 }
 
@@ -255,7 +233,12 @@ func (q *Queue) Listen() error {
 Wait until queue idle
 */
 func (q *Queue) Stop() {
-	if len(q.send) > 0 {
+	q.stopForSend()
+	q.stopForRecv()
+}
+
+func (q *Queue) stopForSend() {
+	if q.send != nil && len(q.send) > 0 {
 		for {
 			time.Sleep(100 * time.Millisecond)
 			inflight := 0
@@ -274,5 +257,29 @@ func (q *Queue) Stop() {
 		ctrl := make(chan swarm.MsgV0)
 		q.qSend <- q.mkBag("", swarm.Bytes("+++"), ctrl)
 		<-ctrl
+
+		close(q.qSend)
+
+		for _, v := range q.send {
+			close(v.msg)
+			close(v.err)
+		}
+
+		q.send = nil
+	}
+}
+
+func (q *Queue) stopForRecv() {
+	if q.recv != nil && len(q.recv) > 0 {
+		close(q.qRecv)
+		close(q.qConf)
+		close(q.ctrl)
+
+		for _, v := range q.recv {
+			close(v.msg)
+			close(v.ack)
+		}
+
+		q.recv = nil
 	}
 }

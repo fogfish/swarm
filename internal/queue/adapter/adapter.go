@@ -9,9 +9,9 @@
 package adapter
 
 import (
-	"context"
-	"time"
+	"fmt"
 
+	"github.com/fogfish/golem/pipe"
 	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
 )
@@ -48,38 +48,26 @@ calls of queueing system interface
 
 AdaptSend builds a channel to listen for incoming Bags and relay it to the function
 */
-func Send(q *Adapter, f func(msg *swarm.Bag) error) chan<- *swarm.Bag {
+func Send(q *Adapter, f func(msg *swarm.Bag) error) chan *swarm.Bag {
+	q.logger.Notice("init send")
+
 	sock := make(chan *swarm.Bag, q.Policy.QueueCapacity)
 
-	q.sys.Go(func(ctx context.Context) {
-		q.logger.Notice("init send")
-		defer close(sock)
+	pipe.ForEach(sock, func(msg *swarm.Bag) {
+		// TODO: add message type control
+		// the control message to ensure that channels are free
+		raw := msg.Object.Bytes()
+		if string(raw[:3]) == "+++" {
+			msg.StdErr <- msg.Object
+			return
+		}
 
-		for {
-			select {
-			//
-			case <-ctx.Done():
-				q.logger.Notice("free send")
-				return
-
-			//
-			case msg := <-sock:
-				// TODO: add message type control
-				// the control message to ensure that channels are free
-				raw := msg.Object.Bytes()
-				if string(raw[:3]) == "+++" {
-					msg.StdErr <- msg.Object
-					continue
-				}
-
-				err := q.Policy.BackoffIO.Retry(func() error { return f(msg) })
-				if err != nil {
-					// TODO: the progress of sender is blocked until
-					//       failed message is consumed
-					msg.StdErr <- msg.Object
-					q.logger.Debug("failed to send message %v", err)
-				}
-			}
+		err := q.Policy.BackoffIO.Retry(func() error { return f(msg) })
+		if err != nil {
+			// TODO: the progress of sender is blocked until
+			//       failed message is consumed
+			msg.StdErr <- msg.Object
+			q.logger.Debug("failed to send message %v", err)
 		}
 	})
 
@@ -91,46 +79,27 @@ func Send(q *Adapter, f func(msg *swarm.Bag) error) chan<- *swarm.Bag {
 Recv create go routine to adapt async i/o over Golang channel to synchronous
 calls of queueing system interface
 */
-func Recv(q *Adapter, f func() (*swarm.Bag, error)) <-chan *swarm.Bag {
-	freq := q.Policy.PollFrequency
-	sock := make(chan *swarm.Bag)
+func Recv(q *Adapter, f func() (*swarm.Bag, error)) chan *swarm.Bag {
+	q.logger.Notice("init recv")
 
-	q.sys.Go(func(ctx context.Context) {
-		q.logger.Notice("init recv")
-		defer close(sock)
-
-		for {
-			select {
-			//
-			case <-ctx.Done():
-				q.logger.Notice("free recv")
+	return pipe.From(0, q.Policy.PollFrequency, func() (*swarm.Bag, error) {
+		var msg *swarm.Bag
+		err := q.Policy.BackoffIO.Retry(
+			func() (e error) {
+				msg, e = f()
 				return
-
-			//
-			case <-time.After(freq):
-				var msg *swarm.Bag
-				err := q.Policy.BackoffIO.Retry(
-					func() (e error) {
-						msg, e = f()
-						return
-					},
-				)
-
-				if err != nil {
-					q.logger.Error("Unable to receive message %v", err)
-					break
-				}
-
-				if msg != nil {
-					// TODO: send is blocked here until actor consumes the message.
-					//       https://go101.org/article/channel-closing.html
-					sock <- msg
-				}
-			}
+			},
+		)
+		if err != nil {
+			q.logger.Error("Unable to receive message %v", err)
+			return nil, err
 		}
-	})
+		if msg == nil {
+			return nil, fmt.Errorf("Nothing is received")
+		}
 
-	return sock
+		return msg, nil
+	})
 }
 
 /*
@@ -138,32 +107,20 @@ func Recv(q *Adapter, f func() (*swarm.Bag, error)) <-chan *swarm.Bag {
 Conf create go routine to adapt async i/o over Golang channel to synchronous
 calls of queueing system interface
 */
-func Conf(q *Adapter, f func(msg *swarm.Msg) error) chan<- *swarm.Bag {
+func Conf(q *Adapter, f func(msg *swarm.Msg) error) chan *swarm.Bag {
+	q.logger.Notice("init conf")
+
 	conf := make(chan *swarm.Bag)
 
-	q.sys.Go(func(ctx context.Context) {
-		q.logger.Notice("init conf")
-		defer close(conf)
-
-		for {
-			select {
-			//
-			case <-ctx.Done():
-				q.logger.Notice("free conf")
-				return
-
-			//
-			case bag := <-conf:
-				switch msg := bag.Object.(type) {
-				case *swarm.Msg:
-					err := q.Policy.BackoffIO.Retry(func() error { return f(msg) })
-					if err != nil {
-						q.logger.Error("Unable to conf message %v", err)
-					}
-				default:
-					q.logger.Notice("Unsupported conf type %v", bag)
-				}
+	pipe.ForEach(conf, func(bag *swarm.Bag) {
+		switch msg := bag.Object.(type) {
+		case *swarm.Msg:
+			err := q.Policy.BackoffIO.Retry(func() error { return f(msg) })
+			if err != nil {
+				q.logger.Error("Unable to conf message %v", err)
 			}
+		default:
+			q.logger.Notice("Unsupported conf type %v", bag)
 		}
 	})
 

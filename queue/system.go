@@ -45,6 +45,10 @@ func SQS(sys swarm.System, queue string, opts ...*swarm.Policy) (swarm.Queue, er
 	return sys.Queue(q), nil
 }
 
+/*
+
+EventBridge ...
+*/
 func EventBridge(sys swarm.System, queue string, opts ...*swarm.Policy) (swarm.Queue, error) {
 	policy := swarm.DefaultPolicy()
 	if len(opts) > 0 {

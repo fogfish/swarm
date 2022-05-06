@@ -9,4 +9,7 @@ require (
 	github.com/fogfish/logger v1.0.0
 )
 
-require github.com/jmespath/go-jmespath v0.4.0 // indirect
+require (
+	github.com/fogfish/golem v0.8.2 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
+)

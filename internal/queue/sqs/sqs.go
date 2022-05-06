@@ -97,7 +97,7 @@ func (q *Queue) ID() string {
 
 spawnSendIO create go routine for emiting messages
 */
-func (q *Queue) Send() (chan<- *swarm.Bag, error) {
+func (q *Queue) Send() (chan *swarm.Bag, error) {
 	if q.url == nil {
 		if err := q.lookupQueue(q.id); err != nil {
 			return nil, err
@@ -124,7 +124,7 @@ func (q *Queue) send(msg *swarm.Bag) error {
 
 //
 //
-func (q *Queue) Recv() (<-chan *swarm.Bag, error) {
+func (q *Queue) Recv() (chan *swarm.Bag, error) {
 	if q.url == nil {
 		if err := q.lookupQueue(q.id); err != nil {
 			return nil, err
@@ -173,7 +173,7 @@ func attr(msg *sqs.Message, key string) string {
 	return *val.StringValue
 }
 
-func (q *Queue) Conf() (chan<- *swarm.Bag, error) {
+func (q *Queue) Conf() (chan *swarm.Bag, error) {
 	if q.url == nil {
 		if err := q.lookupQueue(q.id); err != nil {
 			return nil, err

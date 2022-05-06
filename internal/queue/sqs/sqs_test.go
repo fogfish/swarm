@@ -46,45 +46,8 @@ func TestSQS(t *testing.T) {
 	qtest.TestRecv(t, mkQueue)
 }
 
-// func TestRecv(t *testing.T) {
-// 	side := make(chan string)
-
-// 	sys := system.New("test")
-// 	queue := sys.Queue("test", swarm.Must(sut.New(sys, "test", mock(side))))
-
-// 	msg, _ := queue.Recv(subject)
-
-// 	go sys.Wait()
-
-// 	// 	t.Run("Success", func(t *testing.T) {
-// 	// 		msg, _ := queue.Recv(subject)
-// 	// 		queue.Listen()
-
-// 	val := <-msg
-
-// 	// 		it.Ok(t).
-// 	// 			If(val.Bytes()).Equal([]byte(message))
-// 	// 	})
-
-// 	// 	t.Run("Acknowledge", func(t *testing.T) {
-// 	// 		msg, ack := queue.Recv(subject)
-// 	// 		queue.Listen()
-
-// 	// 		val := <-msg
-// 	// 		ack <- val
-
-// 	// 		it.Ok(t).
-// 	// 			If(<-side).Equal("ack")
-// 	// 	})
-
-// 	sys.Stop()
-
-// 	it.Ok(t).
-// 		If(val.Bytes()).Equal([]byte(message))
-
-// 	// 	time.Sleep(3 * time.Second)
-// }
-
+//
+//
 type mockSQS struct {
 	sqsiface.SQSAPI
 

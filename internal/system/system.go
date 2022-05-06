@@ -58,14 +58,6 @@ func (sys *system) ID() string {
 
 /*
 
-Spawn go routine in context of system
-*/
-func (sys *system) Go(f func(context.Context)) {
-	go f(sys.context)
-}
-
-/*
-
 Listen ...
 */
 func (sys *system) Listen() error {

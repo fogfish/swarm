@@ -95,7 +95,7 @@ func (q *Queue) ID() string {
 
 spawnSendIO create go routine for emiting messages
 */
-func (q *Queue) Send() (chan<- *swarm.Bag, error) {
+func (q *Queue) Send() (chan *swarm.Bag, error) {
 	return adapter.Send(q.adapter, q.send), nil
 }
 
@@ -122,7 +122,7 @@ func (q *Queue) send(msg *swarm.Bag) error {
 	return nil
 }
 
-func (q *Queue) Recv() (<-chan *swarm.Bag, error) {
+func (q *Queue) Recv() (chan *swarm.Bag, error) {
 	sock := make(chan *swarm.Bag)
 	conf := make(chan *swarm.Bag)
 
@@ -158,6 +158,6 @@ func (q *Queue) Recv() (<-chan *swarm.Bag, error) {
 	return sock, nil
 }
 
-func (q *Queue) Conf() (chan<- *swarm.Bag, error) {
+func (q *Queue) Conf() (chan *swarm.Bag, error) {
 	return q.qconf, nil
 }
