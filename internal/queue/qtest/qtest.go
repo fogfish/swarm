@@ -25,7 +25,9 @@ func TestSend(
 	queue := sys.Queue(factory(sys, swarm.DefaultPolicy(), eff))
 
 	out, _ := queue.Send(Category)
-	sys.Listen()
+	if err := sys.Listen(); err != nil {
+		panic(err)
+	}
 
 	t.Run("Success", func(t *testing.T) {
 		out <- swarm.Bytes(Message)
@@ -56,7 +58,9 @@ func TestRecv(
 	queue := sys.Queue(factory(sys, swarm.DefaultPolicy(), eff))
 
 	msg, ack := queue.Recv(Category)
-	sys.Listen()
+	if err := sys.Listen(); err != nil {
+		panic(err)
+	}
 
 	t.Run("Success", func(t *testing.T) {
 		val := <-msg

@@ -12,10 +12,10 @@ import (
 	sut "github.com/fogfish/swarm/internal/queue/sqs"
 )
 
-const (
-	subject = "sqs.test"
-	message = "some message"
-)
+// const (
+// 	subject = "sqs.test"
+// 	message = "some message"
+// )
 
 // func TestNew(t *testing.T) {
 // 	side := make(chan string)
