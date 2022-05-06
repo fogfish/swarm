@@ -27,17 +27,19 @@ func Must(q swarm.Queue, err error) swarm.Queue {
 	return q
 }
 
+func policy(opts []*swarm.Policy) *swarm.Policy {
+	if len(opts) > 0 {
+		return opts[0]
+	}
+	return swarm.DefaultPolicy()
+}
+
 /*
 
 SQS ...
 */
 func SQS(sys swarm.System, queue string, opts ...*swarm.Policy) (swarm.Queue, error) {
-	policy := swarm.DefaultPolicy()
-	if len(opts) > 0 {
-		policy = opts[0]
-	}
-
-	q, err := sqs.New(sys, queue, policy)
+	q, err := sqs.New(sys, queue, policy(opts))
 	if err != nil {
 		return nil, err
 	}
@@ -50,12 +52,7 @@ func SQS(sys swarm.System, queue string, opts ...*swarm.Policy) (swarm.Queue, er
 EventBridge ...
 */
 func EventBridge(sys swarm.System, queue string, opts ...*swarm.Policy) (swarm.Queue, error) {
-	policy := swarm.DefaultPolicy()
-	if len(opts) > 0 {
-		policy = opts[0]
-	}
-
-	q, err := eventbridge.New(sys, queue, policy)
+	q, err := eventbridge.New(sys, queue, policy(opts))
 	if err != nil {
 		return nil, err
 	}
