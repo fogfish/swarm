@@ -5,153 +5,59 @@ import (
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
 	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/internal/queue/adapter"
 )
 
 /*
 
 Queue ...
 */
-type Queue struct {
-	adapter *adapter.Adapter
-	id      string
-	sys     swarm.System
+type Recver struct {
+	id     string
+	sys    swarm.System
+	policy *swarm.Policy
 
-	qrecv chan *swarm.Bag
-	qconf chan *swarm.Bag
+	sock chan *swarm.Bag
+	sack chan *swarm.Bag
 
-	url   *string
-	SQS   sqsiface.SQSAPI
-	Start func(interface{})
+	start func(interface{})
 }
 
 /*
 
 New ...
 */
-func New(
+func NewRecver(
 	sys swarm.System,
-	id string,
+	queue string,
 	policy *swarm.Policy,
-	defSession ...*session.Session,
-) (*Queue, error) {
-	logger := logger.With(logger.Note{
-		"type": "eventbridge",
-		"q":    id,
-	})
-	q := &Queue{
-		id:      id,
-		sys:     sys,
-		adapter: adapter.New(sys, policy, logger),
-		Start:   lambda.Start,
-	}
-	if err := q.newSession(defSession); err != nil {
-		return nil, err
-	}
+) *Recver {
+	return &Recver{
+		id:     queue,
+		sys:    sys,
+		policy: policy,
 
-	return q, nil
+		sock: make(chan *swarm.Bag),
+		sack: make(chan *swarm.Bag),
+	}
 }
 
 //
-func (q *Queue) Mock(mock sqsiface.SQSAPI) {
-	q.SQS = mock
+func (q *Recver) Mock(mock func(interface{})) {
+	q.start = mock
 }
 
-//
-func (q *Queue) MockLambda(mock func(interface{})) {
-	q.Start = mock
-}
-
-//
-func (q *Queue) newSession(defSession []*session.Session) error {
-	if len(defSession) != 0 {
-		q.SQS = sqs.New(defSession[0])
-		return nil
-	}
-
-	awscli, err := session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-	})
-	if err != nil {
-		return fmt.Errorf("Failed to create aws client %w", err)
-	}
-
-	q.SQS = sqs.New(awscli)
-	return nil
-}
-
-func (q *Queue) ID() string {
+func (q *Recver) ID() string {
 	return q.id
 }
 
-//
-func (q *Queue) lookupQueue(id string) error {
-	spec, err := q.SQS.GetQueueUrl(
-		&sqs.GetQueueUrlInput{
-			QueueName: aws.String(id),
-		},
-	)
-
-	if err != nil {
-		return fmt.Errorf("Failed to discover %s aws sqs: %w", id, err)
-	}
-
-	q.url = spec.QueueUrl
-	return nil
-}
-
-/*
-
-spawnSendIO create go routine for emiting messages
-*/
-func (q *Queue) Send() (chan *swarm.Bag, error) {
-	if q.url == nil {
-		if err := q.lookupQueue(q.id); err != nil {
-			return nil, err
-		}
-	}
-
-	return adapter.Send(q.adapter, q.send), nil
-}
-
-func (q *Queue) send(msg *swarm.Bag) error {
-	_, err := q.SQS.SendMessage(
-		&sqs.SendMessageInput{
-			MessageAttributes: map[string]*sqs.MessageAttributeValue{
-				"Category": {StringValue: aws.String(msg.Category), DataType: aws.String("String")},
-				"System":   {StringValue: aws.String(msg.System), DataType: aws.String("String")},
-				"Queue":    {StringValue: aws.String(msg.Queue), DataType: aws.String("String")},
-			},
-			MessageBody: aws.String(string(msg.Object.Bytes())),
-			QueueUrl:    q.url,
-		},
-	)
-
-	return err
-}
-
-func (q *Queue) Recv() (chan *swarm.Bag, error) {
-	if q.url == nil {
-		if err := q.lookupQueue(q.id); err != nil {
-			return nil, err
-		}
-	}
-
-	sock := make(chan *swarm.Bag)
-	conf := make(chan *swarm.Bag)
-
+func (q *Recver) Start() error {
 	go func() {
-		logger.Notice("init aws eventbridge recv %s", q.id)
+		logger.Notice("init aws eventsqs recv %s", q.id)
 
 		// Note: this indirect synonym for lambda.Start
-		q.Start(
+		q.start(
 			func(events events.SQSEvent) error {
 				logger.Debug("cloudwatch event %+v", events)
 
@@ -159,7 +65,7 @@ func (q *Queue) Recv() (chan *swarm.Bag, error) {
 
 				for _, evt := range events.Records {
 					acks[evt.ReceiptHandle] = false
-					sock <- &swarm.Bag{
+					q.sock <- &swarm.Bag{
 						Category: attr(&evt, "Category"),
 						System:   attr(&evt, "System"),
 						Queue:    attr(&evt, "Queue"),
@@ -172,7 +78,7 @@ func (q *Queue) Recv() (chan *swarm.Bag, error) {
 
 				for {
 					select {
-					case bag := <-conf:
+					case bag := <-q.sack:
 						switch msg := bag.Object.(type) {
 						case *swarm.Msg:
 							delete(acks, msg.Receipt)
@@ -182,7 +88,7 @@ func (q *Queue) Recv() (chan *swarm.Bag, error) {
 						default:
 							return fmt.Errorf("unsupported conf type %v", bag)
 						}
-					case <-time.After(q.adapter.Policy.TimeToFlight):
+					case <-time.After(q.policy.TimeToFlight):
 						return fmt.Errorf("sqs message ack timeout")
 					}
 				}
@@ -192,8 +98,7 @@ func (q *Queue) Recv() (chan *swarm.Bag, error) {
 		q.sys.Stop()
 	}()
 
-	q.qconf = conf
-	return sock, nil
+	return nil
 }
 
 func attr(msg *events.SQSMessage, key string) string {
@@ -205,6 +110,19 @@ func attr(msg *events.SQSMessage, key string) string {
 	return *val.StringValue
 }
 
-func (q *Queue) Conf() (chan *swarm.Bag, error) {
-	return q.qconf, nil
+//
+//
+func (q *Recver) Close() error {
+	close(q.sock)
+	close(q.sack)
+
+	return nil
+}
+
+func (q *Recver) Recv() chan *swarm.Bag {
+	return q.sock
+}
+
+func (q *Recver) Conf() chan *swarm.Bag {
+	return q.sack
 }

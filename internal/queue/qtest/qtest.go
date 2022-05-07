@@ -16,7 +16,7 @@ const (
 
 func TestSend(
 	t *testing.T,
-	factory func(swarm.System, *swarm.Policy, chan string) swarm.EventBus,
+	factory func(swarm.System, *swarm.Policy, chan string) (swarm.Sender, swarm.Recver),
 ) {
 	t.Helper()
 
@@ -31,7 +31,6 @@ func TestSend(
 
 	t.Run("Success", func(t *testing.T) {
 		out <- swarm.Bytes(Message)
-
 		it.Ok(t).
 			If(<-eff).Equal(Message)
 	})
@@ -49,7 +48,7 @@ func TestSend(
 
 func TestRecv(
 	t *testing.T,
-	factory func(swarm.System, *swarm.Policy, chan string) swarm.EventBus,
+	factory func(swarm.System, *swarm.Policy, chan string) (swarm.Sender, swarm.Recver),
 ) {
 	t.Helper()
 

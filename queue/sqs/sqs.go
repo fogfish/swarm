@@ -24,12 +24,15 @@ func New(sys swarm.System, queue string, opts ...*swarm.Policy) (swarm.Queue, er
 		policy = opts[0]
 	}
 
-	q, err := sqs.New(sys, queue, policy)
+	awscli, err := system.NewSession()
 	if err != nil {
 		return nil, err
 	}
 
-	return sys.Queue(q), nil
+	qs := sqs.NewSender(sys, queue, policy, awscli)
+	qr := sqs.NewRecver(sys, queue, policy, awscli)
+
+	return sys.Queue(qs, qr), nil
 }
 
 /*

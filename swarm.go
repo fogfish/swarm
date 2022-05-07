@@ -83,6 +83,21 @@ type Bag struct {
 	StdErr chan<- Object
 }
 
+type Sender interface {
+	ID() string
+	Start() error
+	Close() error
+	Send() chan *Bag
+}
+
+type Recver interface {
+	ID() string
+	Start() error
+	Close() error
+	Recv() chan *Bag
+	Conf() chan *Bag
+}
+
 /*
 
 EventBus is an an abstraction of transport protocol(s) to send & recv events
@@ -124,7 +139,7 @@ System ...
 */
 type System interface {
 	// Queue creates new queuing endpoint
-	Queue(EventBus) Queue
+	Queue(Sender, Recver) Queue
 
 	// Listen ...
 	Listen() error

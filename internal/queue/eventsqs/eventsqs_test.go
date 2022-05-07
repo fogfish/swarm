@@ -12,32 +12,29 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
 	"github.com/fogfish/swarm"
-	sut "github.com/fogfish/swarm/internal/queue/eventsqs"
+	sutRecv "github.com/fogfish/swarm/internal/queue/eventsqs"
 	"github.com/fogfish/swarm/internal/queue/qtest"
+	sutSend "github.com/fogfish/swarm/internal/queue/sqs"
+	"github.com/fogfish/swarm/internal/system"
 )
 
-func mkSend(sys swarm.System, policy *swarm.Policy, eff chan string) swarm.EventBus {
-	q, err := sut.New(sys, "test-bridge", policy)
+func mkQueue(sys swarm.System, policy *swarm.Policy, eff chan string) (swarm.Sender, swarm.Recver) {
+	awscli, err := system.NewSession()
 	if err != nil {
 		panic(err)
 	}
-	q.Mock(&mockSQS{loopback: eff})
-	return q
-}
 
-func mkRecv(sys swarm.System, policy *swarm.Policy, eff chan string) swarm.EventBus {
-	q, err := sut.New(sys, "test-bridge", policy)
-	if err != nil {
-		panic(err)
-	}
-	q.Mock(&mockSQS{loopback: eff})
-	q.MockLambda(mockLambda(eff))
-	return q
+	s := sutSend.NewSender(sys, "test-sqs", policy, awscli)
+	s.Mock(&mockSQS{loopback: eff})
+
+	r := sutRecv.NewRecver(sys, "test-bridge", policy)
+	r.Mock(mockLambda(eff))
+	return s, r
 }
 
 func TestEventSQS(t *testing.T) {
-	qtest.TestSend(t, mkSend)
-	qtest.TestRecv(t, mkRecv)
+	qtest.TestSend(t, mkQueue)
+	qtest.TestRecv(t, mkQueue)
 }
 
 //

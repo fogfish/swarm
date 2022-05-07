@@ -39,12 +39,12 @@ func NewSystem(id string) swarm.System {
 
 Queue ...
 */
-func (sys *system) Queue(q swarm.EventBus) swarm.Queue {
+func (sys *system) Queue(send swarm.Sender, recv swarm.Recver) swarm.Queue {
 	sys.Lock()
 	defer sys.Unlock()
 
-	queue := NewQueue(sys, q)
-	sys.queue[q.ID()] = queue
+	queue := NewQueue(sys, send, recv)
+	sys.queue[send.ID()] = queue
 	return queue
 }
 

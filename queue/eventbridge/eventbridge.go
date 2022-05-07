@@ -24,12 +24,15 @@ func New(sys swarm.System, queue string, opts ...*swarm.Policy) (swarm.Queue, er
 		policy = opts[0]
 	}
 
-	q, err := eventbridge.New(sys, queue, policy)
+	awscli, err := system.NewSession()
 	if err != nil {
 		return nil, err
 	}
 
-	return sys.Queue(q), nil
+	qs := eventbridge.NewSender(sys, queue, policy, awscli)
+	qr := eventbridge.NewRecver(sys, queue, policy)
+
+	return sys.Queue(qs, qr), nil
 }
 
 /*

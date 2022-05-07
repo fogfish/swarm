@@ -10,40 +10,29 @@ import (
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/internal/queue/qtest"
 	sut "github.com/fogfish/swarm/internal/queue/sqs"
+	"github.com/fogfish/swarm/internal/system"
 )
-
-// const (
-// 	subject = "sqs.test"
-// 	message = "some message"
-// )
-
-// func TestNew(t *testing.T) {
-// 	side := make(chan string)
-// 	sys := swarm.New("test")
-
-// 	swarm.Must(
-// 		sut.New(sys, "swarm-test",
-// 			mock(side),
-// 			sut.PolicyIO(backoff.Const(1*time.Second, 3)),
-// 			sut.PolicyPoll(1*time.Second),
-// 		),
-// 	)
-
-// 	sys.Stop()
-// }
-
-func mkQueue(sys swarm.System, policy *swarm.Policy, eff chan string) swarm.EventBus {
-	q, err := sut.New(sys, "test-sqs", policy)
-	if err != nil {
-		panic(err)
-	}
-	q.Mock(&mockSQS{loopback: eff})
-	return q
-}
 
 func TestSQS(t *testing.T) {
 	qtest.TestSend(t, mkQueue)
 	qtest.TestRecv(t, mkQueue)
+}
+
+//
+//
+func mkQueue(sys swarm.System, policy *swarm.Policy, eff chan string) (swarm.Sender, swarm.Recver) {
+	awscli, err := system.NewSession()
+	if err != nil {
+		panic(err)
+	}
+
+	s := sut.NewSender(sys, "test-sqs", policy, awscli)
+	s.Mock(&mockSQS{loopback: eff})
+
+	r := sut.NewRecver(sys, "test-sqs", policy, awscli)
+	r.Mock(&mockSQS{loopback: eff})
+
+	return s, r
 }
 
 //
