@@ -10,12 +10,12 @@ package main
 
 import (
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/queue/sqs"
+	"github.com/fogfish/swarm/queue/eventsqs"
 )
 
 func main() {
-	sys := sqs.NewSystem("swarm-example-sqs")
-	q := sqs.Must(sqs.New(sys, "swarm-test"))
+	sys := eventsqs.NewSystem("swarm-example-eventsqs")
+	q := eventsqs.Must(eventsqs.New(sys, "swarm-test"))
 
 	a, _ := q.Send("sqs.test.a")
 	b, _ := q.Send("sqs.test.b")

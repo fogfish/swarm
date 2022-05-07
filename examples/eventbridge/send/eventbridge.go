@@ -10,12 +10,12 @@ package main
 
 import (
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/queue"
+	"github.com/fogfish/swarm/queue/eventbridge"
 )
 
 func main() {
-	sys := queue.System("test")
-	queue := queue.Must(queue.EventBridge(sys, "swarm-test"))
+	sys := eventbridge.NewSystem("swarm-example-eventbridge")
+	queue := eventbridge.Must(eventbridge.New(sys, "swarm-test"))
 
 	a, _ := queue.Send("eventbridge.test.a")
 	b, _ := queue.Send("eventbridge.test.b")

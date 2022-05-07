@@ -68,13 +68,13 @@ TODO: Identity id
  - System
  - Queue
  - Category (type)
- - ==> Or category:system/queue
+ - ==> Or system:queue/category
 
 */
 type Bag struct {
-	Category string
 	System   string
 	Queue    string
+	Category string
 
 	// message payload
 	Object Object

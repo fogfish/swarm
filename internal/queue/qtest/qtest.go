@@ -5,7 +5,7 @@ import (
 
 	"github.com/fogfish/it"
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/queue"
+	"github.com/fogfish/swarm/internal/system"
 )
 
 const (
@@ -21,7 +21,7 @@ func TestSend(
 	t.Helper()
 
 	eff := make(chan string, 1)
-	sys := queue.System("qtest")
+	sys := system.NewSystem("qtest")
 	queue := sys.Queue(factory(sys, swarm.DefaultPolicy(), eff))
 
 	out, _ := queue.Send(Category)
@@ -54,7 +54,7 @@ func TestRecv(
 	t.Helper()
 
 	eff := make(chan string, 1)
-	sys := queue.System("qtest")
+	sys := system.NewSystem("qtest")
 	queue := sys.Queue(factory(sys, swarm.DefaultPolicy(), eff))
 
 	msg, ack := queue.Recv(Category)

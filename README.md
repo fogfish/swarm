@@ -42,6 +42,7 @@ See [design pattern](./doc/pattern.md) to learn how to improve:
 1. **readability**: application uses idiomatic Go code instead of vendor specific interfaces (learning time) 
 2. **portability**: application is portable between various queuing systems in same manner as sockets abstracts networking stacks. (exchange tech stack, Develop against an in-memory)
 3. **testability**: (unit tests with no dependencies)
+4. **serverless** deployments
 
 <!-- TODO: Update inspiration -->
 
@@ -55,16 +56,26 @@ import (
   "github.com/fogfish/swarm/queue/sqs"
 )
 
-// spawn queue client
-sys := swarm.New("test")
-queue := swarm.Must(sqs.New(sys, "some-queue"))
+// create queueing system and instance of the queue
+sys := sqs.NewSystem("swarm-example-sqs")
+queue := sqs.Must(sqs.New(sys, "swarm-test"))
 
-// get Go channel to emit messages into queue
+// get Go channel to emit messages into queue and receive errors
 snd, _ := queue.Send("message-of-type-a")
-snd <- swarm.Bytes("{\"type\": \"a\", \"some\": \"message\"}")
 
 // get Go channel to recv messages from queue
 rcv, ack := queue.Recv("message-of-type-a")
+
+// spawn queue listeners. At this point the system spawns the transport
+// routines so that channels are ready for the communications
+if err := sys.Listen(); err != nil {
+  panic(err)
+}
+
+// emit message to the queue
+snd <- swarm.Bytes("{\"type\": \"a\", \"some\": \"message\"}")
+
+// receive message from queue
 for msg := range rcv {
   // do something with message
   ack <- msg
@@ -73,19 +84,21 @@ for msg := range rcv {
 sys.Stop()
 ```
 
-See [examples](example) folder for executable examples and code snippets for your projects.
+See [examples](examples) folder for executable examples, code snippets for your projects and receipts to build serverless applications.
 
 ## Supported queues
 
-- [x] Ephemeral (in-memory) built-in queue
-  - [ ] sending/receiving message
 - [x] AWS EventBridge
-  - [x] [sending message](example/eventbridge/send/eventbridge.go)
-  - [x] [receiving message](example/eventbridge/recv/eventbridge.go) through lambda handler
+  - [x] [sending message](examples/eventbridge/send/eventbridge.go)
+  - [x] [receiving message](examples/eventbridge/recv/eventbridge.go) using aws lambda
+  - [x] [aws cdk construct](examples/eventbridge/serverless/main.go)
+- [x] AWS SQS Serverless
+  - [x] [sending message](examples/eventsqs/send/eventsqs.go)
+  - [x] [receiving message](examples/eventsqs/recv/eventsqs.go) using aws lambda
+  - [x] [aws cdk construct](examples/eventsqs/serverless/main.go)
 - [x] AWS SQS
-  - [x] [sending message](example/sqs/send/sqs.go)
-  - [ ] receiving message through lambda handler
-  - [x] [receiving message](example/sqs/recv/sqs.go)
+  - [x] [sending message](examples/sqs/send/sqs.go)
+  - [x] [receiving message](examples/sqs/recv/sqs.go)
 - [ ] AWS SNS
   - [ ] sending message
 - [ ] AWS Kinesis

@@ -103,7 +103,7 @@ func (q *Queue) send(msg *swarm.Bag) error {
 	ret, err := q.Bus.PutEvents(&eventbridge.PutEventsInput{
 		Entries: []*eventbridge.PutEventsRequestEntry{
 			{
-				EventBusName: aws.String(q.id),
+				EventBusName: aws.String(msg.System),
 				Source:       aws.String(msg.Queue),
 				DetailType:   aws.String(msg.Category),
 				Detail:       aws.String(string(msg.Object.Bytes())),
@@ -135,7 +135,6 @@ func (q *Queue) Recv() (chan *swarm.Bag, error) {
 				logger.Debug("cloudwatch event %+v", evt)
 
 				sock <- &swarm.Bag{
-					System:   q.id,
 					Category: evt.DetailType,
 					Queue:    evt.Source,
 					Object: &swarm.Msg{

@@ -16,25 +16,6 @@ import (
 	"github.com/fogfish/swarm/internal/queue/qtest"
 )
 
-// const (
-// 	subject = "eventbridge.test"
-// 	message = "{\"some\":\"message\"}"
-// )
-
-// func TestNew(t *testing.T) {
-// 	side := make(chan string)
-// 	sys := swarm.New("test")
-
-// 	swarm.Must(
-// 		sut.New(sys, "swarm-test",
-// 			mock(side),
-// 			sut.PolicyIO(backoff.Const(1*time.Second, 3)),
-// 		),
-// 	)
-
-// 	sys.Stop()
-// }
-
 func mkSend(sys swarm.System, policy *swarm.Policy, eff chan string) swarm.EventBus {
 	q, err := sut.New(sys, "test-bridge", policy)
 	if err != nil {

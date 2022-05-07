@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	sys := eventsqs.NewSystem("swarm-example-sqs")
+	sys := eventsqs.NewSystem("swarm-example-eventsqs")
 	q := eventsqs.Must(eventsqs.New(sys, "swarm-test"))
 
 	go actor("a").handle(q.Recv("sqs.test.a"))
