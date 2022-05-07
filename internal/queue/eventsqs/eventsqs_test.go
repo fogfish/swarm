@@ -35,7 +35,7 @@ func mkRecv(sys swarm.System, policy *swarm.Policy, eff chan string) swarm.Event
 	return q
 }
 
-func TestEventBridge(t *testing.T) {
+func TestEventSQS(t *testing.T) {
 	qtest.TestSend(t, mkSend)
 	qtest.TestRecv(t, mkRecv)
 }
