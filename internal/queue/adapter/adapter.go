@@ -58,7 +58,9 @@ func Send(q *Adapter, f func(msg *swarm.Bag) error) chan *swarm.Bag {
 		// the control message to ensure that channels are free
 		raw := msg.Object.Bytes()
 		if string(raw[:3]) == "+++" {
-			msg.StdErr <- msg.Object
+			fmt.Println("///////////////////")
+			msg.Recover()
+			// msg.StdErr <- msg.Object
 			return
 		}
 
@@ -66,7 +68,8 @@ func Send(q *Adapter, f func(msg *swarm.Bag) error) chan *swarm.Bag {
 		if err != nil {
 			// TODO: the progress of sender is blocked until
 			//       failed message is consumed
-			msg.StdErr <- msg.Object
+			// msg.StdErr <- msg.Object
+			msg.Recover()
 			q.logger.Debug("failed to send message %v", err)
 		}
 	})

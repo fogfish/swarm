@@ -87,6 +87,7 @@ func (q *Sender) Send() chan *swarm.Bag {
 }
 
 func (q *Sender) send(msg *swarm.Bag) error {
+	fmt.Printf("sending %+v\n", msg)
 	_, err := q.client.SendMessage(
 		&sqs.SendMessageInput{
 			MessageAttributes: map[string]*sqs.MessageAttributeValue{
@@ -98,5 +99,7 @@ func (q *Sender) send(msg *swarm.Bag) error {
 			QueueUrl:    q.queue,
 		},
 	)
+	fmt.Printf("sendt %v %v\n", err, *q.queue)
+
 	return err
 }

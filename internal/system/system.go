@@ -48,6 +48,8 @@ func (sys *system) Queue(send swarm.Sender, recv swarm.Recver) swarm.Queue {
 	return queue
 }
 
+// func (sys *system)
+
 /*
 
 ID return unique system ID

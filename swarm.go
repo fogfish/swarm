@@ -81,6 +81,8 @@ type Bag struct {
 
 	//
 	StdErr chan<- Object
+
+	Recover func()
 }
 
 type Sender interface {
@@ -131,6 +133,16 @@ type Queue interface {
 	// - consider send failure as transport error (coupled design vs generic)
 	// - consider ack as additional channel (?)
 	// - consider Listen() <- chan error
+}
+
+/*
+
+Socket ~> pair of golang channels
+*/
+type Socket interface {
+	Send() chan Object
+	Fail() chan Object
+	Close()
 }
 
 /*

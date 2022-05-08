@@ -11,14 +11,14 @@ package main
 import (
 	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/queue/eventsqs"
+	"github.com/fogfish/swarm/queue/sqs"
 )
 
 func main() {
-	sys := eventsqs.NewSystem("swarm-example-sqs")
-	q := eventsqs.Must(eventsqs.New(sys, "swarm-test"))
+	sys := sqs.NewSystem("swarm-example-sqs")
+	q := sqs.Must(sqs.New(sys, "swarm-test"))
 
-	go actor("a").handle(q.Recv("sqs.test.a"))
+	go actor("a").handle(q.Recv("Note"))
 	go actor("b").handle(q.Recv("sqs.test.b"))
 	go actor("c").handle(q.Recv("sqs.test.c"))
 

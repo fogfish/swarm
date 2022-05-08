@@ -2,7 +2,6 @@ package system
 
 import (
 	"sync"
-	"time"
 
 	"github.com/fogfish/golem/pipe"
 	"github.com/fogfish/logger"
@@ -32,6 +31,37 @@ type msgRecv struct {
 	ack chan swarm.Object // channel to send acknowledgement
 }
 
+type Channels struct {
+	sync.Mutex
+	channels map[string]Closer
+}
+
+func NewChannels() Channels {
+	return Channels{
+		channels: make(map[string]Closer),
+	}
+}
+
+func (chs Channels) Length() int {
+	return len(chs.channels)
+}
+
+func (chs Channels) Attach(id string, ch Closer) {
+	chs.Lock()
+	defer chs.Unlock()
+
+	chs.channels[id] = ch
+}
+
+func (chs Channels) Close() {
+	chs.Lock()
+	defer chs.Unlock()
+
+	for _, ch := range chs.channels {
+		ch.Close()
+	}
+}
+
 /*
 
 Queue ...
@@ -46,8 +76,10 @@ type Queue struct {
 	qrecv swarm.Recver
 	recv  map[string]msgRecv
 
-	qsend swarm.Sender
-	send  map[string]msgSend
+	Sender swarm.Sender
+	qsend  swarm.Sender
+	send   map[string]msgSend
+	SendCh Channels
 }
 
 func NewQueue(
@@ -65,8 +97,10 @@ func NewQueue(
 		qrecv: qrecv,
 		recv:  make(map[string]msgRecv),
 
-		qsend: qsend,
-		send:  make(map[string]msgSend),
+		Sender: qsend,
+		qsend:  qsend,
+		send:   make(map[string]msgSend),
+		SendCh: NewChannels(),
 	}
 }
 
@@ -199,7 +233,7 @@ func spawnSendOf(q *Queue, cat string) (chan swarm.Object, chan swarm.Object) {
 
 // Wait activates queue transport protocol
 func (q *Queue) Listen() error {
-	if q.send != nil && len(q.send) > 0 {
+	if q.SendCh.Length() > 0 {
 		if err := q.qsend.Start(); err != nil {
 			return err
 		}
@@ -220,10 +254,10 @@ func (q *Queue) Listen() error {
 Wait until queue idle
 */
 func (q *Queue) Stop() {
-	if q.send != nil && len(q.send) > 0 {
+	if q.SendCh.Length() > 0 {
+		q.SendCh.Close()
 		q.sendWaitIdle()
-		q.qsend.Close()
-		q.sendClose()
+		q.Sender.Close()
 	}
 
 	if q.recv != nil && len(q.recv) > 0 {
@@ -233,32 +267,26 @@ func (q *Queue) Stop() {
 }
 
 func (q *Queue) sendWaitIdle() {
-	for {
-		time.Sleep(100 * time.Millisecond)
-		inflight := 0
-		for _, sock := range q.send {
-			inflight += len(sock.msg)
-		}
-		for _, fail := range q.send {
-			inflight += len(fail.err)
-		}
-		if inflight == 0 {
-			break
-		}
-	}
+	// for {
+	// 	time.Sleep(100 * time.Millisecond)
+	// 	inflight := 0
+	// 	for _, sock := range q.send {
+	// 		inflight += len(sock.msg)
+	// 	}
+	// 	for _, fail := range q.send {
+	// 		inflight += len(fail.err)
+	// 	}
+	// 	if inflight == 0 {
+	// 		break
+	// 	}
+	// }
 
 	// emit control message to ensure that queue is idle
-	ctrl := make(chan swarm.Object)
-	q.qsend.Send() <- q.mkBag("", swarm.Bytes("+++"), ctrl)
+	ctrl := make(chan struct{})
+	m := q.mkBag("", swarm.Bytes("+++"), nil)
+	m.Recover = func() { ctrl <- struct{}{} }
+	q.Sender.Send() <- m
 	<-ctrl
-}
-
-func (q *Queue) sendClose() {
-	for _, v := range q.send {
-		close(v.msg)
-		close(v.err)
-	}
-	q.qsend = nil
 }
 
 func (q *Queue) recvClose() {
