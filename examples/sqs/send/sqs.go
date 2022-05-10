@@ -9,40 +9,33 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/fogfish/swarm/queue"
 	"github.com/fogfish/swarm/queue/sqs"
 )
 
-type Note struct {
+type NoteA struct {
 	ID   string `json:"id"`
 	Text string `json:"text"`
 }
+
+type NoteB NoteA
+type NoteC NoteA
 
 func main() {
 	sys := sqs.NewSystem("swarm-example-sqs")
 	q := sqs.Must(sqs.New(sys, "swarm-test"))
 
-	a, _ := queue.Send[*Note](q)
-
-	// a, _ := q.Send("sqs.test.a")
-	// b, _ := q.Send("sqs.test.b")
-	// c, _ := q.Send("sqs.test.c")
+	a, _ := queue.Send[*NoteA](q)
+	b, _ := queue.Send[*NoteB](q)
+	c, _ := queue.Send[*NoteC](q)
 
 	if err := sys.Listen(); err != nil {
 		panic(err)
 	}
 
-	fmt.Println(a)
-
-	a <- &Note{ID: "a", Text: "message"}
-	// fmt.Println(<-e)
-
-	// time.Sleep(10 * time.Second)
-	// a <- swarm.Bytes("{\"type\": \"a\", \"some\": \"message\"}")
-	// b <- swarm.Bytes("{\"type\": \"b\", \"some\": \"message\"}")
-	// c <- swarm.Bytes("{\"type\": \"c\", \"some\": \"message\"}")
+	a <- &NoteA{ID: "a", Text: "message"}
+	b <- &NoteB{ID: "b", Text: "message"}
+	c <- &NoteC{ID: "c", Text: "message"}
 
 	sys.Stop()
 }

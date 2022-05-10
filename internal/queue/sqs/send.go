@@ -17,7 +17,7 @@ import (
 type Sender struct {
 	id      string
 	adapter *adapter.Adapter
-	sock    chan *swarm.Bag
+	sock    chan *swarm.BagStdErr
 
 	client sqsiface.SQSAPI
 	queue  *string
@@ -79,7 +79,7 @@ func (q *Sender) Close() error {
 
 //
 //
-func (q *Sender) Send() chan *swarm.Bag {
+func (q *Sender) Send() chan *swarm.BagStdErr {
 	if q.sock == nil {
 		q.sock = adapter.Send(q.adapter, q.send)
 	}
@@ -95,7 +95,7 @@ func (q *Sender) send(msg *swarm.Bag) error {
 				"Queue":    {StringValue: aws.String(msg.Queue), DataType: aws.String("String")},
 				"Category": {StringValue: aws.String(msg.Category), DataType: aws.String("String")},
 			},
-			MessageBody: aws.String(string(msg.Object.Bytes())),
+			MessageBody: aws.String(string(msg.Object)),
 			QueueUrl:    q.queue,
 		},
 	)

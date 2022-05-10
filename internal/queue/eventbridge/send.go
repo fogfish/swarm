@@ -19,7 +19,7 @@ Queue ...
 type Sender struct {
 	id      string
 	adapter *adapter.Adapter
-	sock    chan *swarm.Bag
+	sock    chan *swarm.BagStdErr
 
 	sys swarm.System
 
@@ -75,7 +75,7 @@ func (q *Sender) Close() error {
 
 spawnSendIO create go routine for emiting messages
 */
-func (q *Sender) Send() chan *swarm.Bag {
+func (q *Sender) Send() chan *swarm.BagStdErr {
 	if q.sock == nil {
 		q.sock = adapter.Send(q.adapter, q.send)
 	}
@@ -89,7 +89,7 @@ func (q *Sender) send(msg *swarm.Bag) error {
 				EventBusName: aws.String(msg.System),
 				Source:       aws.String(msg.Queue),
 				DetailType:   aws.String(msg.Category),
-				Detail:       aws.String(string(msg.Object.Bytes())),
+				Detail:       aws.String(string(msg.Object)),
 			},
 		},
 	})

@@ -39,16 +39,14 @@ func NewSystem(id string) swarm.System {
 
 Queue ...
 */
-func (sys *system) Queue(send swarm.Sender, recv swarm.Recver) swarm.Queue {
+func (sys *system) Queue(id string, enq swarm.Enqueue, deq swarm.Dequeue, policy *swarm.Policy) swarm.Queue {
 	sys.Lock()
 	defer sys.Unlock()
 
-	queue := NewQueue(sys, send, recv)
-	sys.queue[send.ID()] = queue
+	queue := NewQueue(sys, id, enq, deq, policy)
+	sys.queue[id] = queue
 	return queue
 }
-
-// func (sys *system)
 
 /*
 
@@ -76,9 +74,9 @@ func (sys *system) Listen() error {
 
 Stop ...
 */
-func (sys *system) Stop() {
+func (sys *system) Close() {
 	for _, q := range sys.queue {
-		q.Stop()
+		q.Close()
 	}
 
 	sys.cancel()

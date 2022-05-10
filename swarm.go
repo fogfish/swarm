@@ -10,6 +10,19 @@ package swarm
 
 /*
 
+Messages
+ * Client
+   * send: T
+   * recv: T + receipt
+
+ * Transport
+   * send: bytes, message attributes, recovery function
+	 * recv: binary + receipt using codec function
+	 * conf: receipt only
+*/
+
+/*
+
 Msg type is an abstract container for octet stream, exchanged via channels
 
   ch <- swarm.Bytes("some message")
@@ -18,31 +31,31 @@ Msg type is an abstract container for octet stream, exchanged via channels
 		msg.Bytes()
 	}
 */
-type Object interface {
-	Bytes() []byte
-}
+// type Object interface {
+// 	Bytes() []byte
+// }
 
 /*
 
 Msg type defines external ingress message.
 It containers both payload and receipt to acknowledge
 */
-type Msg struct {
-	Payload []byte
-	Receipt string
-}
+// type Msg struct {
+// 	Payload []byte
+// 	Receipt string
+// }
 
-var (
-	_ Object = (*Msg)(nil)
-)
+// var (
+// 	_ Object = (*Msg)(nil)
+// )
 
 /*
 
 Bytes returns message payload (octet stream)
 */
-func (msg *Msg) Bytes() []byte {
-	return msg.Payload
-}
+// func (msg *Msg) Bytes() []byte {
+// 	return msg.Payload
+// }
 
 /*
 
@@ -52,69 +65,106 @@ as message.
   ch <- swarm.Bytes("some message")
 
 */
-type Bytes []byte
+// type Bytes []byte
 
 /*
 
 Bytes returns message payload (octet stream)
 */
-func (b Bytes) Bytes() []byte { return b }
+// func (b Bytes) Bytes() []byte { return b }
 
 /*
 
-Bag is an internal message envelop containing message and routing attributes
+Msg is a generic envelop type for incoming messages.
+It contains both decoded object and its digest used to acknowledge message.
+*/
+type Msg[T any] struct {
+	Object T
+	Digest string
+}
 
-TODO: Identity id
- - System
- - Queue
- - Category (type)
- - ==> Or system:queue/category
+/*
 
+Bytes is an abstract container for octet stream for incoming messages.
+*/
+type Bytes struct {
+	Object []byte
+	Digest string
+}
+
+//
+// Enq
+// Deq
+//
+// Enqueue
+// Dequeue
+//
+
+// TODO:
+//  [x] fix bag type
+//  [x] fix recv dispatch
+//  [x] finish generic Send (Enq) / Recv (Deq)
+//  - fix MsgG to Msg[T]{Object, Digest}
+//  - make bytes Send (Enq) / Recv (Deq)
+//  - rename to enqueue
+
+/*
+
+Bag type is an abstract container for octet stream, exchanged via channels.
+It is used by queuing transport to abstract message on the wire.
 */
 type Bag struct {
 	System   string
 	Queue    string
 	Category string
 
-	// message payload
-	Object Object
-
-	//
-	StdErr chan<- Object
-
-	Recover func()
-}
-
-type Sender interface {
-	ID() string
-	Start() error
-	Close() error
-	Send() chan *Bag
-}
-
-type Recver interface {
-	ID() string
-	Start() error
-	Close() error
-	Recv() chan *Bag
-	Conf() chan *Bag
+	Object []byte
+	Digest string
 }
 
 /*
 
-EventBus is an an abstraction of transport protocol(s) to send & recv events
+BagStdErr is an envelop used to enqueue messages to broker
 */
-type EventBus interface {
-	ID() string
+type BagStdErr struct {
+	Bag
+	StdErr func(error)
+}
 
-	// Send connects to queueing broker and returns channel to send messages
-	Send() (chan *Bag, error)
+/*
 
-	// Recv connects to queueing broker and returns channel to recv messages
-	Recv() (chan *Bag, error)
+Enqueue is an abstraction of transport protocols to send messages for
+the processing to queueing system (broker). Enqueue is an abstraction of
+transport client.
+*/
+type Enqueue interface {
+	// Listent activates transport
+	Listen() error
 
-	// Conf connects to queueing broker and returns channel to confirm processed messages
-	Conf() (chan *Bag, error)
+	// Close transport
+	Close() error
+
+	// Enq returns a channel to enqueue messages
+	Enq() chan *BagStdErr
+}
+
+/*
+
+Dequeue is an abstraction of transport protocol to receive messages from
+queueing system (broker). Dequeue is an abstraction of transport client.
+*/
+type Dequeue interface {
+	// Listent activates transport
+	Listen() error
+
+	// Close transport
+	Close() error
+
+	// Deq returns a channel to dequeue messages
+	Deq() chan *Bag
+
+	// Ack returns a channel to acknowledge message processign
+	Ack() chan *Bag
 }
 
 /*
@@ -123,10 +173,10 @@ Queue ...
 */
 type Queue interface {
 	// Creates endpoints to receive messages and acknowledge its consumption.
-	Recv(string) (<-chan Object, chan<- Object)
+	// Recv(string) (<-chan Object, chan<- Object)
 
 	// Creates endpoints to send messages and channel to consume errors.
-	Send(string) (chan<- Object, <-chan Object)
+	// Send(string) (chan<- Object, <-chan Object)
 
 	// TODO:
 	// - Err (chan<- error) handle transport errors
@@ -137,32 +187,18 @@ type Queue interface {
 
 /*
 
-Socket ~> pair of golang channels
-*/
-type Socket interface {
-	Send() chan Object
-	Fail() chan Object
-	Close()
-}
-
-/*
-
-System ...
+System of Queues controls group related queues.
 */
 type System interface {
-	// Queue creates new queuing endpoint
-	Queue(Sender, Recver) Queue
+	// Create new queueing endpoint from transport
+	Queue(string, Enqueue, Dequeue, *Policy) Queue
 
-	// Listen ...
+	// Listent activates all transport
 	Listen() error
 
-	/*
-	 Stop system and all active go routines
-	*/
-	Stop()
+	// Close system and all queues
+	Close()
 
-	/*
-	 Wait system to be stopped
-	*/
+	// Wait for system to be stopped
 	Wait()
 }

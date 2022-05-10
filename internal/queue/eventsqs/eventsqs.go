@@ -69,24 +69,17 @@ func (q *Recver) Start() error {
 						Category: attr(&evt, "Category"),
 						System:   attr(&evt, "System"),
 						Queue:    attr(&evt, "Queue"),
-						Object: &swarm.Msg{
-							Payload: []byte(evt.Body),
-							Receipt: evt.ReceiptHandle,
-						},
+						Object:   []byte(evt.Body),
+						Digest:   evt.ReceiptHandle,
 					}
 				}
 
 				for {
 					select {
 					case bag := <-q.sack:
-						switch msg := bag.Object.(type) {
-						case *swarm.Msg:
-							delete(acks, msg.Receipt)
-							if len(acks) == 0 {
-								return nil
-							}
-						default:
-							return fmt.Errorf("unsupported conf type %v", bag)
+						delete(acks, bag.Digest)
+						if len(acks) == 0 {
+							return nil
 						}
 					case <-time.After(q.policy.TimeToFlight):
 						return fmt.Errorf("sqs message ack timeout")

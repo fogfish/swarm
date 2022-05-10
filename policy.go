@@ -8,7 +8,7 @@ import (
 
 /*
 
-Policy defines queue behavior
+Policy defines behavior of queue
 */
 type Policy struct {
 	BackoffIO     backoff.Seq

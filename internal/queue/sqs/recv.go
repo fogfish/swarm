@@ -106,13 +106,11 @@ func (q *Recver) recv() (*swarm.Bag, error) {
 	head := result.Messages[0]
 
 	return &swarm.Bag{
-		Category: attr(head, "Category"),
 		System:   attr(head, "System"),
 		Queue:    attr(head, "Queue"),
-		Object: &swarm.Msg{
-			Payload: []byte(*head.Body),
-			Receipt: *head.ReceiptHandle,
-		},
+		Category: attr(head, "Category"),
+		Object:   []byte(*head.Body),
+		Digest:   *head.ReceiptHandle,
 	}, nil
 }
 
@@ -134,11 +132,11 @@ func (q *Recver) Conf() chan *swarm.Bag {
 	return q.sack
 }
 
-func (q *Recver) conf(msg *swarm.Msg) error {
+func (q *Recver) conf(msg *swarm.Bag) error {
 	_, err := q.client.DeleteMessage(
 		&sqs.DeleteMessageInput{
 			QueueUrl:      q.queue,
-			ReceiptHandle: aws.String(string(msg.Receipt)),
+			ReceiptHandle: aws.String(string(msg.Digest)),
 		},
 	)
 	return err

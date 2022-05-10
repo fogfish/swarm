@@ -11,16 +11,25 @@ package main
 import (
 	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
+	"github.com/fogfish/swarm/queue"
 	"github.com/fogfish/swarm/queue/sqs"
 )
+
+type NoteA struct {
+	ID   string `json:"id"`
+	Text string `json:"text"`
+}
+
+type NoteB NoteA
+type NoteC NoteA
 
 func main() {
 	sys := sqs.NewSystem("swarm-example-sqs")
 	q := sqs.Must(sqs.New(sys, "swarm-test"))
 
-	go actor("a").handle(q.Recv("Note"))
-	go actor("b").handle(q.Recv("sqs.test.b"))
-	go actor("c").handle(q.Recv("sqs.test.c"))
+	go actor[NoteA]("a").handle(queue.Recv[NoteA](q))
+	go actor[NoteB]("b").handle(queue.Recv[NoteB](q))
+	go actor[NoteC]("c").handle(queue.Recv[NoteC](q))
 
 	if err := sys.Listen(); err != nil {
 		panic(err)
@@ -30,11 +39,11 @@ func main() {
 }
 
 //
-type actor string
+type actor[T any] string
 
-func (a actor) handle(rcv <-chan swarm.Object, ack chan<- swarm.Object) {
+func (a actor[T]) handle(rcv <-chan *swarm.Msg[T], ack chan<- *swarm.Msg[T]) {
 	for msg := range rcv {
-		logger.Debug("event on %s > %s", a, msg.Bytes())
+		logger.Debug("event on %s > %+v", a, msg.Object)
 		ack <- msg
 	}
 }

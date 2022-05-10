@@ -48,28 +48,25 @@ calls of queueing system interface
 
 AdaptSend builds a channel to listen for incoming Bags and relay it to the function
 */
-func Send(q *Adapter, f func(msg *swarm.Bag) error) chan *swarm.Bag {
+func Send(q *Adapter, f func(*swarm.Bag) error) chan *swarm.BagStdErr {
 	q.logger.Notice("init send")
 
-	sock := make(chan *swarm.Bag, q.Policy.QueueCapacity)
+	sock := make(chan *swarm.BagStdErr, q.Policy.QueueCapacity)
 
-	pipe.ForEach(sock, func(msg *swarm.Bag) {
+	pipe.ForEach(sock, func(bag *swarm.BagStdErr) {
 		// TODO: add message type control
 		// the control message to ensure that channels are free
-		raw := msg.Object.Bytes()
-		if string(raw[:3]) == "+++" {
-			fmt.Println("///////////////////")
-			msg.Recover()
-			// msg.StdErr <- msg.Object
+		// raw := msg.Object.Bytes()
+		if string(bag.Object[:3]) == "+++" {
+			bag.StdErr(nil)
 			return
 		}
 
-		err := q.Policy.BackoffIO.Retry(func() error { return f(msg) })
+		err := q.Policy.BackoffIO.Retry(func() error { return f(&bag.Bag) })
 		if err != nil {
 			// TODO: the progress of sender is blocked until
 			//       failed message is consumed
-			// msg.StdErr <- msg.Object
-			msg.Recover()
+			bag.StdErr(err)
 			q.logger.Debug("failed to send message %v", err)
 		}
 	})
@@ -110,21 +107,21 @@ func Recv(q *Adapter, f func() (*swarm.Bag, error)) chan *swarm.Bag {
 Conf create go routine to adapt async i/o over Golang channel to synchronous
 calls of queueing system interface
 */
-func Conf(q *Adapter, f func(msg *swarm.Msg) error) chan *swarm.Bag {
+func Conf(q *Adapter, f func(*swarm.Bag) error) chan *swarm.Bag {
 	q.logger.Notice("init conf")
 
 	conf := make(chan *swarm.Bag)
 
 	pipe.ForEach(conf, func(bag *swarm.Bag) {
-		switch msg := bag.Object.(type) {
-		case *swarm.Msg:
-			err := q.Policy.BackoffIO.Retry(func() error { return f(msg) })
-			if err != nil {
-				q.logger.Error("Unable to conf message %v", err)
-			}
-		default:
-			q.logger.Notice("Unsupported conf type %v", bag)
+		// switch msg := bag.Object.(type) {
+		// case *swarm.Msg:
+		err := q.Policy.BackoffIO.Retry(func() error { return f(bag) })
+		if err != nil {
+			q.logger.Error("Unable to conf message %v", err)
 		}
+		// default:
+		// q.logger.Notice("Unsupported conf type %v", bag)
+		// }
 	})
 
 	return conf

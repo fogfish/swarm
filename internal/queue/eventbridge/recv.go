@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
 )
@@ -40,6 +41,8 @@ func NewRecver(
 
 		sock: make(chan *swarm.Bag),
 		sack: make(chan *swarm.Bag),
+
+		start: lambda.Start,
 	}
 }
 
@@ -64,12 +67,10 @@ func (q *Recver) Start() error {
 				logger.Debug("cloudwatch event %+v", evt)
 
 				q.sock <- &swarm.Bag{
-					Category: evt.DetailType,
 					Queue:    evt.Source,
-					Object: &swarm.Msg{
-						Payload: evt.Detail,
-						Receipt: evt.ID,
-					},
+					Category: evt.DetailType,
+					Object:   evt.Detail,
+					Digest:   evt.ID,
 				}
 
 				select {

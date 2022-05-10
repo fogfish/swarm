@@ -1,6 +1,10 @@
 package system
 
-import "time"
+import (
+	"time"
+
+	"github.com/fogfish/swarm"
+)
 
 type Closer interface {
 	Close()
@@ -32,8 +36,8 @@ func (ch *MsgSendCh[T]) Close() {
 msgRecv is the pair of channel, exposed by the queue to clients to recv messages
 */
 type MsgRecvCh[T any] struct {
-	Msg chan T // channel to recv message
-	Ack chan T // channel to send acknowledgement
+	Msg chan *swarm.Msg[T] // channel to recv message
+	Ack chan *swarm.Msg[T] // channel to send acknowledgement
 }
 
 func (ch *MsgRecvCh[T]) Close() {
