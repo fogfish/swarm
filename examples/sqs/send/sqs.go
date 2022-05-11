@@ -13,29 +13,36 @@ import (
 	"github.com/fogfish/swarm/queue/sqs"
 )
 
-type NoteA struct {
+type User struct {
 	ID   string `json:"id"`
 	Text string `json:"text"`
 }
 
-type NoteB NoteA
-type NoteC NoteA
+type Note struct {
+	ID   string `json:"id"`
+	Text string `json:"text"`
+}
+
+type Like struct {
+	ID   string `json:"id"`
+	Text string `json:"text"`
+}
 
 func main() {
 	sys := sqs.NewSystem("swarm-example-sqs")
 	q := sqs.Must(sqs.New(sys, "swarm-test"))
 
-	a, _ := queue.Send[*NoteA](q)
-	b, _ := queue.Send[*NoteB](q)
-	c, _ := queue.Send[*NoteC](q)
+	a, _ := queue.Enqueue[*User](q)
+	b, _ := queue.Enqueue[*Note](q)
+	c, _ := queue.Enqueue[*Like](q)
 
 	if err := sys.Listen(); err != nil {
 		panic(err)
 	}
 
-	a <- &NoteA{ID: "a", Text: "message"}
-	b <- &NoteB{ID: "b", Text: "message"}
-	c <- &NoteC{ID: "c", Text: "message"}
+	a <- &User{ID: "user", Text: "some text"}
+	b <- &Note{ID: "note", Text: "some text"}
+	c <- &Like{ID: "like", Text: "some text"}
 
-	sys.Stop()
+	sys.Close()
 }

@@ -18,23 +18,23 @@ import (
 	"github.com/fogfish/swarm/internal/system"
 )
 
-func mkQueue(sys swarm.System, policy *swarm.Policy, eff chan string) (swarm.Sender, swarm.Recver) {
+func mkQueue(sys swarm.System, policy *swarm.Policy, eff chan string) (swarm.Enqueue, swarm.Dequeue) {
 	awscli, err := system.NewSession()
 	if err != nil {
 		panic(err)
 	}
 
-	s := sutSend.NewSender(sys, "test-sqs", policy, awscli)
-	s.Mock(&mockSQS{loopback: eff})
+	enq := sutSend.NewEnqueue(sys, "test-sqs", policy, awscli)
+	enq.Mock(&mockSQS{loopback: eff})
 
-	r := sutRecv.NewRecver(sys, "test-bridge", policy)
-	r.Mock(mockLambda(eff))
-	return s, r
+	deq := sutRecv.NewDequeue(sys, "test-bridge", policy)
+	deq.Mock(mockLambda(eff))
+	return enq, deq
 }
 
 func TestEventSQS(t *testing.T) {
-	qtest.TestSend(t, mkQueue)
-	qtest.TestRecv(t, mkQueue)
+	qtest.TestEnqueue(t, mkQueue)
+	qtest.TestDequeue(t, mkQueue)
 }
 
 //

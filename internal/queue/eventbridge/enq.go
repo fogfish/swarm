@@ -16,7 +16,7 @@ import (
 
 Queue ...
 */
-type Sender struct {
+type Enqueue struct {
 	id      string
 	adapter *adapter.Adapter
 	sock    chan *swarm.BagStdErr
@@ -30,16 +30,16 @@ type Sender struct {
 
 New ...
 */
-func NewSender(
+func NewEnqueue(
 	sys swarm.System,
 	queue string,
 	policy *swarm.Policy,
 	session *session.Session,
-) *Sender {
+) *Enqueue {
 	logger := logger.With(logger.Note{"type": "eventbridge", "q": queue})
-	adapt := adapter.New(sys, policy, logger)
+	adapt := adapter.New(policy, logger)
 
-	return &Sender{
+	return &Enqueue{
 		id:      queue,
 		adapter: adapt,
 
@@ -50,22 +50,22 @@ func NewSender(
 }
 
 //
-func (q *Sender) Mock(mock eventbridgeiface.EventBridgeAPI) {
+func (q *Enqueue) Mock(mock eventbridgeiface.EventBridgeAPI) {
 	q.client = mock
 }
 
 //
-func (q *Sender) ID() string {
-	return q.id
-}
+// func (q *Sender) ID() string {
+// 	return q.id
+// }
 
 //
-func (q *Sender) Start() error {
+func (q *Enqueue) Listen() error {
 	return nil
 }
 
 //
-func (q *Sender) Close() error {
+func (q *Enqueue) Close() error {
 	close(q.sock)
 
 	return nil
@@ -75,14 +75,14 @@ func (q *Sender) Close() error {
 
 spawnSendIO create go routine for emiting messages
 */
-func (q *Sender) Send() chan *swarm.BagStdErr {
+func (q *Enqueue) Enq() chan *swarm.BagStdErr {
 	if q.sock == nil {
-		q.sock = adapter.Send(q.adapter, q.send)
+		q.sock = adapter.Enq(q.adapter, q.enq)
 	}
 	return q.sock
 }
 
-func (q *Sender) send(msg *swarm.Bag) error {
+func (q *Enqueue) enq(msg *swarm.Bag) error {
 	ret, err := q.client.PutEvents(&eventbridge.PutEventsInput{
 		Entries: []*eventbridge.PutEventsRequestEntry{
 			{

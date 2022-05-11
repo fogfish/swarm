@@ -29,10 +29,10 @@ func New(sys swarm.System, queue string, opts ...*swarm.Policy) (swarm.Queue, er
 		return nil, err
 	}
 
-	qs := sqs.NewSender(sys, queue, policy, awscli)
-	qr := sqs.NewRecver(sys, queue, policy, awscli)
+	enq := sqs.NewEnqueue(sys, queue, policy, awscli)
+	deq := sqs.NewDequeue(sys, queue, policy, awscli)
 
-	return sys.Queue(qs, qr), nil
+	return sys.Queue(queue, enq, deq, policy), nil
 }
 
 /*

@@ -11,16 +11,32 @@ package main
 import (
 	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
+	"github.com/fogfish/swarm/queue"
 	"github.com/fogfish/swarm/queue/eventsqs"
 )
+
+type User struct {
+	ID   string `json:"id"`
+	Text string `json:"text"`
+}
+
+type Note struct {
+	ID   string `json:"id"`
+	Text string `json:"text"`
+}
+
+type Like struct {
+	ID   string `json:"id"`
+	Text string `json:"text"`
+}
 
 func main() {
 	sys := eventsqs.NewSystem("swarm-example-eventsqs")
 	q := eventsqs.Must(eventsqs.New(sys, "swarm-test"))
 
-	go actor("a").handle(q.Recv("sqs.test.a"))
-	go actor("b").handle(q.Recv("sqs.test.b"))
-	go actor("c").handle(q.Recv("sqs.test.c"))
+	go actor[User]("a").handle(queue.Dequeue[User](q))
+	go actor[Note]("b").handle(queue.Dequeue[Note](q))
+	go actor[Like]("c").handle(queue.Dequeue[Like](q))
 
 	if err := sys.Listen(); err != nil {
 		panic(err)
@@ -30,11 +46,11 @@ func main() {
 }
 
 //
-type actor string
+type actor[T any] string
 
-func (a actor) handle(rcv <-chan swarm.Object, ack chan<- swarm.Object) {
+func (a actor[T]) handle(rcv <-chan *swarm.Msg[T], ack chan<- *swarm.Msg[T]) {
 	for msg := range rcv {
-		logger.Debug("event on %s > %s", a, msg.Bytes())
+		logger.Debug("event on %s > %+v", a, msg.Object)
 		ack <- msg
 	}
 }

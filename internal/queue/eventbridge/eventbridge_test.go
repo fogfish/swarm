@@ -17,23 +17,23 @@ import (
 	"github.com/fogfish/swarm/internal/system"
 )
 
-func mkQueue(sys swarm.System, policy *swarm.Policy, eff chan string) (swarm.Sender, swarm.Recver) {
+func mkQueue(sys swarm.System, policy *swarm.Policy, eff chan string) (swarm.Enqueue, swarm.Dequeue) {
 	awscli, err := system.NewSession()
 	if err != nil {
 		panic(err)
 	}
 
-	s := sut.NewSender(sys, "test-bridge", policy, awscli)
-	s.Mock(&mockEventBridge{loopback: eff})
+	enq := sut.NewEnqueue(sys, "test-bridge", policy, awscli)
+	enq.Mock(&mockEventBridge{loopback: eff})
 
-	r := sut.NewRecver(sys, "test-bridge", policy)
-	r.Mock(mockLambda(eff))
-	return s, r
+	deq := sut.NewDequeue(sys, "test-bridge", policy)
+	deq.Mock(mockLambda(eff))
+	return enq, deq
 }
 
 func TestEventBridge(t *testing.T) {
-	qtest.TestSend(t, mkQueue)
-	qtest.TestRecv(t, mkQueue)
+	qtest.TestEnqueue(t, mkQueue)
+	qtest.TestDequeue(t, mkQueue)
 }
 
 type mockEventBridge struct {

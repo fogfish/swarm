@@ -14,7 +14,7 @@ import (
 
 Queue ...
 */
-type Recver struct {
+type Dequeue struct {
 	id     string
 	sys    swarm.System
 	policy *swarm.Policy
@@ -29,12 +29,12 @@ type Recver struct {
 
 New ...
 */
-func NewRecver(
+func NewDequeue(
 	sys swarm.System,
 	queue string,
 	policy *swarm.Policy,
-) *Recver {
-	return &Recver{
+) *Dequeue {
+	return &Dequeue{
 		id:     queue,
 		sys:    sys,
 		policy: policy,
@@ -47,17 +47,17 @@ func NewRecver(
 }
 
 //
-func (q *Recver) Mock(mock func(interface{})) {
+func (q *Dequeue) Mock(mock func(interface{})) {
 	q.start = mock
 }
 
 //
-func (q *Recver) ID() string {
-	return q.id
-}
+// func (q *Recver) ID() string {
+// 	return q.id
+// }
 
 //
-func (q *Recver) Start() error {
+func (q *Dequeue) Listen() error {
 	go func() {
 		logger.Notice("init aws eventbridge recv %s", q.id)
 
@@ -81,7 +81,7 @@ func (q *Recver) Start() error {
 				}
 			},
 		)
-		q.sys.Stop()
+		q.sys.Close()
 	}()
 
 	return nil
@@ -89,17 +89,17 @@ func (q *Recver) Start() error {
 
 //
 //
-func (q *Recver) Close() error {
+func (q *Dequeue) Close() error {
 	close(q.sock)
 	close(q.sack)
 
 	return nil
 }
 
-func (q *Recver) Recv() chan *swarm.Bag {
+func (q *Dequeue) Deq() chan *swarm.Bag {
 	return q.sock
 }
 
-func (q *Recver) Conf() chan *swarm.Bag {
+func (q *Dequeue) Ack() chan *swarm.Bag {
 	return q.sack
 }

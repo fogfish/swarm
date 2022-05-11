@@ -23,16 +23,12 @@ api calls into channel messaging
 */
 type Adapter struct {
 	Policy *swarm.Policy
-
-	sys    swarm.System
 	logger logger.Logger
 }
 
-func New(sys swarm.System, policy *swarm.Policy, logger logger.Logger) *Adapter {
+func New(policy *swarm.Policy, logger logger.Logger) *Adapter {
 	return &Adapter{
 		Policy: policy,
-
-		sys:    sys,
 		logger: logger,
 	}
 }
@@ -48,8 +44,8 @@ calls of queueing system interface
 
 AdaptSend builds a channel to listen for incoming Bags and relay it to the function
 */
-func Send(q *Adapter, f func(*swarm.Bag) error) chan *swarm.BagStdErr {
-	q.logger.Notice("init send")
+func Enq(q *Adapter, f func(*swarm.Bag) error) chan *swarm.BagStdErr {
+	q.logger.Notice("init enq")
 
 	sock := make(chan *swarm.BagStdErr, q.Policy.QueueCapacity)
 
@@ -79,8 +75,8 @@ func Send(q *Adapter, f func(*swarm.Bag) error) chan *swarm.BagStdErr {
 Recv create go routine to adapt async i/o over Golang channel to synchronous
 calls of queueing system interface
 */
-func Recv(q *Adapter, f func() (*swarm.Bag, error)) chan *swarm.Bag {
-	q.logger.Notice("init recv")
+func Deq(q *Adapter, f func() (*swarm.Bag, error)) chan *swarm.Bag {
+	q.logger.Notice("init deq")
 
 	return pipe.From(0, q.Policy.PollFrequency, func() (*swarm.Bag, error) {
 		var msg *swarm.Bag
@@ -107,8 +103,8 @@ func Recv(q *Adapter, f func() (*swarm.Bag, error)) chan *swarm.Bag {
 Conf create go routine to adapt async i/o over Golang channel to synchronous
 calls of queueing system interface
 */
-func Conf(q *Adapter, f func(*swarm.Bag) error) chan *swarm.Bag {
-	q.logger.Notice("init conf")
+func Ack(q *Adapter, f func(*swarm.Bag) error) chan *swarm.Bag {
+	q.logger.Notice("init ack")
 
 	conf := make(chan *swarm.Bag)
 

@@ -15,21 +15,28 @@ import (
 	"github.com/fogfish/swarm/queue/sqs"
 )
 
-type NoteA struct {
+type User struct {
 	ID   string `json:"id"`
 	Text string `json:"text"`
 }
 
-type NoteB NoteA
-type NoteC NoteA
+type Note struct {
+	ID   string `json:"id"`
+	Text string `json:"text"`
+}
+
+type Like struct {
+	ID   string `json:"id"`
+	Text string `json:"text"`
+}
 
 func main() {
 	sys := sqs.NewSystem("swarm-example-sqs")
 	q := sqs.Must(sqs.New(sys, "swarm-test"))
 
-	go actor[NoteA]("a").handle(queue.Recv[NoteA](q))
-	go actor[NoteB]("b").handle(queue.Recv[NoteB](q))
-	go actor[NoteC]("c").handle(queue.Recv[NoteC](q))
+	go actor[User]("a").handle(queue.Dequeue[User](q))
+	go actor[Note]("b").handle(queue.Dequeue[Note](q))
+	go actor[Like]("c").handle(queue.Dequeue[Like](q))
 
 	if err := sys.Listen(); err != nil {
 		panic(err)

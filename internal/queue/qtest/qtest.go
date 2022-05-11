@@ -19,17 +19,18 @@ type Note struct {
 	Some string `json:"some"`
 }
 
-func TestSend(
+func TestEnqueue(
 	t *testing.T,
-	factory func(swarm.System, *swarm.Policy, chan string) (swarm.Sender, swarm.Recver),
+	factory func(swarm.System, *swarm.Policy, chan string) (swarm.Enqueue, swarm.Dequeue),
 ) {
 	t.Helper()
 
 	eff := make(chan string, 1)
-	sys := system.NewSystem("qtest")
-	q := sys.Queue(factory(sys, swarm.DefaultPolicy(), eff))
+	sys := system.NewSystem("test-system")
+	enq, deq := factory(sys, swarm.DefaultPolicy(), eff)
+	q := sys.Queue("test-queue", enq, deq, swarm.DefaultPolicy())
 
-	out, _ := queue.Send[Note](q)
+	out, _ := queue.Enqueue[Note](q)
 	if err := sys.Listen(); err != nil {
 		panic(err)
 	}
@@ -48,20 +49,21 @@ func TestSend(
 	// 		If(<-err).Equal(swarm.Bytes(Message))
 	// })
 
-	sys.Stop()
+	sys.Close()
 }
 
-func TestRecv(
+func TestDequeue(
 	t *testing.T,
-	factory func(swarm.System, *swarm.Policy, chan string) (swarm.Sender, swarm.Recver),
+	factory func(swarm.System, *swarm.Policy, chan string) (swarm.Enqueue, swarm.Dequeue),
 ) {
 	t.Helper()
 
 	eff := make(chan string, 1)
-	sys := system.NewSystem("qtest")
-	q := sys.Queue(factory(sys, swarm.DefaultPolicy(), eff))
+	sys := system.NewSystem("test-system")
+	enq, deq := factory(sys, swarm.DefaultPolicy(), eff)
+	q := sys.Queue("test-queue", enq, deq, swarm.DefaultPolicy())
 
-	msg, ack := queue.Recv[Note](q)
+	msg, ack := queue.Dequeue[Note](q)
 	if err := sys.Listen(); err != nil {
 		panic(err)
 	}
@@ -75,5 +77,5 @@ func TestRecv(
 			If(<-eff).Equal(Receipt)
 	})
 
-	sys.Stop()
+	sys.Close()
 }

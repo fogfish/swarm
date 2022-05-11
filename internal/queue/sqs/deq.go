@@ -12,7 +12,7 @@ import (
 	"github.com/fogfish/swarm/internal/queue/adapter"
 )
 
-type Recver struct {
+type Dequeue struct {
 	id      string
 	adapter *adapter.Adapter
 	sock    chan *swarm.Bag
@@ -24,16 +24,16 @@ type Recver struct {
 
 //
 //
-func NewRecver(
+func NewDequeue(
 	sys swarm.System,
 	queue string,
 	policy *swarm.Policy,
 	session *session.Session,
-) *Recver {
+) *Dequeue {
 	logger := logger.With(logger.Note{"type": "sqs", "q": queue})
-	adapt := adapter.New(sys, policy, logger)
+	adapt := adapter.New(policy, logger)
 
-	return &Recver{
+	return &Dequeue{
 		id:      queue,
 		adapter: adapt,
 		client:  sqs.New(session),
@@ -41,17 +41,17 @@ func NewRecver(
 }
 
 // Mock ...
-func (q *Recver) Mock(mock sqsiface.SQSAPI) {
+func (q *Dequeue) Mock(mock sqsiface.SQSAPI) {
 	q.client = mock
 }
 
 //
 //
-func (q *Recver) ID() string { return q.id }
+// func (q *Recver) ID() string { return q.id }
 
 //
 //
-func (q *Recver) Start() error {
+func (q *Dequeue) Listen() error {
 	if q.queue == nil {
 		spec, err := q.client.GetQueueUrl(
 			&sqs.GetQueueUrlInput{
@@ -70,7 +70,7 @@ func (q *Recver) Start() error {
 
 //
 //
-func (q *Recver) Close() error {
+func (q *Dequeue) Close() error {
 	close(q.sock)
 	close(q.sack)
 
@@ -79,14 +79,14 @@ func (q *Recver) Close() error {
 
 //
 //
-func (q *Recver) Recv() chan *swarm.Bag {
+func (q *Dequeue) Deq() chan *swarm.Bag {
 	if q.sock == nil {
-		q.sock = adapter.Recv(q.adapter, q.recv)
+		q.sock = adapter.Deq(q.adapter, q.deq)
 	}
 	return q.sock
 }
 
-func (q *Recver) recv() (*swarm.Bag, error) {
+func (q *Dequeue) deq() (*swarm.Bag, error) {
 	result, err := q.client.ReceiveMessage(
 		&sqs.ReceiveMessageInput{
 			MessageAttributeNames: []*string{aws.String("All")},
@@ -125,14 +125,14 @@ func attr(msg *sqs.Message, key string) string {
 
 //
 //
-func (q *Recver) Conf() chan *swarm.Bag {
+func (q *Dequeue) Ack() chan *swarm.Bag {
 	if q.sack == nil {
-		q.sack = adapter.Conf(q.adapter, q.conf)
+		q.sack = adapter.Ack(q.adapter, q.ack)
 	}
 	return q.sack
 }
 
-func (q *Recver) conf(msg *swarm.Bag) error {
+func (q *Dequeue) ack(msg *swarm.Bag) error {
 	_, err := q.client.DeleteMessage(
 		&sqs.DeleteMessageInput{
 			QueueUrl:      q.queue,

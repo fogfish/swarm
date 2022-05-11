@@ -13,7 +13,17 @@ import (
 	"github.com/fogfish/swarm/queue/eventbridge"
 )
 
+type User struct {
+	ID   string `json:"id"`
+	Text string `json:"text"`
+}
+
 type Note struct {
+	ID   string `json:"id"`
+	Text string `json:"text"`
+}
+
+type Like struct {
 	ID   string `json:"id"`
 	Text string `json:"text"`
 }
@@ -22,17 +32,17 @@ func main() {
 	sys := eventbridge.NewSystem("swarm-example-eventbridge")
 	q := eventbridge.Must(eventbridge.New(sys, "swarm-test"))
 
-	a, _ := queue.Send[*Note](q)
-	// b, _ := queue.Send("eventbridge.test.b")
-	// c, _ := queue.Send("eventbridge.test.c")
+	a, _ := queue.Enqueue[*User](q)
+	b, _ := queue.Enqueue[*Note](q)
+	c, _ := queue.Enqueue[*Like](q)
 
 	if err := sys.Listen(); err != nil {
 		panic(err)
 	}
 
-	a <- &Note{ID: "a", Text: "message"}
-	// b <- swarm.Bytes("{\"type\": \"b\", \"some\": \"message\"}")
-	// c <- swarm.Bytes("{\"type\": \"c\", \"some\": \"message\"}")
+	a <- &User{ID: "user", Text: "some text"}
+	b <- &Note{ID: "note", Text: "some text"}
+	c <- &Like{ID: "like", Text: "some text"}
 
-	sys.Stop()
+	sys.Close()
 }
