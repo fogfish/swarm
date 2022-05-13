@@ -113,7 +113,7 @@ func (q *Dequeue) Close() error {
 	close(q.sock)
 	close(q.sack)
 
-	q.logger.Notice("dequeue closed")
+	q.logger.Info("dequeue closed")
 	return nil
 }
 

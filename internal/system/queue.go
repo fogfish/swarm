@@ -74,7 +74,7 @@ func (q *Queue) dispatch() {
 		defer func() {
 			if err := recover(); err != nil {
 			}
-			q.logger.Notice("free dequeue router")
+			q.logger.Info("free dequeue router")
 		}()
 
 		for {

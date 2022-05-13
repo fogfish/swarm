@@ -47,7 +47,7 @@ func spawnEnqueueOf[T any](q *system.Queue, cat string) (chan T, chan T) {
 			"queue": q.System.ID() + "://" + q.ID + "/" + cat,
 		},
 	)
-	logger.Notice("init enqueue")
+	logger.Info("init enqueue")
 
 	emit := q.Enqueue.Enq()
 	sock := make(chan T, q.Policy.QueueCapacity)
@@ -96,7 +96,7 @@ func spawnDequeueOf[T any](q *system.Queue, cat string) (chan *swarm.Msg[T], cha
 			"queue": q.System.ID() + "://" + q.ID + "/" + cat,
 		},
 	)
-	logger.Notice("init dequeue")
+	logger.Info("init dequeue")
 
 	conf := q.Dequeue.Ack()
 	mbox := make(chan *swarm.Bag)
