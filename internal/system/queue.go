@@ -78,12 +78,16 @@ func (q *Queue) dispatch() {
 		}()
 
 		for {
+			// Note: first select prevents raise condition when reading multiple channel.
 			select {
-			// TODO: raise condition
-			//       dispatch is started same time as transport
-			//       there are no ordering on retrival from channels
-			//       sock channel can flush message before all queues
-			//       are registered
+			case mbox := <-q.Ctrl:
+				mailboxes[mbox.ID] = mbox.Queue
+				q.logger.Debug("register category %s", mbox.ID)
+				continue
+			default:
+			}
+
+			select {
 			case mbox, ok := <-q.Ctrl:
 				if !ok {
 					return
