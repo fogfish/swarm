@@ -31,12 +31,19 @@ func TestEnqueue(
 	q := sys.Queue("test-queue", enq, deq, swarm.DefaultPolicy())
 
 	out, _ := queue.Enqueue[Note](q)
+	bin, _ := queue.EnqueueBytes(q, Category+"-bin")
 	if err := sys.Listen(); err != nil {
 		panic(err)
 	}
 
 	t.Run("Success", func(t *testing.T) {
 		out <- Note{Some: "message"}
+		it.Ok(t).
+			If(<-eff).Equal(Message)
+	})
+
+	t.Run("Success.Bytes", func(t *testing.T) {
+		bin <- []byte(Message)
 		it.Ok(t).
 			If(<-eff).Equal(Message)
 	})

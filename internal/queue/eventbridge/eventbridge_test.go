@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -47,7 +48,7 @@ func (m *mockEventBridge) PutEvents(s *eventbridge.PutEventsInput) (*eventbridge
 		return nil, fmt.Errorf("Bad request")
 	}
 
-	if aws.StringValue(s.Entries[0].DetailType) != qtest.Category {
+	if !strings.HasPrefix(*s.Entries[0].DetailType, qtest.Category) {
 		return nil, fmt.Errorf("Bad message category")
 	}
 

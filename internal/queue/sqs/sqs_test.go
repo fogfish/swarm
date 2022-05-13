@@ -2,6 +2,7 @@ package sqs_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -55,7 +56,7 @@ func (m *mockSQS) SendMessage(s *sqs.SendMessageInput) (*sqs.SendMessageOutput, 
 		return nil, fmt.Errorf("Bad message attributes")
 	}
 
-	if *cat.StringValue != qtest.Category {
+	if !strings.HasPrefix(*cat.StringValue, qtest.Category) {
 		return nil, fmt.Errorf("Bad message category")
 	}
 
