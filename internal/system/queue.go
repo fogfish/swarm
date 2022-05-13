@@ -72,9 +72,10 @@ func (q *Queue) dispatch() {
 
 		// Note: this is required to gracefull stop dispatcher when channel is closed
 		defer func() {
-			if err := recover(); err != nil {
-			}
 			q.logger.Info("free dequeue router")
+			if err := recover(); err != nil {
+				return
+			}
 		}()
 
 		for {

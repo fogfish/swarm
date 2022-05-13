@@ -92,7 +92,7 @@ func Deq(q *Adapter, f func() (*swarm.Bag, error)) chan *swarm.Bag {
 			return nil, err
 		}
 		if msg == nil {
-			return nil, fmt.Errorf("Nothing is received")
+			return nil, fmt.Errorf("nothing is received")
 		}
 
 		return msg, nil
@@ -112,7 +112,7 @@ func Ack(q *Adapter, f func(*swarm.Bag) error) chan *swarm.Bag {
 	pipe.ForEach(conf, func(bag *swarm.Bag) {
 		err := q.Policy.BackoffIO.Retry(func() error { return f(bag) })
 		if err != nil {
-			q.logger.Error("Unable to ack message %v", err)
+			q.logger.Error("unable to ack message %v", err)
 		}
 	})
 
