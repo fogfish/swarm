@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
 )
 
@@ -14,6 +15,7 @@ type system struct {
 	id      string
 	context context.Context
 	cancel  context.CancelFunc
+	logger  logger.Logger
 }
 
 var (
@@ -29,6 +31,7 @@ func NewSystem(id string) swarm.System {
 		id:      id,
 		queue:   make(map[string]*Queue),
 		context: context.Background(),
+		logger:  logger.With(logger.Note{"system": id}),
 	}
 
 	sys.context, sys.cancel = context.WithCancel(sys.context)
@@ -61,6 +64,8 @@ func (sys *system) ID() string {
 Listen ...
 */
 func (sys *system) Listen() error {
+	sys.logger.Info("system listening")
+
 	for _, q := range sys.queue {
 		if err := q.Listen(); err != nil {
 			return err
@@ -79,6 +84,7 @@ func (sys *system) Close() {
 		q.Close()
 	}
 
+	sys.logger.Info("system closed")
 	sys.cancel()
 }
 

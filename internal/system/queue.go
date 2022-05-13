@@ -30,6 +30,8 @@ type Queue struct {
 
 	Dequeue   swarm.Dequeue
 	DequeueCh *Channels
+
+	logger logger.Logger
 }
 
 func NewQueue(
@@ -51,6 +53,12 @@ func NewQueue(
 
 		Dequeue:   deq,
 		DequeueCh: NewChannels(),
+
+		logger: logger.With(
+			logger.Note{
+				"queue": sys.id + "://" + queue,
+			},
+		),
 	}
 }
 
@@ -58,7 +66,7 @@ func NewQueue(
 //
 func (q *Queue) dispatch() {
 	go func() {
-		logger.Notice("init %s dequeue router", q.ID)
+		q.logger.Info("init dequeue router")
 		mailboxes := map[string]chan *swarm.Bag{}
 		sock := q.Dequeue.Deq()
 
@@ -66,18 +74,22 @@ func (q *Queue) dispatch() {
 		defer func() {
 			if err := recover(); err != nil {
 			}
-			logger.Notice("free %s dequeue router", q.ID)
+			q.logger.Notice("free dequeue router")
 		}()
 
 		for {
 			select {
-			//
+			// TODO: raise condition
+			//       dispatch is started same time as transport
+			//       there are no ordering on retrival from channels
+			//       sock channel can flush message before all queues
+			//       are registered
 			case mbox, ok := <-q.Ctrl:
 				if !ok {
 					return
 				}
 				mailboxes[mbox.ID] = mbox.Queue
-				logger.Debug("register %s to %s dequeue router", mbox.ID, q.ID)
+				q.logger.Debug("register category %s", mbox.ID)
 
 			//
 			case message, ok := <-sock:
@@ -91,7 +103,7 @@ func (q *Queue) dispatch() {
 					//       it prevents proper clean-up strategy
 					mbox <- message
 				} else {
-					logger.Error("category %s is not supported by %s dequeue router", message.Category, q.ID)
+					q.logger.Error("category %s is not found", message.Category)
 				}
 			}
 		}
@@ -100,6 +112,8 @@ func (q *Queue) dispatch() {
 
 // Wait activates queue transport protocol
 func (q *Queue) Listen() error {
+	q.logger.Info("queue listening")
+
 	if q.EnqueueCh.Length() > 0 {
 		if err := q.Enqueue.Listen(); err != nil {
 			return err
@@ -135,6 +149,8 @@ func (q *Queue) Close() {
 		close(q.Ctrl)
 		q.Dequeue.Close()
 	}
+
+	q.logger.Info("queue closed")
 }
 
 func (q *Queue) enqueueWaitIdle() {

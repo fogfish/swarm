@@ -22,7 +22,8 @@ type Dequeue struct {
 	sock chan *swarm.Bag
 	sack chan *swarm.Bag
 
-	start func(interface{})
+	start  func(interface{})
+	logger logger.Logger
 }
 
 /*
@@ -34,6 +35,13 @@ func NewDequeue(
 	queue string,
 	policy *swarm.Policy,
 ) *Dequeue {
+	logger := logger.With(
+		logger.Note{
+			"type":  "eventbridge",
+			"queue": sys.ID() + "://" + queue,
+		},
+	)
+
 	return &Dequeue{
 		id:     queue,
 		sys:    sys,
@@ -42,7 +50,8 @@ func NewDequeue(
 		sock: make(chan *swarm.Bag),
 		sack: make(chan *swarm.Bag),
 
-		start: lambda.Start,
+		start:  lambda.Start,
+		logger: logger,
 	}
 }
 
@@ -52,20 +61,13 @@ func (q *Dequeue) Mock(mock func(interface{})) {
 }
 
 //
-// func (q *Recver) ID() string {
-// 	return q.id
-// }
-
-//
 func (q *Dequeue) Listen() error {
 	go func() {
-		logger.Notice("init aws eventbridge recv %s", q.id)
+		q.logger.Info("dequeue listening")
 
 		// Note: this indirect synonym for lambda.Start
 		q.start(
 			func(evt events.CloudWatchEvent) error {
-				logger.Debug("cloudwatch event %+v", evt)
-
 				q.sock <- &swarm.Bag{
 					Queue:    evt.Source,
 					Category: evt.DetailType,
@@ -77,6 +79,7 @@ func (q *Dequeue) Listen() error {
 				case <-q.sack:
 					return nil
 				case <-time.After(q.policy.TimeToFlight):
+					q.logger.Error("timeout message ack")
 					return errors.New("message ack timeout: " + evt.ID)
 				}
 			},
@@ -93,6 +96,7 @@ func (q *Dequeue) Close() error {
 	close(q.sock)
 	close(q.sack)
 
+	q.logger.Info("dequeue closed")
 	return nil
 }
 

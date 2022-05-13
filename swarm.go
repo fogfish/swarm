@@ -104,9 +104,9 @@ type Bytes struct {
 //  [x] fix bag type
 //  [x] fix recv dispatch
 //  [x] finish generic Send (Enq) / Recv (Deq)
-//  - fix MsgG to Msg[T]{Object, Digest}
+//  [x] fix MsgG to Msg[T]{Object, Digest}
 //  - make bytes Send (Enq) / Recv (Deq)
-//  - rename to enqueue
+//  [x] rename to enqueue
 
 /*
 
@@ -190,6 +190,8 @@ type Queue interface {
 System of Queues controls group related queues.
 */
 type System interface {
+	ID() string
+
 	// Create new queueing endpoint from transport
 	Queue(string, Enqueue, Dequeue, *Policy) Queue
 

@@ -21,6 +21,7 @@ type Enqueue struct {
 
 	client sqsiface.SQSAPI
 	queue  *string
+	logger logger.Logger
 }
 
 //
@@ -31,13 +32,19 @@ func NewEnqueue(
 	policy *swarm.Policy,
 	session *session.Session,
 ) *Enqueue {
-	logger := logger.With(logger.Note{"type": "sqs", "q": queue})
-	adapt := adapter.New(policy, logger)
+	logger := logger.With(
+		logger.Note{
+			"type":  "sqs",
+			"queue": sys.ID() + "://" + queue,
+		},
+	)
 
+	adapt := adapter.New(policy, logger)
 	return &Enqueue{
 		id:      queue,
 		adapter: adapt,
 		client:  sqs.New(session),
+		logger:  logger,
 	}
 }
 
@@ -48,11 +55,9 @@ func (q *Enqueue) Mock(mock sqsiface.SQSAPI) {
 
 //
 //
-// func (q *Sender) ID() string { return q.id }
-
-//
-//
 func (q *Enqueue) Listen() error {
+	q.logger.Info("enqueue listening")
+
 	if q.queue == nil {
 		spec, err := q.client.GetQueueUrl(
 			&sqs.GetQueueUrlInput{
@@ -74,6 +79,7 @@ func (q *Enqueue) Listen() error {
 func (q *Enqueue) Close() error {
 	close(q.sock)
 
+	q.logger.Info("enqueue closed")
 	return nil
 }
 

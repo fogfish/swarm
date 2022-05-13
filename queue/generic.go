@@ -2,7 +2,6 @@ package queue
 
 import (
 	"encoding/json"
-	"fmt"
 	"reflect"
 
 	"github.com/fogfish/golem/pipe"
@@ -24,6 +23,8 @@ func typeOf[T any]() string {
 //
 //
 func Enqueue[T any](q swarm.Queue) (chan<- T, <-chan T) {
+	// TODO: detect if T is string/binary and disable decoding
+
 	switch queue := q.(type) {
 	case *system.Queue:
 		cat := typeOf[T]()
@@ -34,12 +35,19 @@ func Enqueue[T any](q swarm.Queue) (chan<- T, <-chan T) {
 		return ch.Msg, ch.Err
 
 	default:
-		panic(fmt.Errorf("Invalid Queue type %T", q))
+		logger.Critical("invalid type of queue %T", q)
 	}
+
+	return nil, nil
 }
 
 func spawnEnqueueOf[T any](q *system.Queue, cat string) (chan T, chan T) {
-	logger.Notice("init enqueue %s://%s/%s", q.System.ID(), q.ID, cat)
+	logger := logger.With(
+		logger.Note{
+			"queue": q.System.ID() + "://" + q.ID + "/" + cat,
+		},
+	)
+	logger.Notice("init enqueue")
 
 	emit := q.Enqueue.Enq()
 	sock := make(chan T, q.Policy.QueueCapacity)
@@ -77,12 +85,18 @@ func Dequeue[T any](q swarm.Queue) (<-chan *swarm.Msg[T], chan<- *swarm.Msg[T]) 
 		queue.DequeueCh.Attach(cat, &ch)
 		return ch.Msg, ch.Ack
 	default:
-		panic(fmt.Errorf("Invalid Queue type %T", q))
+		logger.Critical("invalid type of queue %T", q)
 	}
+	return nil, nil
 }
 
 func spawnDequeueOf[T any](q *system.Queue, cat string) (chan *swarm.Msg[T], chan *swarm.Msg[T]) {
-	logger.Notice("init dequeue %s://%s/%s", q.System.ID(), q.ID, cat)
+	logger := logger.With(
+		logger.Note{
+			"queue": q.System.ID() + "://" + q.ID + "/" + cat,
+		},
+	)
+	logger.Notice("init dequeue")
 
 	conf := q.Dequeue.Ack()
 	mbox := make(chan *swarm.Bag)
@@ -102,7 +116,7 @@ func spawnDequeueOf[T any](q *system.Queue, cat string) (chan *swarm.Msg[T], cha
 		err := json.Unmarshal(bag.Object, &msg.Object)
 
 		if err != nil {
-			logger.Error("queue %s://%s/%s failed to dequeue %v", q.System.ID(), q.ID, cat, err)
+			logger.Error("failed to dequeue %v", err)
 			// TODO: pipe map support either
 			return nil
 		}

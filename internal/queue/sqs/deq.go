@@ -20,6 +20,7 @@ type Dequeue struct {
 
 	client sqsiface.SQSAPI
 	queue  *string
+	logger logger.Logger
 }
 
 //
@@ -30,13 +31,19 @@ func NewDequeue(
 	policy *swarm.Policy,
 	session *session.Session,
 ) *Dequeue {
-	logger := logger.With(logger.Note{"type": "sqs", "q": queue})
-	adapt := adapter.New(policy, logger)
+	logger := logger.With(
+		logger.Note{
+			"type":  "sqs",
+			"queue": sys.ID() + "://" + queue,
+		},
+	)
 
+	adapt := adapter.New(policy, logger)
 	return &Dequeue{
 		id:      queue,
 		adapter: adapt,
 		client:  sqs.New(session),
+		logger:  logger,
 	}
 }
 
@@ -47,11 +54,9 @@ func (q *Dequeue) Mock(mock sqsiface.SQSAPI) {
 
 //
 //
-// func (q *Recver) ID() string { return q.id }
-
-//
-//
 func (q *Dequeue) Listen() error {
+	q.logger.Info("dequeue listening")
+
 	if q.queue == nil {
 		spec, err := q.client.GetQueueUrl(
 			&sqs.GetQueueUrlInput{
@@ -74,6 +79,7 @@ func (q *Dequeue) Close() error {
 	close(q.sock)
 	close(q.sack)
 
+	q.logger.Info("dequeue closed")
 	return nil
 }
 

@@ -45,7 +45,7 @@ calls of queueing system interface
 AdaptSend builds a channel to listen for incoming Bags and relay it to the function
 */
 func Enq(q *Adapter, f func(*swarm.Bag) error) chan *swarm.BagStdErr {
-	q.logger.Notice("init enq")
+	q.logger.Info("init enqueue adapter")
 
 	sock := make(chan *swarm.BagStdErr, q.Policy.QueueCapacity)
 
@@ -55,6 +55,7 @@ func Enq(q *Adapter, f func(*swarm.Bag) error) chan *swarm.BagStdErr {
 		// raw := msg.Object.Bytes()
 		if string(bag.Object[:3]) == "+++" {
 			bag.StdErr(nil)
+			q.logger.Info("end of stream")
 			return
 		}
 
@@ -76,7 +77,7 @@ Recv create go routine to adapt async i/o over Golang channel to synchronous
 calls of queueing system interface
 */
 func Deq(q *Adapter, f func() (*swarm.Bag, error)) chan *swarm.Bag {
-	q.logger.Notice("init deq")
+	q.logger.Info("init dequeue adapter")
 
 	return pipe.From(0, q.Policy.PollFrequency, func() (*swarm.Bag, error) {
 		var msg *swarm.Bag
@@ -104,20 +105,15 @@ Conf create go routine to adapt async i/o over Golang channel to synchronous
 calls of queueing system interface
 */
 func Ack(q *Adapter, f func(*swarm.Bag) error) chan *swarm.Bag {
-	q.logger.Notice("init ack")
+	q.logger.Info("init ack adapter")
 
 	conf := make(chan *swarm.Bag)
 
 	pipe.ForEach(conf, func(bag *swarm.Bag) {
-		// switch msg := bag.Object.(type) {
-		// case *swarm.Msg:
 		err := q.Policy.BackoffIO.Retry(func() error { return f(bag) })
 		if err != nil {
-			q.logger.Error("Unable to conf message %v", err)
+			q.logger.Error("Unable to ack message %v", err)
 		}
-		// default:
-		// q.logger.Notice("Unsupported conf type %v", bag)
-		// }
 	})
 
 	return conf

@@ -24,6 +24,7 @@ type Enqueue struct {
 	sys swarm.System
 
 	client eventbridgeiface.EventBridgeAPI
+	logger logger.Logger
 }
 
 /*
@@ -36,9 +37,14 @@ func NewEnqueue(
 	policy *swarm.Policy,
 	session *session.Session,
 ) *Enqueue {
-	logger := logger.With(logger.Note{"type": "eventbridge", "q": queue})
-	adapt := adapter.New(policy, logger)
+	logger := logger.With(
+		logger.Note{
+			"type":  "eventbridge",
+			"queue": sys.ID() + "://" + queue,
+		},
+	)
 
+	adapt := adapter.New(policy, logger)
 	return &Enqueue{
 		id:      queue,
 		adapter: adapt,
@@ -46,6 +52,7 @@ func NewEnqueue(
 		sys: sys,
 
 		client: eventbridge.New(session),
+		logger: logger,
 	}
 }
 
@@ -55,12 +62,9 @@ func (q *Enqueue) Mock(mock eventbridgeiface.EventBridgeAPI) {
 }
 
 //
-// func (q *Sender) ID() string {
-// 	return q.id
-// }
-
-//
 func (q *Enqueue) Listen() error {
+	q.logger.Info("enqueue listening")
+
 	return nil
 }
 
@@ -68,6 +72,7 @@ func (q *Enqueue) Listen() error {
 func (q *Enqueue) Close() error {
 	close(q.sock)
 
+	q.logger.Info("enqueue closed")
 	return nil
 }
 
