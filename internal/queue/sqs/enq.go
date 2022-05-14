@@ -87,12 +87,12 @@ func (q *Enqueue) Close() error {
 //
 func (q *Enqueue) Enq() chan *swarm.BagStdErr {
 	if q.sock == nil {
-		q.sock = adapter.Enq(q.adapter, q.enq)
+		q.sock = adapter.Enq(q.adapter, q.EnqSync)
 	}
 	return q.sock
 }
 
-func (q *Enqueue) enq(msg *swarm.Bag) error {
+func (q *Enqueue) EnqSync(msg *swarm.Bag) error {
 	_, err := q.client.SendMessage(
 		&sqs.SendMessageInput{
 			MessageAttributes: map[string]*sqs.MessageAttributeValue{

@@ -10,71 +10,6 @@ package swarm
 
 /*
 
-Messages
- * Client
-   * send: T
-   * recv: T + receipt
-
- * Transport
-   * send: bytes, message attributes, recovery function
-	 * recv: binary + receipt using codec function
-	 * conf: receipt only
-*/
-
-/*
-
-Msg type is an abstract container for octet stream, exchanged via channels
-
-  ch <- swarm.Bytes("some message")
-  ...
-	for msg := range ch {
-		msg.Bytes()
-	}
-*/
-// type Object interface {
-// 	Bytes() []byte
-// }
-
-/*
-
-Msg type defines external ingress message.
-It containers both payload and receipt to acknowledge
-*/
-// type Msg struct {
-// 	Payload []byte
-// 	Receipt string
-// }
-
-// var (
-// 	_ Object = (*Msg)(nil)
-// )
-
-/*
-
-Bytes returns message payload (octet stream)
-*/
-// func (msg *Msg) Bytes() []byte {
-// 	return msg.Payload
-// }
-
-/*
-
-Bytes (octet stream) is a built in type to represent sequence of bytes
-as message.
-
-  ch <- swarm.Bytes("some message")
-
-*/
-// type Bytes []byte
-
-/*
-
-Bytes returns message payload (octet stream)
-*/
-// func (b Bytes) Bytes() []byte { return b }
-
-/*
-
 Msg is a generic envelop type for incoming messages.
 It contains both decoded object and its digest used to acknowledge message.
 */
@@ -82,31 +17,6 @@ type Msg[T any] struct {
 	Object T
 	Digest string
 }
-
-/*
-
-Bytes is an abstract container for octet stream for incoming messages.
-*/
-type Bytes struct {
-	Object []byte
-	Digest string
-}
-
-//
-// Enq
-// Deq
-//
-// Enqueue
-// Dequeue
-//
-
-// TODO:
-//  [x] fix bag type
-//  [x] fix recv dispatch
-//  [x] finish generic Send (Enq) / Recv (Deq)
-//  [x] fix MsgG to Msg[T]{Object, Digest}
-//  - make bytes Send (Enq) / Recv (Deq)
-//  [x] rename to enqueue
 
 /*
 
@@ -146,6 +56,9 @@ type Enqueue interface {
 
 	// Enq returns a channel to enqueue messages
 	Enq() chan *BagStdErr
+
+	// Enqueue synchronously message
+	EnqSync(*Bag) error
 }
 
 /*

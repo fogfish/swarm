@@ -10,33 +10,18 @@ import (
 	"github.com/fogfish/swarm/internal/system"
 )
 
-func typeOf[T any]() string {
-	typ := reflect.TypeOf(*new(T))
-	cat := typ.Name()
-	if typ.Kind() == reflect.Ptr {
-		cat = typ.Elem().Name()
-	}
+/*
 
-	return cat
-}
-
-//
-//
+Enqueue creates channels to enqueue Golang structs and receive dead-letters
+*/
 func Enqueue[T any](q swarm.Queue) (chan<- T, <-chan T) {
-	switch queue := q.(type) {
-	case *system.Queue:
-		cat := typeOf[T]()
+	queue := systemQueue(q)
+	cat := typeOf[T]()
 
-		var ch system.MsgSendCh[T]
-		ch.Msg, ch.Err = spawnEnqueueOf[T](queue, cat)
-		queue.EnqueueCh.Attach(cat, &ch)
-		return ch.Msg, ch.Err
-
-	default:
-		logger.Critical("invalid type of queue %T", q)
-	}
-
-	return nil, nil
+	var ch system.MsgSendCh[T]
+	ch.Msg, ch.Err = spawnEnqueueOf[T](queue, cat)
+	queue.EnqueueCh.Attach(cat, &ch)
+	return ch.Msg, ch.Err
 }
 
 func spawnEnqueueOf[T any](q *system.Queue, cat string) (chan T, chan T) {
@@ -71,21 +56,17 @@ func spawnEnqueueOf[T any](q *system.Queue, cat string) (chan T, chan T) {
 	return sock, fail
 }
 
-//
-//
+/*
+
+EnqueueBytes creates channels to enqueue binary messages and receive dead-letters
+*/
 func EnqueueBytes(q swarm.Queue, cat string) (chan<- []byte, <-chan []byte) {
-	switch queue := q.(type) {
-	case *system.Queue:
-		var ch system.MsgSendCh[[]byte]
-		ch.Msg, ch.Err = spawnEnqueueBytesOf(queue, cat)
-		queue.EnqueueCh.Attach(cat, &ch)
-		return ch.Msg, ch.Err
+	queue := systemQueue(q)
 
-	default:
-		logger.Critical("invalid type of queue %T", q)
-	}
-
-	return nil, nil
+	var ch system.MsgSendCh[[]byte]
+	ch.Msg, ch.Err = spawnEnqueueBytesOf(queue, cat)
+	queue.EnqueueCh.Attach(cat, &ch)
+	return ch.Msg, ch.Err
 }
 
 func spawnEnqueueBytesOf(q *system.Queue, cat string) (chan []byte, chan []byte) {
@@ -115,21 +96,41 @@ func spawnEnqueueBytesOf(q *system.Queue, cat string) (chan []byte, chan []byte)
 	return sock, fail
 }
 
-//
-//
-func Dequeue[T any](q swarm.Queue) (<-chan *swarm.Msg[T], chan<- *swarm.Msg[T]) {
-	switch queue := q.(type) {
-	case *system.Queue:
-		cat := typeOf[T]()
+/*
 
-		var ch system.MsgRecvCh[T]
-		ch.Msg, ch.Ack = spawnDequeueOf[T](queue, cat)
-		queue.DequeueCh.Attach(cat, &ch)
-		return ch.Msg, ch.Ack
-	default:
-		logger.Critical("invalid type of queue %T", q)
+EnqueueSync synchronously enqueue message
+*/
+func EnqueueSync[T any](q swarm.Queue, msg T) error {
+	queue := systemQueue(q)
+	cat := typeOf[T]()
+
+	object, err := json.Marshal(msg)
+	if err != nil {
+		return err
 	}
-	return nil, nil
+
+	return queue.Enqueue.EnqSync(
+		&swarm.Bag{
+			System:   queue.System.ID(),
+			Queue:    queue.ID,
+			Category: cat,
+			Object:   object,
+		},
+	)
+}
+
+/*
+
+Dequeue creates channels to receive Golang structs and send acknowledgement
+*/
+func Dequeue[T any](q swarm.Queue) (<-chan *swarm.Msg[T], chan<- *swarm.Msg[T]) {
+	queue := systemQueue(q)
+	cat := typeOf[T]()
+
+	var ch system.MsgRecvCh[T]
+	ch.Msg, ch.Ack = spawnDequeueOf[T](queue, cat)
+	queue.DequeueCh.Attach(cat, &ch)
+	return ch.Msg, ch.Ack
 }
 
 func spawnDequeueOf[T any](q *system.Queue, cat string) (chan *swarm.Msg[T], chan *swarm.Msg[T]) {
@@ -167,19 +168,17 @@ func spawnDequeueOf[T any](q *system.Queue, cat string) (chan *swarm.Msg[T], cha
 	return recv, acks
 }
 
-//
-//
+/*
+
+DequeueBytes creates channels to receive binary messages and send acknowledgement
+*/
 func DequeueBytes(q swarm.Queue, cat string) (<-chan *swarm.Msg[[]byte], chan<- *swarm.Msg[[]byte]) {
-	switch queue := q.(type) {
-	case *system.Queue:
-		var ch system.MsgRecvCh[[]byte]
-		ch.Msg, ch.Ack = spawnDequeueBytes(queue, cat)
-		queue.DequeueCh.Attach(cat, &ch)
-		return ch.Msg, ch.Ack
-	default:
-		logger.Critical("invalid type of queue %T", q)
-	}
-	return nil, nil
+	queue := systemQueue(q)
+
+	var ch system.MsgRecvCh[[]byte]
+	ch.Msg, ch.Ack = spawnDequeueBytes(queue, cat)
+	queue.DequeueCh.Attach(cat, &ch)
+	return ch.Msg, ch.Ack
 }
 
 func spawnDequeueBytes(q *system.Queue, cat string) (chan *swarm.Msg[[]byte], chan *swarm.Msg[[]byte]) {
@@ -212,4 +211,28 @@ func spawnDequeueBytes(q *system.Queue, cat string) (chan *swarm.Msg[[]byte], ch
 
 	q.Ctrl <- system.Mailbox{ID: cat, Queue: mbox}
 	return recv, acks
+}
+
+//
+// Helpers
+//
+
+func typeOf[T any]() string {
+	typ := reflect.TypeOf(*new(T))
+	cat := typ.Name()
+	if typ.Kind() == reflect.Ptr {
+		cat = typ.Elem().Name()
+	}
+
+	return cat
+}
+
+func systemQueue(q swarm.Queue) *system.Queue {
+	switch queue := q.(type) {
+	case *system.Queue:
+		return queue
+	default:
+		logger.Critical("invalid type of queue %T", q)
+	}
+	return nil
 }
