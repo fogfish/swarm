@@ -172,17 +172,8 @@ type Dequeue interface {
 Queue ...
 */
 type Queue interface {
-	// Creates endpoints to receive messages and acknowledge its consumption.
-	// Recv(string) (<-chan Object, chan<- Object)
-
-	// Creates endpoints to send messages and channel to consume errors.
-	// Send(string) (chan<- Object, <-chan Object)
-
-	// TODO:
-	// - Err (chan<- error) handle transport errors
-	// - consider send failure as transport error (coupled design vs generic)
-	// - consider ack as additional channel (?)
-	// - consider Listen() <- chan error
+	// Sync queue buffers
+	Sync()
 }
 
 /*

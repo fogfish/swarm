@@ -24,6 +24,12 @@ func (chs *Channels) Attach(id string, ch Closer) {
 	chs.channels[id] = ch
 }
 
+func (chs *Channels) Sync() {
+	for _, ch := range chs.channels {
+		ch.Sync()
+	}
+}
+
 func (chs *Channels) Close() {
 	chs.Lock()
 	defer chs.Unlock()

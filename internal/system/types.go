@@ -7,6 +7,7 @@ import (
 )
 
 type Closer interface {
+	Sync()
 	Close()
 }
 
@@ -19,14 +20,17 @@ type MsgSendCh[T any] struct {
 	Err chan T // channel to recv failed messages
 }
 
-func (ch *MsgSendCh[T]) Close() {
+func (ch *MsgSendCh[T]) Sync() {
 	for {
 		time.Sleep(100 * time.Millisecond)
 		if len(ch.Msg)+len(ch.Err) == 0 {
 			break
 		}
 	}
+}
 
+func (ch *MsgSendCh[T]) Close() {
+	ch.Sync()
 	close(ch.Msg)
 	close(ch.Err)
 }
@@ -40,14 +44,17 @@ type MsgRecvCh[T any] struct {
 	Ack chan *swarm.Msg[T] // channel to send acknowledgement
 }
 
-func (ch *MsgRecvCh[T]) Close() {
+func (ch *MsgRecvCh[T]) Sync() {
 	for {
 		time.Sleep(100 * time.Millisecond)
 		if len(ch.Msg)+len(ch.Ack) == 0 {
 			break
 		}
 	}
+}
 
+func (ch *MsgRecvCh[T]) Close() {
+	ch.Sync()
 	close(ch.Msg)
 	close(ch.Ack)
 }

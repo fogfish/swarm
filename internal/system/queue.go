@@ -158,6 +158,18 @@ func (q *Queue) Close() {
 	q.logger.Info("queue closed")
 }
 
+func (q *Queue) Sync() {
+	if q.EnqueueCh.Length() > 0 {
+		q.EnqueueCh.Sync()
+	}
+
+	if q.DequeueCh.Length() > 0 {
+		q.DequeueCh.Sync()
+	}
+
+	q.enqueueWaitIdle()
+}
+
 func (q *Queue) enqueueWaitIdle() {
 	// emit control message to ensure that queue is idle
 	ctrl := make(chan struct{})

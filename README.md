@@ -39,12 +39,11 @@ Today's wrong abstractions lead to complexity on maintainability in the future. 
 
 See [design pattern](./doc/pattern.md) to learn how to improve:
 
-1. **readability**: application uses idiomatic Go code instead of vendor specific interfaces (learning time) 
-2. **portability**: application is portable between various queuing systems in same manner as sockets abstracts networking stacks. (exchange tech stack, Develop against an in-memory)
-3. **testability**: (unit tests with no dependencies)
-4. **serverless** deployments
-
-<!-- TODO: Update inspiration -->
+1. **readability**: application uses pure Go code instead of vendor specific interfaces (learning time) 
+2. **portability**: application is portable between various queuing systems in same manner as sockets abstracts networking stacks (exchange queueing transport "on-the-fly" to resolve evolution of requirements)  
+3. **testability**: unit testing focuses on pure biz logic, simplify dependency injections and mocking (pure unit tests).  
+4. **distribution**: idiomatic architecture to build distributed topologies and scale-out Golang applications (clustering).
+5. **serverless**: of-the-shelf portable patterns for serverless applications (aws cdk).
 
 ## Getting started
 
@@ -52,32 +51,38 @@ The latest version of the library is available at `main` branch of this reposito
 
 ```go
 import (
-  "github.com/fogfish/swarm"
-  "github.com/fogfish/swarm/queue/sqs"
+	"github.com/fogfish/swarm/queue"
+	"github.com/fogfish/swarm/queue/sqs"
 )
 
-// create queueing system and instance of the queue
+// Use pure Golang struct to define events and messages in the app
+type Note struct {
+  ID   string `json:"id"`
+  Text string `json:"text"`
+}
+
+// Create instance of the client to queueing system, for example AWS SQS
 sys := sqs.NewSystem("swarm-example-sqs")
-queue := sqs.Must(sqs.New(sys, "swarm-test"))
+q := sqs.Must(sqs.New(sys, "swarm-test"))
 
-// get Go channel to emit messages into queue and receive errors
-snd, _ := queue.Send("message-of-type-a")
+// Get Go channel to emit messages into queue and receive failed messages
+enq, dlq := queue.Enqueue[("message-of-type-a")
 
-// get Go channel to recv messages from queue
-rcv, ack := queue.Recv("message-of-type-a")
+// Get Go channel to recv messages from queue and acknowledge them
+deq, ack := queue.Recv("message-of-type-a")
 
-// spawn queue listeners. At this point the system spawns the transport
+// Spawn queue listeners. At this point the system spawns the transport
 // routines so that channels are ready for the communications
 if err := sys.Listen(); err != nil {
   panic(err)
 }
 
-// emit message to the queue
-snd <- swarm.Bytes("{\"type\": \"a\", \"some\": \"message\"}")
+// Enqueue message to the queue
+enq <- Note{ID: "note", Text: "some text"}
 
-// receive message from queue
-for msg := range rcv {
-  // do something with message
+// Dequeue message from queue
+for msg := range deq {
+  // do something with message and then acknowledge it
   ack <- msg
 }
 
@@ -85,6 +90,34 @@ sys.Stop()
 ```
 
 See [examples](examples) folder for executable examples, code snippets for your projects and receipts to build serverless applications.
+
+## Getting started with serverless
+
+See [example of serverless event consumer](examples/eventbridge/serverless/main.go). The library provides AWS CDK Golang constructs to spawn consumers.
+
+```go
+package main
+
+import (
+  "github.com/fogfish/scud"
+  "github.com/fogfish/swarm/queue/eventbridge"
+)
+
+func main() {
+  eventbridge.NewServerlessApp("swarm-example-eventbridge").
+    CreateEventBus().
+    CreateSink(
+      &eventbridge.SinkProps{
+        Queue: "swarm-test",
+        Lambda: &scud.FunctionGoProps{
+          SourceCodePackage: "github.com/fogfish/swarm",
+          SourceCodeLambda:  "examples/eventbridge/recv",
+        },
+      },
+    ).
+    Synth(nil)
+}
+```
 
 ## Supported queues
 
