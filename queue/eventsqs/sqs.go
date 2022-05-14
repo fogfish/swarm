@@ -6,10 +6,11 @@
 // https://github.com/fogfish/swarm
 //
 
-package sqs
+package eventsqs
 
 import (
 	"github.com/fogfish/swarm"
+	"github.com/fogfish/swarm/internal/queue/eventsqs"
 	"github.com/fogfish/swarm/internal/queue/sqs"
 	"github.com/fogfish/swarm/internal/system"
 )
@@ -38,7 +39,7 @@ func New(sys swarm.System, queue string, opts ...*swarm.Policy) (swarm.Queue, er
 	}
 
 	enq := sqs.NewEnqueue(sys, queue, policy, awscli)
-	deq := sqs.NewDequeue(sys, queue, policy, awscli)
+	deq := eventsqs.NewDequeue(sys, queue, policy)
 
 	return sys.Queue(queue, enq, deq, policy), nil
 }
