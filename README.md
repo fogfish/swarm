@@ -47,12 +47,33 @@ See [design pattern](./doc/pattern.md) to learn how to improve:
 
 ## Getting started
 
+The library requires **Go 1.18** or later due to usage of [generics](https://go.dev/blog/intro-generics).
+
 The latest version of the library is available at `main` branch of this repository. All development, including new features and bug fixes, take place on the `main` branch using forking and pull requests as described in contribution guidelines. The stable version is available via Golang modules.
+
+The latest version of the library is available at `main` branch. All development, including new features and bug fixes, take place on the `main` branch using forking and pull requests as described in contribution guidelines. The stable version is available via Golang modules.
+
+1. Use `go get` to retrieve the library and add it as dependency to your application.
+
+```bash
+go get -u github.com/fogfish/swarm
+```
+
+2. Import required package in your code
 
 ```go
 import (
-	"github.com/fogfish/swarm/queue"
-	"github.com/fogfish/swarm/queue/sqs"
+  "github.com/fogfish/swarm/queue"
+  "github.com/fogfish/swarm/queue/sqs" // <-- replace with your queue 
+)
+```
+
+### Quick Example
+
+```go
+import (
+  "github.com/fogfish/swarm/queue"
+  "github.com/fogfish/swarm/queue/sqs"
 )
 
 // Use pure Golang struct to define events and messages in the app
@@ -66,10 +87,10 @@ sys := sqs.NewSystem("swarm-example-sqs")
 q := sqs.Must(sqs.New(sys, "swarm-test"))
 
 // Get Go channel to emit messages into queue and receive failed messages
-enq, dlq := queue.Enqueue[("message-of-type-a")
+enq, dlq := queue.Enqueue[Note](q)
 
 // Get Go channel to recv messages from queue and acknowledge them
-deq, ack := queue.Recv("message-of-type-a")
+deq, ack := queue.Dequeue[Note](q)
 
 // Spawn queue listeners. At this point the system spawns the transport
 // routines so that channels are ready for the communications
