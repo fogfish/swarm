@@ -90,7 +90,7 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) Sink {
 type ServerlessApp interface {
 	awscdk.App
 	CreateEventBus() ServerlessApp
-	AttachEventBus() ServerlessApp
+	AttachEventBus(string) ServerlessApp
 	CreateSink(*SinkProps) ServerlessApp
 }
 
@@ -100,6 +100,16 @@ type serverlessapp struct {
 	sys   string
 	bus   awsevents.IEventBus
 	sinks []Sink
+}
+
+//
+func vsn(app awscdk.App) string {
+	switch val := app.Node().TryGetContext(jsii.String("vsn")).(type) {
+	case string:
+		return val
+	default:
+		return "latest"
+	}
 }
 
 /*
@@ -121,7 +131,7 @@ func NewServerlessApp(sys string) ServerlessApp {
 	//
 	// Stack
 	//
-	stack := awscdk.NewStack(app, jsii.String(sys), config)
+	stack := awscdk.NewStack(app, jsii.String(sys+"-"+vsn(app)), config)
 
 	return &serverlessapp{
 		App:   app,
@@ -139,10 +149,8 @@ func (app *serverlessapp) CreateEventBus() ServerlessApp {
 	return app
 }
 
-func (app *serverlessapp) AttachEventBus() ServerlessApp {
-	app.bus = awsevents.EventBus_FromEventBusName(app.stack, jsii.String("Bus"),
-		awscdk.Aws_STACK_NAME(),
-	)
+func (app *serverlessapp) AttachEventBus(eventBusName string) ServerlessApp {
+	app.bus = awsevents.EventBus_FromEventBusName(app.stack, jsii.String("Bus"), jsii.String(eventBusName))
 
 	return app
 }
