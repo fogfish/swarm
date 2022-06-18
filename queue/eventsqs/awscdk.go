@@ -64,7 +64,7 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) Sink {
 type ServerlessApp interface {
 	awscdk.App
 	CreateQueue() ServerlessApp
-	AttachQueue() ServerlessApp
+	AttachQueue(string) ServerlessApp
 	CreateSink(*SinkProps) ServerlessApp
 }
 
@@ -74,6 +74,16 @@ type serverlessapp struct {
 	sys   string
 	queue awssqs.IQueue
 	sinks []Sink
+}
+
+//
+func vsn(app awscdk.App) string {
+	switch val := app.Node().TryGetContext(jsii.String("vsn")).(type) {
+	case string:
+		return val
+	default:
+		return "latest"
+	}
 }
 
 /*
@@ -95,7 +105,7 @@ func NewServerlessApp(sys string) ServerlessApp {
 	//
 	// Stack
 	//
-	stack := awscdk.NewStack(app, jsii.String(sys), config)
+	stack := awscdk.NewStack(app, jsii.String(sys+"-"+vsn(app)), config)
 
 	return &serverlessapp{
 		App:   app,
@@ -116,10 +126,10 @@ func (app *serverlessapp) CreateQueue() ServerlessApp {
 	return app
 }
 
-func (app *serverlessapp) AttachQueue() ServerlessApp {
+func (app *serverlessapp) AttachQueue(queueName string) ServerlessApp {
 	app.queue = awssqs.Queue_FromQueueAttributes(app.stack, jsii.String("Bus"),
 		&awssqs.QueueAttributes{
-			QueueName: awscdk.Aws_STACK_NAME(),
+			QueueName: jsii.String(queueName),
 		},
 	)
 
