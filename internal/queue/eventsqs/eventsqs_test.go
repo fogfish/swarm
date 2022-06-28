@@ -27,7 +27,17 @@ import (
 	"github.com/fogfish/swarm/internal/system"
 )
 
-func mkQueue(sys swarm.System, policy *swarm.Policy, eff chan string) (swarm.Enqueue, swarm.Dequeue) {
+func TestEventSQS(t *testing.T) {
+	qtest.TestEnqueue(t, mkEnqueue)
+	qtest.TestDequeue(t, mkDequeue)
+}
+
+func mkEnqueue(
+	sys swarm.System,
+	policy *swarm.Policy,
+	eff chan string,
+	expectCategory string,
+) swarm.Enqueue {
 	awscli, err := system.NewSession()
 	if err != nil {
 		panic(err)
@@ -36,14 +46,20 @@ func mkQueue(sys swarm.System, policy *swarm.Policy, eff chan string) (swarm.Enq
 	enq := sutSend.NewEnqueue(sys, "test-sqs", policy, awscli)
 	enq.Mock(&mockSQS{loopback: eff})
 
-	deq := sutRecv.NewDequeue(sys, "test-bridge", policy)
-	deq.Mock(mockLambda(eff))
-	return enq, deq
+	return enq
 }
 
-func TestEventSQS(t *testing.T) {
-	qtest.TestEnqueue(t, mkQueue)
-	qtest.TestDequeue(t, mkQueue)
+func mkDequeue(
+	sys swarm.System,
+	policy *swarm.Policy,
+	eff chan string,
+	returnCategory string,
+	returnMessage string,
+	returnReceipt string,
+) swarm.Dequeue {
+	deq := sutRecv.NewDequeue(sys, "test-bridge", policy)
+	deq.Mock(mockLambda(eff, returnCategory, returnMessage, returnReceipt))
+	return deq
 }
 
 //
@@ -51,7 +67,8 @@ func TestEventSQS(t *testing.T) {
 type mockSQS struct {
 	sqsiface.SQSAPI
 
-	loopback chan string
+	loopback       chan string
+	expectCategory string
 }
 
 func (m *mockSQS) GetQueueUrl(s *sqs.GetQueueUrlInput) (*sqs.GetQueueUrlOutput, error) {
@@ -66,7 +83,7 @@ func (m *mockSQS) SendMessage(s *sqs.SendMessageInput) (*sqs.SendMessageOutput, 
 		return nil, fmt.Errorf("Bad message attributes")
 	}
 
-	if !strings.HasPrefix(*cat.StringValue, qtest.Category) {
+	if !strings.HasPrefix(*cat.StringValue, m.expectCategory) {
 		return nil, fmt.Errorf("Bad message category")
 	}
 
@@ -79,17 +96,22 @@ func (m *mockSQS) SendMessage(s *sqs.SendMessageInput) (*sqs.SendMessageOutput, 
 mock AWS Lambda Handler
 
 */
-func mockLambda(loopback chan string) func(interface{}) {
+func mockLambda(
+	loopback chan string,
+	returnCategory string,
+	returnMessage string,
+	returnReceipt string,
+) func(interface{}) {
 	return func(handler interface{}) {
 		msg, _ := json.Marshal(
 			events.SQSEvent{
 				Records: []events.SQSMessage{
 					{
 						MessageId:     "abc-def",
-						ReceiptHandle: qtest.Receipt,
-						Body:          qtest.Message,
+						ReceiptHandle: returnReceipt,
+						Body:          returnMessage,
 						MessageAttributes: map[string]events.SQSMessageAttribute{
-							"Category": {StringValue: aws.String(qtest.Category)},
+							"Category": {StringValue: aws.String(returnCategory)},
 						},
 					},
 				},
@@ -102,6 +124,6 @@ func mockLambda(loopback chan string) func(interface{}) {
 			panic(err)
 		}
 
-		loopback <- qtest.Receipt
+		loopback <- returnReceipt
 	}
 }
