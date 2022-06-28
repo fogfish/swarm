@@ -9,6 +9,7 @@
 package qtest
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/fogfish/it"
@@ -16,11 +17,13 @@ import (
 	"github.com/fogfish/swarm/internal/system"
 	"github.com/fogfish/swarm/queue"
 	"github.com/fogfish/swarm/queue/bytes"
+	"github.com/fogfish/swarm/queue/events"
 )
 
 const (
-	Category = "Note"
+	Category = "note"
 	Message  = "{\"some\":\"message\"}"
+	Event    = ""
 	Receipt  = "0x123456789abcdef"
 )
 
@@ -41,6 +44,7 @@ func TestEnqueue(
 
 	out, _ := queue.Enqueue[Note](q)
 	bin, _ := bytes.Enqueue(q, Category+"-bin")
+	evt, _ := events.Enqueue[*Note, swarm.Event[*Note]](q)
 	if err := sys.Listen(); err != nil {
 		panic(err)
 	}
@@ -55,6 +59,21 @@ func TestEnqueue(
 		bin <- []byte(Message)
 		it.Ok(t).
 			If(<-eff).Equal(Message)
+	})
+
+	t.Run("Success.Events", func(t *testing.T) {
+		evt <- &swarm.Event[*Note]{
+			Object: &Note{Some: "message"},
+		}
+		var out swarm.Event[*Note]
+		err := json.Unmarshal([]byte(<-eff), &out)
+
+		it.Ok(t).
+			IfNil(err).
+			If(*out.Object).Equal(Note{Some: "message"}).
+			If(string(out.Type)).Equal("note:Event[*swarm.Note").
+			IfTrue(out.ID != "").
+			IfTrue(out.Created != "")
 	})
 
 	// t.Run("Failure", func(t *testing.T) {
