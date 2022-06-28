@@ -11,6 +11,7 @@ package queue
 import (
 	"encoding/json"
 	"reflect"
+	"strings"
 
 	"github.com/fogfish/golem/pipe"
 	"github.com/fogfish/logger"
@@ -23,8 +24,8 @@ import (
 Enqueue creates channels to enqueue Golang structs and receive dead-letters
 */
 func Enqueue[T any](q swarm.Queue, category ...string) (chan<- T, <-chan T) {
-	queue := systemQueue(q)
-	cat := typeOf[T](category...)
+	queue := castToSystemQueue(q)
+	cat := strings.ToLower(typeOf[T](category...))
 
 	var ch system.MsgSendCh[T]
 	ch.Msg, ch.Err = spawnEnqueueOf[T](queue, cat)
@@ -66,51 +67,11 @@ func spawnEnqueueOf[T any](q *system.Queue, cat string) (chan T, chan T) {
 
 /*
 
-EnqueueBytes creates channels to enqueue binary messages and receive dead-letters
-*/
-func EnqueueBytes(q swarm.Queue, cat string) (chan<- []byte, <-chan []byte) {
-	queue := systemQueue(q)
-
-	var ch system.MsgSendCh[[]byte]
-	ch.Msg, ch.Err = spawnEnqueueBytesOf(queue, cat)
-	queue.EnqueueCh.Attach(cat, &ch)
-	return ch.Msg, ch.Err
-}
-
-func spawnEnqueueBytesOf(q *system.Queue, cat string) (chan []byte, chan []byte) {
-	logger := logger.With(
-		logger.Note{
-			"queue": q.System.ID() + "://" + q.ID + "/" + cat,
-		},
-	)
-	logger.Info("init enqueue for bytes")
-
-	emit := q.Enqueue.Enq()
-	sock := make(chan []byte, q.Policy.QueueCapacity)
-	fail := make(chan []byte, q.Policy.QueueCapacity)
-
-	pipe.ForEach(sock, func(object []byte) {
-		emit <- &swarm.BagStdErr{
-			Bag: swarm.Bag{
-				System:   q.System.ID(),
-				Queue:    q.ID,
-				Category: cat,
-				Object:   object,
-			},
-			StdErr: func(error) { fail <- object },
-		}
-	})
-
-	return sock, fail
-}
-
-/*
-
 EnqueueSync synchronously enqueue message
 */
 func EnqueueSync[T any](q swarm.Queue, msg T) error {
-	queue := systemQueue(q)
-	cat := typeOf[T]()
+	queue := castToSystemQueue(q)
+	cat := strings.ToLower(typeOf[T]())
 
 	object, err := json.Marshal(msg)
 	if err != nil {
@@ -132,8 +93,8 @@ func EnqueueSync[T any](q swarm.Queue, msg T) error {
 Dequeue creates channels to receive Golang structs and send acknowledgement
 */
 func Dequeue[T any](q swarm.Queue, category ...string) (<-chan *swarm.Msg[T], chan<- *swarm.Msg[T]) {
-	queue := systemQueue(q)
-	cat := typeOf[T](category...)
+	queue := castToSystemQueue(q)
+	cat := strings.ToLower(typeOf[T](category...))
 
 	var ch system.MsgRecvCh[T]
 	ch.Msg, ch.Ack = spawnDequeueOf[T](queue, cat)
@@ -176,56 +137,16 @@ func spawnDequeueOf[T any](q *system.Queue, cat string) (chan *swarm.Msg[T], cha
 	return recv, acks
 }
 
-/*
-
-DequeueBytes creates channels to receive binary messages and send acknowledgement
-*/
-func DequeueBytes(q swarm.Queue, cat string) (<-chan *swarm.Msg[[]byte], chan<- *swarm.Msg[[]byte]) {
-	queue := systemQueue(q)
-
-	var ch system.MsgRecvCh[[]byte]
-	ch.Msg, ch.Ack = spawnDequeueBytes(queue, cat)
-	queue.DequeueCh.Attach(cat, &ch)
-	return ch.Msg, ch.Ack
-}
-
-func spawnDequeueBytes(q *system.Queue, cat string) (chan *swarm.Msg[[]byte], chan *swarm.Msg[[]byte]) {
-	logger := logger.With(
-		logger.Note{
-			"queue": q.System.ID() + "://" + q.ID + "/" + cat,
-		},
-	)
-	logger.Info("init dequeue for bytes")
-
-	conf := q.Dequeue.Ack()
-	mbox := make(chan *swarm.Bag)
-	acks := make(chan *swarm.Msg[[]byte])
-
-	pipe.ForEach(acks, func(object *swarm.Msg[[]byte]) {
-		conf <- &swarm.Bag{
-			Category: cat,
-			System:   q.System.ID(),
-			Queue:    q.ID,
-			Digest:   object.Digest,
-		}
-	})
-
-	recv := pipe.Map(mbox, func(bag *swarm.Bag) *swarm.Msg[[]byte] {
-		return &swarm.Msg[[]byte]{
-			Object: bag.Object,
-			Digest: bag.Digest,
-		}
-	})
-
-	q.Ctrl <- system.Mailbox{ID: cat, Queue: mbox}
-	return recv, acks
-}
-
 //
 // Helpers
 //
 
 func typeOf[T any](category ...string) string {
+	//
+	// TODO: fix
+	//   Action[*swarm.User] if container type is used
+	//
+
 	if len(category) > 0 {
 		return category[0]
 	}
@@ -239,7 +160,7 @@ func typeOf[T any](category ...string) string {
 	return cat
 }
 
-func systemQueue(q swarm.Queue) *system.Queue {
+func castToSystemQueue(q swarm.Queue) *system.Queue {
 	switch queue := q.(type) {
 	case *system.Queue:
 		return queue

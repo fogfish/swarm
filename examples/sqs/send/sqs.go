@@ -41,7 +41,9 @@ func main() {
 	}
 
 	a <- &User{ID: "user", Text: "some text"}
+
 	b <- &Note{ID: "note", Text: "some text"}
+
 	c <- &Like{ID: "like", Text: "some text"}
 
 	sys.Close()

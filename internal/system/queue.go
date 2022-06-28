@@ -11,6 +11,7 @@ package system
 import (
 	"sync"
 
+	"github.com/fogfish/guid"
 	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
 )
@@ -39,6 +40,8 @@ type Queue struct {
 	Dequeue   swarm.Dequeue
 	DequeueCh *Channels
 
+	Clock guid.Chronos
+
 	logger logger.Logger
 }
 
@@ -61,6 +64,8 @@ func NewQueue(
 
 		Dequeue:   deq,
 		DequeueCh: NewChannels(),
+
+		Clock: guid.NewLClock(),
 
 		logger: logger.With(
 			logger.Note{

@@ -23,48 +23,84 @@ import (
 )
 
 func TestSQS(t *testing.T) {
-	qtest.TestEnqueue(t, mkQueue)
-	qtest.TestDequeue(t, mkQueue)
+	qtest.TestEnqueue(t, mkEnqueue)
+	qtest.TestDequeue(t, mkDequeue)
 }
 
 //
 //
-func mkQueue(sys swarm.System, policy *swarm.Policy, eff chan string) (swarm.Enqueue, swarm.Dequeue) {
+func mkEnqueue(
+	sys swarm.System,
+	policy *swarm.Policy,
+	eff chan string,
+	expectCategory string,
+) swarm.Enqueue {
 	awscli, err := system.NewSession()
 	if err != nil {
 		panic(err)
 	}
 
 	s := sut.NewEnqueue(sys, "test-sqs", policy, awscli)
-	s.Mock(&mockSQS{loopback: eff})
+	s.Mock(SendMessage(eff, expectCategory))
+	return s
+}
+
+func mkDequeue(
+	sys swarm.System,
+	policy *swarm.Policy,
+	eff chan string,
+	returnCategory string,
+	returnMessage string,
+	returnReceipt string,
+) swarm.Dequeue {
+	awscli, err := system.NewSession()
+	if err != nil {
+		panic(err)
+	}
 
 	r := sut.NewDequeue(sys, "test-sqs", policy, awscli)
-	r.Mock(&mockSQS{loopback: eff})
-
-	return s, r
+	r.Mock(ReceiveMessage(eff, returnCategory, returnMessage, returnReceipt))
+	return r
 }
 
 //
 //
-type mockSQS struct {
+type mockGetQueueUrl struct {
 	sqsiface.SQSAPI
-
-	loopback chan string
 }
 
-func (m *mockSQS) GetQueueUrl(s *sqs.GetQueueUrlInput) (*sqs.GetQueueUrlOutput, error) {
+func (m *mockGetQueueUrl) GetQueueUrl(s *sqs.GetQueueUrlInput) (*sqs.GetQueueUrlOutput, error) {
 	return &sqs.GetQueueUrlOutput{
 		QueueUrl: aws.String("https://sqs.eu-west-1.amazonaws.com/000000000000/mock"),
 	}, nil
 }
 
-func (m *mockSQS) SendMessage(s *sqs.SendMessageInput) (*sqs.SendMessageOutput, error) {
+//
+//
+type mockSendMessage struct {
+	sqsiface.SQSAPI
+	expectCategory string
+	loopback       chan string
+}
+
+func SendMessage(
+	loopback chan string,
+	expectCategory string,
+) *mockSendMessage {
+	return &mockSendMessage{
+		SQSAPI:         &mockGetQueueUrl{},
+		expectCategory: expectCategory,
+		loopback:       loopback,
+	}
+}
+
+func (m *mockSendMessage) SendMessage(s *sqs.SendMessageInput) (*sqs.SendMessageOutput, error) {
 	cat, exists := s.MessageAttributes["Category"]
 	if !exists {
 		return nil, fmt.Errorf("Bad message attributes")
 	}
 
-	if !strings.HasPrefix(*cat.StringValue, qtest.Category) {
+	if !strings.HasPrefix(*cat.StringValue, m.expectCategory) {
 		return nil, fmt.Errorf("Bad message category")
 	}
 
@@ -72,24 +108,96 @@ func (m *mockSQS) SendMessage(s *sqs.SendMessageInput) (*sqs.SendMessageOutput, 
 	return &sqs.SendMessageOutput{}, nil
 }
 
-func (m *mockSQS) ReceiveMessage(s *sqs.ReceiveMessageInput) (*sqs.ReceiveMessageOutput, error) {
+//
+//
+type mockReceiveMessage struct {
+	sqsiface.SQSAPI
+	returnCategory string
+	returnMessage  string
+	returnReceipt  string
+	loopback       chan string
+}
+
+func ReceiveMessage(
+	loopback chan string,
+	returnCategory string,
+	returnMessage string,
+	returnReceipt string,
+) *mockReceiveMessage {
+	return &mockReceiveMessage{
+		SQSAPI:         &mockGetQueueUrl{},
+		returnCategory: returnCategory,
+		returnMessage:  returnMessage,
+		returnReceipt:  returnReceipt,
+		loopback:       loopback,
+	}
+}
+
+func (m *mockReceiveMessage) ReceiveMessage(s *sqs.ReceiveMessageInput) (*sqs.ReceiveMessageOutput, error) {
 	return &sqs.ReceiveMessageOutput{
 		Messages: []*sqs.Message{
 			{
 				MessageAttributes: map[string]*sqs.MessageAttributeValue{
-					"Category": {StringValue: aws.String(qtest.Category)},
+					"Category": {StringValue: aws.String(m.returnCategory)},
 				},
-				Body:          aws.String(qtest.Message),
-				ReceiptHandle: aws.String(qtest.Receipt),
+				Body:          aws.String(m.returnMessage),
+				ReceiptHandle: aws.String(m.returnReceipt),
 			},
 		},
 	}, nil
 }
 
-func (m *mockSQS) DeleteMessage(s *sqs.DeleteMessageInput) (*sqs.DeleteMessageOutput, error) {
+func (m *mockReceiveMessage) DeleteMessage(s *sqs.DeleteMessageInput) (*sqs.DeleteMessageOutput, error) {
 	m.loopback <- aws.StringValue(s.ReceiptHandle)
 	return &sqs.DeleteMessageOutput{}, nil
 }
+
+//
+//
+// type mockSQS struct {
+// 	sqsiface.SQSAPI
+
+// 	loopback chan string
+// }
+
+// func (m *mockSQS) GetQueueUrl(s *sqs.GetQueueUrlInput) (*sqs.GetQueueUrlOutput, error) {
+// 	return &sqs.GetQueueUrlOutput{
+// 		QueueUrl: aws.String("https://sqs.eu-west-1.amazonaws.com/000000000000/mock"),
+// 	}, nil
+// }
+
+// func (m *mockSQS) SendMessage(s *sqs.SendMessageInput) (*sqs.SendMessageOutput, error) {
+// 	cat, exists := s.MessageAttributes["Category"]
+// 	if !exists {
+// 		return nil, fmt.Errorf("Bad message attributes")
+// 	}
+
+// 	if !strings.HasPrefix(*cat.StringValue, qtest.Category) {
+// 		return nil, fmt.Errorf("Bad message category")
+// 	}
+
+// 	m.loopback <- aws.StringValue(s.MessageBody)
+// 	return &sqs.SendMessageOutput{}, nil
+// }
+
+// func (m *mockSQS) ReceiveMessage(s *sqs.ReceiveMessageInput) (*sqs.ReceiveMessageOutput, error) {
+// 	return &sqs.ReceiveMessageOutput{
+// 		Messages: []*sqs.Message{
+// 			{
+// 				MessageAttributes: map[string]*sqs.MessageAttributeValue{
+// 					"Category": {StringValue: aws.String(qtest.Category)},
+// 				},
+// 				Body:          aws.String(qtest.Message),
+// 				ReceiptHandle: aws.String(qtest.Receipt),
+// 			},
+// 		},
+// 	}, nil
+// }
+
+// func (m *mockSQS) DeleteMessage(s *sqs.DeleteMessageInput) (*sqs.DeleteMessageOutput, error) {
+// 	m.loopback <- aws.StringValue(s.ReceiptHandle)
+// 	return &sqs.DeleteMessageOutput{}, nil
+// }
 
 /*
 

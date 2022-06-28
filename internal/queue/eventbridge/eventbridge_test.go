@@ -26,29 +26,48 @@ import (
 	"github.com/fogfish/swarm/internal/system"
 )
 
-func mkQueue(sys swarm.System, policy *swarm.Policy, eff chan string) (swarm.Enqueue, swarm.Dequeue) {
+func TestEventBridge(t *testing.T) {
+	qtest.TestEnqueue(t, mkEnqueue)
+	qtest.TestDequeue(t, mkDequeue)
+}
+
+func mkEnqueue(
+	sys swarm.System,
+	policy *swarm.Policy,
+	eff chan string,
+	expectCategory string,
+) swarm.Enqueue {
 	awscli, err := system.NewSession()
 	if err != nil {
 		panic(err)
 	}
 
 	enq := sut.NewEnqueue(sys, "test-bridge", policy, awscli)
-	enq.Mock(&mockEventBridge{loopback: eff})
+	enq.Mock(&mockEventBridge{
+		loopback:       eff,
+		expectCategory: expectCategory,
+	})
 
-	deq := sut.NewDequeue(sys, "test-bridge", policy)
-	deq.Mock(mockLambda(eff))
-	return enq, deq
+	return enq
 }
 
-func TestEventBridge(t *testing.T) {
-	qtest.TestEnqueue(t, mkQueue)
-	qtest.TestDequeue(t, mkQueue)
+func mkDequeue(
+	sys swarm.System,
+	policy *swarm.Policy,
+	eff chan string,
+	returnCategory string,
+	returnMessage string,
+	returnReceipt string,
+) swarm.Dequeue {
+	deq := sut.NewDequeue(sys, "test-bridge", policy)
+	deq.Mock(mockLambda(eff, returnCategory, returnMessage, returnReceipt))
+	return deq
 }
 
 type mockEventBridge struct {
 	eventbridgeiface.EventBridgeAPI
-
-	loopback chan string
+	loopback       chan string
+	expectCategory string
 }
 
 func (m *mockEventBridge) PutEvents(s *eventbridge.PutEventsInput) (*eventbridge.PutEventsOutput, error) {
@@ -56,7 +75,7 @@ func (m *mockEventBridge) PutEvents(s *eventbridge.PutEventsInput) (*eventbridge
 		return nil, fmt.Errorf("Bad request")
 	}
 
-	if !strings.HasPrefix(*s.Entries[0].DetailType, qtest.Category) {
+	if !strings.HasPrefix(*s.Entries[0].DetailType, m.expectCategory) {
 		return nil, fmt.Errorf("Bad message category")
 	}
 
@@ -71,13 +90,18 @@ func (m *mockEventBridge) PutEvents(s *eventbridge.PutEventsInput) (*eventbridge
 mock AWS Lambda Handler
 
 */
-func mockLambda(loopback chan string) func(interface{}) {
+func mockLambda(
+	loopback chan string,
+	returnCategory string,
+	returnMessage string,
+	returnReceipt string,
+) func(interface{}) {
 	return func(handler interface{}) {
 		msg, _ := json.Marshal(
 			events.CloudWatchEvent{
 				ID:         "abc-def",
-				DetailType: qtest.Category,
-				Detail:     json.RawMessage(qtest.Message),
+				DetailType: returnCategory,
+				Detail:     json.RawMessage(returnMessage),
 			},
 		)
 
@@ -87,6 +111,6 @@ func mockLambda(loopback chan string) func(interface{}) {
 			panic(err)
 		}
 
-		loopback <- qtest.Receipt
+		loopback <- returnReceipt
 	}
 }
