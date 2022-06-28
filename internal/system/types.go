@@ -66,3 +66,51 @@ func (ch *MsgRecvCh[T]) Close() {
 	close(ch.Msg)
 	close(ch.Ack)
 }
+
+/*
+
+MsgSendCh is the pair of channel, exposed by the queue to clients to send messages
+*/
+type EvtSendCh[T any, E swarm.EventKind[T]] struct {
+	Msg chan *E // channel to send message out
+	Err chan *E // channel to recv failed messages
+}
+
+func (ch *EvtSendCh[T, E]) Sync() {
+	for {
+		time.Sleep(100 * time.Millisecond)
+		if len(ch.Msg)+len(ch.Err) == 0 {
+			break
+		}
+	}
+}
+
+func (ch *EvtSendCh[T, E]) Close() {
+	ch.Sync()
+	close(ch.Msg)
+	close(ch.Err)
+}
+
+/*
+
+msgRecv is the pair of channel, exposed by the queue to clients to recv messages
+*/
+type EvtRecvCh[T any, E swarm.EventKind[T]] struct {
+	Msg chan *E // channel to recv message
+	Ack chan *E // channel to send acknowledgement
+}
+
+func (ch *EvtRecvCh[T, E]) Sync() {
+	for {
+		time.Sleep(100 * time.Millisecond)
+		if len(ch.Msg)+len(ch.Ack) == 0 {
+			break
+		}
+	}
+}
+
+func (ch *EvtRecvCh[T, E]) Close() {
+	ch.Sync()
+	close(ch.Msg)
+	close(ch.Ack)
+}

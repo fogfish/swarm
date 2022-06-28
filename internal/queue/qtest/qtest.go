@@ -15,6 +15,7 @@ import (
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/internal/system"
 	"github.com/fogfish/swarm/queue"
+	"github.com/fogfish/swarm/queue/bytes"
 )
 
 const (
@@ -39,7 +40,7 @@ func TestEnqueue(
 	q := sys.Queue("test-queue", enq, deq, swarm.DefaultPolicy())
 
 	out, _ := queue.Enqueue[Note](q)
-	bin, _ := queue.EnqueueBytes(q, Category+"-bin")
+	bin, _ := bytes.Enqueue(q, Category+"-bin")
 	if err := sys.Listen(); err != nil {
 		panic(err)
 	}
