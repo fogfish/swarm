@@ -11,7 +11,6 @@ package queue
 import (
 	"encoding/json"
 	"reflect"
-	"strings"
 
 	"github.com/fogfish/golem/pipe"
 	"github.com/fogfish/logger"
@@ -25,7 +24,7 @@ Enqueue creates channels to enqueue Golang structs and receive dead-letters
 */
 func Enqueue[T any](q swarm.Queue, category ...string) (chan<- T, <-chan T) {
 	queue := castToSystemQueue(q)
-	cat := strings.ToLower(typeOf[T](category...))
+	cat := typeOf[T](category...)
 
 	var ch system.MsgSendCh[T]
 	ch.Msg, ch.Err = spawnEnqueueOf[T](queue, cat)
@@ -71,7 +70,7 @@ EnqueueSync synchronously enqueue message
 */
 func EnqueueSync[T any](q swarm.Queue, msg T) error {
 	queue := castToSystemQueue(q)
-	cat := strings.ToLower(typeOf[T]())
+	cat := typeOf[T]()
 
 	object, err := json.Marshal(msg)
 	if err != nil {
@@ -94,7 +93,7 @@ Dequeue creates channels to receive Golang structs and send acknowledgement
 */
 func Dequeue[T any](q swarm.Queue, category ...string) (<-chan *swarm.Msg[T], chan<- *swarm.Msg[T]) {
 	queue := castToSystemQueue(q)
-	cat := strings.ToLower(typeOf[T](category...))
+	cat := typeOf[T](category...)
 
 	var ch system.MsgRecvCh[T]
 	ch.Msg, ch.Ack = spawnDequeueOf[T](queue, cat)
