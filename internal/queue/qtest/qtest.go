@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	Category = "Note"
+	Category = "note"
 	Message  = "{\"some\":\"message\"}"
 	Receipt  = "0x123456789abcdef"
 )
