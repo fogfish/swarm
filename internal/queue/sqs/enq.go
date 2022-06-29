@@ -9,12 +9,12 @@
 package sqs
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/internal/queue/adapter"
@@ -27,7 +27,7 @@ type Enqueue struct {
 	adapter *adapter.Adapter
 	sock    chan *swarm.BagStdErr
 
-	client sqsiface.SQSAPI
+	client EnqueueService
 	queue  *string
 	logger logger.Logger
 }
@@ -38,7 +38,7 @@ func NewEnqueue(
 	sys swarm.System,
 	queue string,
 	policy *swarm.Policy,
-	session *session.Session,
+	session aws.Config,
 ) *Enqueue {
 	logger := logger.With(
 		logger.Note{
@@ -51,13 +51,13 @@ func NewEnqueue(
 	return &Enqueue{
 		id:      queue,
 		adapter: adapt,
-		client:  sqs.New(session),
+		client:  sqs.NewFromConfig(session),
 		logger:  logger,
 	}
 }
 
 // Mock ...
-func (q *Enqueue) Mock(mock sqsiface.SQSAPI) {
+func (q *Enqueue) Mock(mock EnqueueService) {
 	q.client = mock
 }
 
@@ -68,6 +68,7 @@ func (q *Enqueue) Listen() error {
 
 	if q.queue == nil {
 		spec, err := q.client.GetQueueUrl(
+			context.TODO(),
 			&sqs.GetQueueUrlInput{
 				QueueName: aws.String(q.id),
 			},
@@ -102,8 +103,9 @@ func (q *Enqueue) Enq() chan *swarm.BagStdErr {
 
 func (q *Enqueue) EnqSync(msg *swarm.Bag) error {
 	_, err := q.client.SendMessage(
+		context.TODO(),
 		&sqs.SendMessageInput{
-			MessageAttributes: map[string]*sqs.MessageAttributeValue{
+			MessageAttributes: map[string]types.MessageAttributeValue{
 				"System":   {StringValue: aws.String(msg.System), DataType: aws.String("String")},
 				"Queue":    {StringValue: aws.String(msg.Queue), DataType: aws.String("String")},
 				"Category": {StringValue: aws.String(msg.Category), DataType: aws.String("String")},

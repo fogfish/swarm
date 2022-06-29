@@ -9,6 +9,9 @@
 package sqs
 
 import (
+	"context"
+
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/internal/queue/sqs"
 	"github.com/fogfish/swarm/internal/system"
@@ -32,7 +35,7 @@ func New(sys swarm.System, queue string, opts ...*swarm.Policy) (swarm.Queue, er
 		policy = opts[0]
 	}
 
-	awscli, err := system.NewSession()
+	awscli, err := config.LoadDefaultConfig(context.Background())
 	if err != nil {
 		return nil, err
 	}

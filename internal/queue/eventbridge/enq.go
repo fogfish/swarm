@@ -9,12 +9,12 @@
 package eventbridge
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/eventbridge"
-	"github.com/aws/aws-sdk-go/service/eventbridge/eventbridgeiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/eventbridge"
+	"github.com/aws/aws-sdk-go-v2/service/eventbridge/types"
 	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/internal/queue/adapter"
@@ -31,7 +31,7 @@ type Enqueue struct {
 
 	sys swarm.System
 
-	client eventbridgeiface.EventBridgeAPI
+	client EnqueueService
 	logger logger.Logger
 }
 
@@ -43,7 +43,7 @@ func NewEnqueue(
 	sys swarm.System,
 	queue string,
 	policy *swarm.Policy,
-	session *session.Session,
+	session aws.Config,
 ) *Enqueue {
 	logger := logger.With(
 		logger.Note{
@@ -59,13 +59,13 @@ func NewEnqueue(
 
 		sys: sys,
 
-		client: eventbridge.New(session),
+		client: eventbridge.NewFromConfig(session),
 		logger: logger,
 	}
 }
 
 //
-func (q *Enqueue) Mock(mock eventbridgeiface.EventBridgeAPI) {
+func (q *Enqueue) Mock(mock EnqueueService) {
 	q.client = mock
 }
 
@@ -96,22 +96,25 @@ func (q *Enqueue) Enq() chan *swarm.BagStdErr {
 }
 
 func (q *Enqueue) EnqSync(msg *swarm.Bag) error {
-	ret, err := q.client.PutEvents(&eventbridge.PutEventsInput{
-		Entries: []*eventbridge.PutEventsRequestEntry{
-			{
-				EventBusName: aws.String(msg.System),
-				Source:       aws.String(msg.Queue),
-				DetailType:   aws.String(msg.Category),
-				Detail:       aws.String(string(msg.Object)),
+	ret, err := q.client.PutEvents(
+		context.TODO(),
+		&eventbridge.PutEventsInput{
+			Entries: []types.PutEventsRequestEntry{
+				{
+					EventBusName: aws.String(msg.System),
+					Source:       aws.String(msg.Queue),
+					DetailType:   aws.String(msg.Category),
+					Detail:       aws.String(string(msg.Object)),
+				},
 			},
 		},
-	})
+	)
 
 	if err != nil {
 		return err
 	}
 
-	if *ret.FailedEntryCount > 0 {
+	if ret.FailedEntryCount > 0 {
 		return fmt.Errorf("%v: %v", ret.Entries[0].ErrorCode, ret.Entries[0].ErrorMessage)
 	}
 
