@@ -9,12 +9,12 @@
 package sqs
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/internal/queue/adapter"
@@ -26,7 +26,7 @@ type Dequeue struct {
 	sock    chan *swarm.Bag
 	sack    chan *swarm.Bag
 
-	client sqsiface.SQSAPI
+	client DequeueService
 	queue  *string
 	logger logger.Logger
 }
@@ -37,7 +37,7 @@ func NewDequeue(
 	sys swarm.System,
 	queue string,
 	policy *swarm.Policy,
-	session *session.Session,
+	session aws.Config,
 ) *Dequeue {
 	logger := logger.With(
 		logger.Note{
@@ -50,13 +50,13 @@ func NewDequeue(
 	return &Dequeue{
 		id:      queue,
 		adapter: adapt,
-		client:  sqs.New(session),
+		client:  sqs.NewFromConfig(session),
 		logger:  logger,
 	}
 }
 
 // Mock ...
-func (q *Dequeue) Mock(mock sqsiface.SQSAPI) {
+func (q *Dequeue) Mock(mock DequeueService) {
 	q.client = mock
 }
 
@@ -67,6 +67,7 @@ func (q *Dequeue) Listen() error {
 
 	if q.queue == nil {
 		spec, err := q.client.GetQueueUrl(
+			context.TODO(),
 			&sqs.GetQueueUrlInput{
 				QueueName: aws.String(q.id),
 			},
@@ -102,11 +103,12 @@ func (q *Dequeue) Deq() chan *swarm.Bag {
 
 func (q *Dequeue) deq() (*swarm.Bag, error) {
 	result, err := q.client.ReceiveMessage(
+		context.TODO(),
 		&sqs.ReceiveMessageInput{
-			MessageAttributeNames: []*string{aws.String("All")},
+			MessageAttributeNames: []string{string(types.QueueAttributeNameAll)},
 			QueueUrl:              q.queue,
-			MaxNumberOfMessages:   aws.Int64(1),
-			WaitTimeSeconds:       aws.Int64(10),
+			MaxNumberOfMessages:   1,
+			WaitTimeSeconds:       10,
 		},
 	)
 	if err != nil {
@@ -120,15 +122,15 @@ func (q *Dequeue) deq() (*swarm.Bag, error) {
 	head := result.Messages[0]
 
 	return &swarm.Bag{
-		System:   attr(head, "System"),
-		Queue:    attr(head, "Queue"),
-		Category: attr(head, "Category"),
+		System:   attr(&head, "System"),
+		Queue:    attr(&head, "Queue"),
+		Category: attr(&head, "Category"),
 		Object:   []byte(*head.Body),
 		Digest:   *head.ReceiptHandle,
 	}, nil
 }
 
-func attr(msg *sqs.Message, key string) string {
+func attr(msg *types.Message, key string) string {
 	val, exists := msg.MessageAttributes[key]
 	if !exists {
 		return ""
@@ -148,6 +150,7 @@ func (q *Dequeue) Ack() chan *swarm.Bag {
 
 func (q *Dequeue) ack(msg *swarm.Bag) error {
 	_, err := q.client.DeleteMessage(
+		context.TODO(),
 		&sqs.DeleteMessageInput{
 			QueueUrl:      q.queue,
 			ReceiptHandle: aws.String(string(msg.Digest)),

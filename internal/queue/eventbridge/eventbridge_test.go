@@ -17,13 +17,11 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/eventbridge"
-	"github.com/aws/aws-sdk-go/service/eventbridge/eventbridgeiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/eventbridge"
 	"github.com/fogfish/swarm"
 	sut "github.com/fogfish/swarm/internal/queue/eventbridge"
 	"github.com/fogfish/swarm/internal/queue/qtest"
-	"github.com/fogfish/swarm/internal/system"
 )
 
 func TestEventBridge(t *testing.T) {
@@ -37,13 +35,8 @@ func mkEnqueue(
 	eff chan string,
 	expectCategory string,
 ) swarm.Enqueue {
-	awscli, err := system.NewSession()
-	if err != nil {
-		panic(err)
-	}
-
-	enq := sut.NewEnqueue(sys, "test-bridge", policy, awscli)
-	enq.Mock(&mockEventBridge{
+	enq := sut.NewEnqueue(sys, "test-bridge", policy, *aws.NewConfig())
+	enq.Mock(&mockEnqueueService{
 		loopback:       eff,
 		expectCategory: expectCategory,
 	})
@@ -64,24 +57,24 @@ func mkDequeue(
 	return deq
 }
 
-type mockEventBridge struct {
-	eventbridgeiface.EventBridgeAPI
+type mockEnqueueService struct {
+	sut.EnqueueService
 	loopback       chan string
 	expectCategory string
 }
 
-func (m *mockEventBridge) PutEvents(s *eventbridge.PutEventsInput) (*eventbridge.PutEventsOutput, error) {
-	if len(s.Entries) != 1 {
+func (m *mockEnqueueService) PutEvents(ctx context.Context, req *eventbridge.PutEventsInput, opts ...func(*eventbridge.Options)) (*eventbridge.PutEventsOutput, error) {
+	if len(req.Entries) != 1 {
 		return nil, fmt.Errorf("Bad request")
 	}
 
-	if !strings.HasPrefix(*s.Entries[0].DetailType, m.expectCategory) {
+	if !strings.HasPrefix(*req.Entries[0].DetailType, m.expectCategory) {
 		return nil, fmt.Errorf("Bad message category")
 	}
 
-	m.loopback <- aws.StringValue(s.Entries[0].Detail)
+	m.loopback <- aws.ToString(req.Entries[0].Detail)
 	return &eventbridge.PutEventsOutput{
-		FailedEntryCount: aws.Int64(0),
+		FailedEntryCount: 0,
 	}, nil
 }
 
