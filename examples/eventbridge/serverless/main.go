@@ -14,16 +14,18 @@ import (
 )
 
 func main() {
-	eventbridge.NewServerlessApp("swarm-example-eventbridge").
-		CreateEventBus().
-		CreateSink(
-			&eventbridge.SinkProps{
-				Queue: "swarm-test",
-				Lambda: &scud.FunctionGoProps{
-					SourceCodePackage: "github.com/fogfish/swarm",
-					SourceCodeLambda:  "examples/eventbridge/recv",
-				},
+	app := eventbridge.NewServerlessApp("swarm-example-eventbridge")
+	app.CreateEventBus()
+
+	app.CreateSink(
+		&eventbridge.SinkProps{
+			Queue: "swarm-test",
+			Lambda: &scud.FunctionGoProps{
+				SourceCodePackage: "github.com/fogfish/swarm",
+				SourceCodeLambda:  "examples/eventbridge/recv",
 			},
-		).
-		Synth(nil)
+		},
+	)
+
+	app.Synth(nil)
 }

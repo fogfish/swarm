@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsevents"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awseventstargets"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
 	"github.com/aws/constructs-go/constructs/v10"
 	"github.com/aws/jsii-runtime-go"
 	"github.com/fogfish/scud"
@@ -26,10 +27,12 @@ Sink ...
 */
 type Sink interface {
 	constructs.Construct
+	Handler() awslambda.IFunction
 }
 
 type sink struct {
 	constructs.Construct
+	handler awslambda.IFunction
 }
 
 /*
@@ -51,7 +54,7 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) Sink {
 	sink := &sink{Construct: constructs.NewConstruct(scope, id)}
 
 	//
-	handler := scud.NewFunctionGo(sink.Construct, jsii.String("Func"), props.Lambda)
+	sink.handler = scud.NewFunctionGo(sink.Construct, jsii.String("Func"), props.Lambda)
 
 	//
 	pattern := &awsevents.EventPattern{}
@@ -75,7 +78,7 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) Sink {
 		},
 	)
 	rule.AddTarget(awseventstargets.NewLambdaFunction(
-		handler,
+		sink.handler,
 		&awseventstargets.LambdaFunctionProps{
 			// TODO:
 			// MaxEventAge: ,
@@ -86,12 +89,19 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) Sink {
 	return sink
 }
 
+func (sink *sink) Handler() awslambda.IFunction {
+	return sink.handler
+}
+
 //
 type ServerlessApp interface {
 	awscdk.App
-	CreateEventBus() ServerlessApp
-	AttachEventBus(string) ServerlessApp
-	CreateSink(*SinkProps) ServerlessApp
+	Stack() awscdk.Stack
+
+	CreateEventBus() awsevents.IEventBus
+	AttachEventBus(string) awsevents.IEventBus
+
+	CreateSink(*SinkProps) Sink
 }
 
 type serverlessapp struct {
@@ -141,26 +151,30 @@ func NewServerlessApp(sys string) ServerlessApp {
 	}
 }
 
-func (app *serverlessapp) CreateEventBus() ServerlessApp {
+func (app *serverlessapp) Stack() awscdk.Stack {
+	return app.stack
+}
+
+func (app *serverlessapp) CreateEventBus() awsevents.IEventBus {
 	app.bus = awsevents.NewEventBus(app.stack, jsii.String("Bus"),
 		&awsevents.EventBusProps{EventBusName: awscdk.Aws_STACK_NAME()},
 	)
 
-	return app
+	return app.bus
 }
 
-func (app *serverlessapp) AttachEventBus(eventBusName string) ServerlessApp {
+func (app *serverlessapp) AttachEventBus(eventBusName string) awsevents.IEventBus {
 	app.bus = awsevents.EventBus_FromEventBusName(app.stack, jsii.String("Bus"), jsii.String(eventBusName))
 
-	return app
+	return app.bus
 }
 
-func (app *serverlessapp) CreateSink(props *SinkProps) ServerlessApp {
+func (app *serverlessapp) CreateSink(props *SinkProps) Sink {
 	props.System = app.bus
 
 	name := "Sink" + strconv.Itoa(len(app.sinks))
 	sink := NewSink(app.stack, jsii.String(name), props)
 
 	app.sinks = append(app.sinks, sink)
-	return app
+	return sink
 }
