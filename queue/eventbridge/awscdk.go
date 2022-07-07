@@ -21,18 +21,15 @@ import (
 	"github.com/fogfish/scud"
 )
 
-/*
+//------------------------------------------------------------------------------
+//
+// AWS CDK Sink Construct
+//
+//------------------------------------------------------------------------------
 
-Sink ...
-*/
-type Sink interface {
+type Sink struct {
 	constructs.Construct
-	Handler() awslambda.IFunction
-}
-
-type sink struct {
-	constructs.Construct
-	handler awslambda.IFunction
+	Handler awslambda.IFunction
 }
 
 /*
@@ -50,11 +47,11 @@ type SinkProps struct {
 
 NewSink ...
 */
-func NewSink(scope constructs.Construct, id *string, props *SinkProps) Sink {
-	sink := &sink{Construct: constructs.NewConstruct(scope, id)}
+func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
+	sink := &Sink{Construct: constructs.NewConstruct(scope, id)}
 
 	//
-	sink.handler = scud.NewFunctionGo(sink.Construct, jsii.String("Func"), props.Lambda)
+	sink.Handler = scud.NewFunctionGo(sink.Construct, jsii.String("Func"), props.Lambda)
 
 	//
 	pattern := &awsevents.EventPattern{}
@@ -78,7 +75,7 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) Sink {
 		},
 	)
 	rule.AddTarget(awseventstargets.NewLambdaFunction(
-		sink.handler,
+		sink.Handler,
 		&awseventstargets.LambdaFunctionProps{
 			// TODO:
 			// MaxEventAge: ,
@@ -89,48 +86,95 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) Sink {
 	return sink
 }
 
-func (sink *sink) Handler() awslambda.IFunction {
-	return sink.handler
-}
-
+//------------------------------------------------------------------------------
 //
-type ServerlessApp interface {
-	awscdk.App
-	Stack() awscdk.Stack
+// AWS CDK Stack Construct
+//
+//------------------------------------------------------------------------------
 
-	CreateEventBus() awsevents.IEventBus
-	AttachEventBus(string) awsevents.IEventBus
-
-	CreateSink(*SinkProps) Sink
+type ServerlessStackProps struct {
+	*awscdk.StackProps
+	Version string
+	System  string
 }
 
-type serverlessapp struct {
-	awscdk.App
-	stack awscdk.Stack
-	sys   string
+type ServerlessStack struct {
+	awscdk.Stack
+	app   awscdk.App
 	bus   awsevents.IEventBus
-	sinks []Sink
+	sinks []*Sink
 }
 
-//
-func vsn(app awscdk.App) string {
-	switch val := app.Node().TryGetContext(jsii.String("vsn")).(type) {
-	case string:
-		return val
-	default:
-		return "latest"
+func NewServerlessStack(app awscdk.App, id *string, props *ServerlessStackProps) *ServerlessStack {
+	sid := *id
+	if props.Version != "" {
+		sid = sid + "-" + props.Version
 	}
+
+	stack := &ServerlessStack{
+		Stack: awscdk.NewStack(app, jsii.String(sid), props.StackProps),
+	}
+
+	return stack
+}
+
+func (stack *ServerlessStack) NewEventBus(eventBusName ...string) awsevents.IEventBus {
+	name := awscdk.Aws_STACK_NAME()
+	if len(eventBusName) > 0 {
+		name = &eventBusName[0]
+	}
+
+	stack.bus = awsevents.NewEventBus(stack.Stack, jsii.String("Bus"),
+		&awsevents.EventBusProps{EventBusName: name},
+	)
+
+	return stack.bus
+}
+
+func (stack *ServerlessStack) AddEventBus(eventBusName string) awsevents.IEventBus {
+	stack.bus = awsevents.EventBus_FromEventBusName(stack.Stack, jsii.String("Bus"), jsii.String(eventBusName))
+
+	return stack.bus
+}
+
+func (stack *ServerlessStack) NewSink(props *SinkProps) *Sink {
+	if stack.bus == nil {
+		panic("EventBus is not defined.")
+	}
+
+	props.System = stack.bus
+
+	name := "Sink" + strconv.Itoa(len(stack.sinks))
+	sink := NewSink(stack.Stack, jsii.String(name), props)
+
+	stack.sinks = append(stack.sinks, sink)
+	return sink
+}
+
+//------------------------------------------------------------------------------
+//
+// AWS CDK App Construct
+//
+//------------------------------------------------------------------------------
+
+/*
+
+ServerlessApp ...
+*/
+type ServerlessApp struct {
+	awscdk.App
 }
 
 /*
 
-NewApp ...
+NewServerlessApp ...
 */
-func NewServerlessApp(sys string) ServerlessApp {
-	//
-	// Global config
-	//
+func NewServerlessApp() *ServerlessApp {
 	app := awscdk.NewApp(nil)
+	return &ServerlessApp{App: app}
+}
+
+func (app *ServerlessApp) NewStack(name string) *ServerlessStack {
 	config := &awscdk.StackProps{
 		Env: &awscdk.Environment{
 			Account: jsii.String(os.Getenv("CDK_DEFAULT_ACCOUNT")),
@@ -138,43 +182,30 @@ func NewServerlessApp(sys string) ServerlessApp {
 		},
 	}
 
-	//
-	// Stack
-	//
-	stack := awscdk.NewStack(app, jsii.String(sys+"-"+vsn(app)), config)
+	return NewServerlessStack(app.App, jsii.String(name), &ServerlessStackProps{
+		StackProps: config,
+		Version:    FromContextVsn(app),
+		System:     name,
+	})
+}
 
-	return &serverlessapp{
-		App:   app,
-		stack: stack,
-		sys:   sys,
-		sinks: []Sink{},
+//
+func FromContext(app awscdk.App, key string) string {
+	val := app.Node().TryGetContext(jsii.String(key))
+	switch v := val.(type) {
+	case string:
+		return v
+	default:
+		return ""
 	}
 }
 
-func (app *serverlessapp) Stack() awscdk.Stack {
-	return app.stack
-}
+//
+func FromContextVsn(app awscdk.App) string {
+	vsn := FromContext(app, "vsn")
+	if vsn == "" {
+		return "main"
+	}
 
-func (app *serverlessapp) CreateEventBus() awsevents.IEventBus {
-	app.bus = awsevents.NewEventBus(app.stack, jsii.String("Bus"),
-		&awsevents.EventBusProps{EventBusName: awscdk.Aws_STACK_NAME()},
-	)
-
-	return app.bus
-}
-
-func (app *serverlessapp) AttachEventBus(eventBusName string) awsevents.IEventBus {
-	app.bus = awsevents.EventBus_FromEventBusName(app.stack, jsii.String("Bus"), jsii.String(eventBusName))
-
-	return app.bus
-}
-
-func (app *serverlessapp) CreateSink(props *SinkProps) Sink {
-	props.System = app.bus
-
-	name := "Sink" + strconv.Itoa(len(app.sinks))
-	sink := NewSink(app.stack, jsii.String(name), props)
-
-	app.sinks = append(app.sinks, sink)
-	return sink
+	return vsn
 }

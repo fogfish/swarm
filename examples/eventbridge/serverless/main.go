@@ -14,10 +14,12 @@ import (
 )
 
 func main() {
-	app := eventbridge.NewServerlessApp("swarm-example-eventbridge")
-	app.CreateEventBus()
+	app := eventbridge.NewServerlessApp()
 
-	app.CreateSink(
+	stack := app.NewStack("swarm-example-eventbridge")
+	stack.NewEventBus()
+
+	stack.NewSink(
 		&eventbridge.SinkProps{
 			Queue: "swarm-test",
 			Lambda: &scud.FunctionGoProps{
