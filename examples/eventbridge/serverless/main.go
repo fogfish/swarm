@@ -21,7 +21,7 @@ func main() {
 
 	stack.NewSink(
 		&eventbridge.SinkProps{
-			Queue: "swarm-test",
+			Queues: []string{"swarm-test"},
 			Lambda: &scud.FunctionGoProps{
 				SourceCodePackage: "github.com/fogfish/swarm",
 				SourceCodeLambda:  "examples/eventbridge/recv",

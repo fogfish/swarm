@@ -114,7 +114,6 @@ type ServerlessStackProps struct {
 
 type ServerlessStack struct {
 	awscdk.Stack
-	app   awscdk.App
 	bus   awsevents.IEventBus
 	sinks []*Sink
 }
