@@ -35,12 +35,14 @@ type Sink struct {
 /*
 
 SinkProps ...
+https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-event-patterns.html
 */
 type SinkProps struct {
-	System   awsevents.IEventBus
-	Queue    string
-	Category string
-	Lambda   *scud.FunctionGoProps
+	System     awsevents.IEventBus
+	Queues     []string
+	Categories []string
+	Pattern    map[string]interface{}
+	Lambda     *scud.FunctionGoProps
 }
 
 /*
@@ -55,12 +57,24 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 
 	//
 	pattern := &awsevents.EventPattern{}
-	if props.Category != "" && props.Category != "*" {
-		pattern.DetailType = &[]*string{&props.Category}
+	if props.Categories != nil && len(props.Categories) > 0 {
+		seq := make([]*string, len(props.Categories))
+		for i, category := range props.Categories {
+			seq[i] = jsii.String(category)
+		}
+		pattern.DetailType = &seq
 	}
 
-	if props.Queue != "" && props.Queue != "*" {
-		pattern.Source = &[]*string{&props.Queue}
+	if props.Queues != nil && len(props.Queues) > 0 {
+		seq := make([]*string, len(props.Queues))
+		for i, queue := range props.Queues {
+			seq[i] = jsii.String(queue)
+		}
+		pattern.Source = &seq
+	}
+
+	if props.Pattern != nil {
+		pattern.Detail = &props.Pattern
 	}
 
 	if pattern.DetailType == nil && pattern.Source == nil {
@@ -204,7 +218,7 @@ func FromContext(app awscdk.App, key string) string {
 func FromContextVsn(app awscdk.App) string {
 	vsn := FromContext(app, "vsn")
 	if vsn == "" {
-		return "main"
+		return "latest"
 	}
 
 	return vsn
