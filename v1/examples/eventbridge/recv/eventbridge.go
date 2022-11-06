@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2021 Dmitry Kolesnikov
+// Copyright (C) 2021 - 2022 Dmitry Kolesnikov
 //
 // This file may be modified and distributed under the terms
 // of the Apache License Version 2.0. See the LICENSE file for details.
@@ -11,8 +11,8 @@ package main
 import (
 	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/broker/sqs"
 	"github.com/fogfish/swarm/queue"
+	"github.com/fogfish/swarm/queue/eventbridge"
 )
 
 type User struct {
@@ -31,13 +31,18 @@ type Like struct {
 }
 
 func main() {
-	q, _ := sqs.New(nil, "swarm-test")
+	sys := eventbridge.NewSystem("swarm-example-eventbridge")
+	q := eventbridge.Must(eventbridge.New(sys, "swarm-test"))
 
 	go actor[User]("a").handle(queue.Dequeue[User](q))
 	go actor[Note]("b").handle(queue.Dequeue[Note](q))
 	go actor[Like]("c").handle(queue.Dequeue[Like](q))
 
-	q.Await()
+	if err := sys.Listen(); err != nil {
+		panic(err)
+	}
+
+	sys.Wait()
 }
 
 //

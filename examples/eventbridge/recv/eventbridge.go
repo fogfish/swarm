@@ -11,8 +11,8 @@ package main
 import (
 	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
+	"github.com/fogfish/swarm/broker/eventbridge"
 	"github.com/fogfish/swarm/queue"
-	"github.com/fogfish/swarm/queue/eventbridge"
 )
 
 type User struct {
@@ -31,18 +31,16 @@ type Like struct {
 }
 
 func main() {
-	sys := eventbridge.NewSystem("swarm-example-eventbridge")
-	q := eventbridge.Must(eventbridge.New(sys, "swarm-test"))
+	q, err := eventbridge.New(nil, "swarm-example-eventbridge")
+	if err != nil {
+		panic(err)
+	}
 
 	go actor[User]("a").handle(queue.Dequeue[User](q))
 	go actor[Note]("b").handle(queue.Dequeue[Note](q))
 	go actor[Like]("c").handle(queue.Dequeue[Like](q))
 
-	if err := sys.Listen(); err != nil {
-		panic(err)
-	}
-
-	sys.Wait()
+	q.Await()
 }
 
 //

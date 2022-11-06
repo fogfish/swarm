@@ -9,10 +9,11 @@
 package main
 
 import (
+	"time"
+
 	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/broker/sqs"
-	"github.com/fogfish/swarm/queue"
+	"github.com/fogfish/swarm/internal/sqsv2"
 )
 
 type User struct {
@@ -31,13 +32,22 @@ type Like struct {
 }
 
 func main() {
-	q, _ := sqs.New(nil, "swarm-test")
+	q := sqsv2.New()
 
-	go actor[User]("a").handle(queue.Dequeue[User](q))
-	go actor[Note]("b").handle(queue.Dequeue[Note](q))
-	go actor[Like]("c").handle(queue.Dequeue[Like](q))
+	// sys := sqs.NewSystem("swarm-example-sqs")
+	// q := sqs.Must(sqs.New(sys, "swarm-test"))
 
-	q.Await()
+	go actor[User]("a").handle(swarm.DequeueV2[User](q, "swarm-test-user"))
+	// go actor[Note]("b").handle(queue.Dequeue[Note](q))
+	// go actor[Like]("c").handle(queue.Dequeue[Like](q))
+
+	// if err := sys.Listen(); err != nil {
+	// 	panic(err)
+	// }
+
+	// sys.Wait()
+	time.Sleep(1 * time.Second)
+	q.Close()
 }
 
 //
