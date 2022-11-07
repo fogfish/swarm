@@ -11,8 +11,8 @@ package main
 import (
 	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
+	"github.com/fogfish/swarm/broker/eventsqs"
 	"github.com/fogfish/swarm/queue"
-	"github.com/fogfish/swarm/queue/eventsqs"
 )
 
 type User struct {
@@ -31,18 +31,16 @@ type Like struct {
 }
 
 func main() {
-	sys := eventsqs.NewSystem("swarm-example-eventsqs")
-	q := eventsqs.Must(eventsqs.New(sys, "swarm-test"))
-
-	go actor[User]("a").handle(queue.Dequeue[User](q))
-	go actor[Note]("b").handle(queue.Dequeue[Note](q))
-	go actor[Like]("c").handle(queue.Dequeue[Like](q))
-
-	if err := sys.Listen(); err != nil {
+	q, err := eventsqs.New("swarm-example-sqs-latest")
+	if err != nil {
 		panic(err)
 	}
 
-	sys.Wait()
+	go actor[User]("user").handle(queue.Dequeue[User](q))
+	go actor[Note]("note").handle(queue.Dequeue[Note](q))
+	go actor[Like]("like").handle(queue.Dequeue[Like](q))
+
+	q.Await()
 }
 
 //

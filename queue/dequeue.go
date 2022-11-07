@@ -2,7 +2,6 @@ package queue
 
 import (
 	"encoding/json"
-	"time"
 
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/internal/pipe"
@@ -12,29 +11,27 @@ import (
 
 Dequeue ...
 */
-func Dequeue[T any](q swarm.Broker, queue ...string) (<-chan *swarm.Msg[T], chan<- *swarm.Msg[T]) {
+func Dequeue[T any](q swarm.Broker, category ...string) (<-chan *swarm.Msg[T], chan<- *swarm.Msg[T]) {
 	ch := swarm.NewMsgDeqCh[T]()
 
 	cat := typeOf[T]()
-	qid := cat
-	if len(queue) > 0 {
-		qid = queue[0]
+	if len(category) > 0 {
+		cat = category[0]
 	}
 
-	sock, err := q.Dequeue(qid, ch)
+	sock, err := q.Dequeue(cat, ch)
 	if err != nil {
 		panic(err)
 	}
 
 	pipe.ForEach(ch.Ack, func(object *swarm.Msg[T]) {
 		sock.Ack(swarm.Bag{
-			Queue:    qid,
 			Category: cat,
 			Digest:   object.Digest,
 		})
 	})
 
-	pipe.Emit(ch.Msg, 100*time.Millisecond, func() (*swarm.Msg[T], error) {
+	pipe.Emit(ch.Msg, q.Config().PollFrequency, func() (*swarm.Msg[T], error) {
 		bag, err := sock.Deq(cat)
 		if err != nil {
 			return nil, err

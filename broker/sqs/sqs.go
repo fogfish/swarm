@@ -12,11 +12,12 @@ import (
 
 type client struct {
 	service SQS
+	config  *swarm.Config
 	queue   *string
 }
 
-func newClient(service SQS, queue string) (*client, error) {
-	api, err := newService(service)
+func newClient(queue string, config *swarm.Config) (*client, error) {
+	api, err := newService(config)
 	if err != nil {
 		return nil, err
 	}
@@ -33,13 +34,17 @@ func newClient(service SQS, queue string) (*client, error) {
 
 	return &client{
 		service: api,
+		config:  config,
 		queue:   spec.QueueUrl,
 	}, nil
 }
 
-func newService(service SQS) (SQS, error) {
-	if service != nil {
-		return service, nil
+func newService(conf *swarm.Config) (SQS, error) {
+	if conf.Service != nil {
+		service, ok := conf.Service.(SQS)
+		if ok {
+			return service, nil
+		}
 	}
 
 	aws, err := config.LoadDefaultConfig(context.Background())
@@ -56,7 +61,7 @@ func (cli *client) Enq(bag swarm.Bag) error {
 		context.TODO(),
 		&sqs.SendMessageInput{
 			MessageAttributes: map[string]types.MessageAttributeValue{
-				"Queue":    {StringValue: aws.String(bag.Queue), DataType: aws.String("String")},
+				"Agent":    {StringValue: aws.String(cli.config.Agent), DataType: aws.String("String")},
 				"Category": {StringValue: aws.String(bag.Category), DataType: aws.String("String")},
 			},
 			MessageBody: aws.String(string(bag.Object)),
@@ -101,7 +106,6 @@ func (cli client) Deq(cat string) (swarm.Bag, error) {
 	head := result.Messages[0]
 
 	return swarm.Bag{
-		Queue:    attr(&head, "Queue"),
 		Category: attr(&head, "Category"),
 		Object:   []byte(*head.Body),
 		Digest:   *head.ReceiptHandle,

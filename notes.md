@@ -68,3 +68,20 @@ swarm.Enqueue[T any](Socket) (chan, chan)
 queue.Enq
 queue/event.Enq
 queue/bytes.Enq
+
+// terminology
+
+// Canonical IRI that defines a type of action.
+Type curie.IRI `json:"@type,omitempty"`
+Category / Type of object
+
+//
+// Direct performer of the event, a software service that emits action to the stream.
+Agent curie.IRI `json:"agent,omitempty"`
+
+Event Bridge | Source = Agent = SQS | Agent 
+
+//
+// Indirect participants, a user who initiated an event.
+Participant curie.IRI `json:"participant,omitempty"`
+

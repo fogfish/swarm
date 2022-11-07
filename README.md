@@ -217,3 +217,12 @@ TBD
 
 [![See LICENSE](https://img.shields.io/github/license/fogfish/swarm.svg?style=for-the-badge)](LICENSE)
 
+
+<!--
+
+TODO
+
+order guarantee on the channel only
+
+-->
+

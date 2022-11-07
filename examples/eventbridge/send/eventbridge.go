@@ -9,6 +9,7 @@
 package main
 
 import (
+	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/eventbridge"
 	"github.com/fogfish/swarm/queue"
 )
@@ -29,7 +30,9 @@ type Like struct {
 }
 
 func main() {
-	q, err := eventbridge.New(nil, "swarm-example-eventbridge-latest")
+	q, err := eventbridge.New("swarm-example-eventbridge-latest",
+		swarm.WithAgent("swarm-example-eventbridge"),
+	)
 	if err != nil {
 		panic(err)
 	}

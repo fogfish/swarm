@@ -31,7 +31,7 @@ type Like struct {
 }
 
 func main() {
-	q, err := eventbridge.New(nil, "swarm-example-eventbridge")
+	q, err := eventbridge.New("swarm-example-eventbridge")
 	if err != nil {
 		panic(err)
 	}

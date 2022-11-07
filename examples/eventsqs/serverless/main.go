@@ -10,21 +10,20 @@ package main
 
 import (
 	"github.com/fogfish/scud"
-	"github.com/fogfish/swarm/broker/eventbridge"
+	"github.com/fogfish/swarm/broker/eventsqs"
 )
 
 func main() {
-	app := eventbridge.NewServerlessApp()
+	app := eventsqs.NewServerlessApp()
 
-	stack := app.NewStack("swarm-example-eventbridge")
-	stack.NewEventBus()
+	stack := app.NewStack("swarm-example-sqs")
+	stack.NewQueue()
 
 	stack.NewSink(
-		&eventbridge.SinkProps{
-			Agents: []string{"swarm-example-eventbridge"},
+		&eventsqs.SinkProps{
 			Lambda: &scud.FunctionGoProps{
 				SourceCodePackage: "github.com/fogfish/swarm",
-				SourceCodeLambda:  "examples/eventbridge/recv",
+				SourceCodeLambda:  "examples/eventsqs/recv",
 			},
 		},
 	)

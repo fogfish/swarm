@@ -10,6 +10,7 @@ type Dequeue interface {
 }
 
 type Broker interface {
+	Config() *Config
 	Close()
 	Await()
 	Enqueue(string, Channel) (Enqueue, error)

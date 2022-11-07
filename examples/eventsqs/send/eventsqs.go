@@ -9,8 +9,8 @@
 package main
 
 import (
+	"github.com/fogfish/swarm/broker/eventsqs"
 	"github.com/fogfish/swarm/queue"
-	"github.com/fogfish/swarm/queue/eventsqs"
 )
 
 type User struct {
@@ -29,21 +29,20 @@ type Like struct {
 }
 
 func main() {
-	sys := eventsqs.NewSystem("swarm-example-eventsqs")
-	q := eventsqs.Must(eventsqs.New(sys, "swarm-test"))
-
-	a, _ := queue.Enqueue[*User](q)
-	b, _ := queue.Enqueue[*Note](q)
-	c, _ := queue.Enqueue[*Like](q)
-
-	if err := sys.Listen(); err != nil {
+	q, err := eventsqs.New("swarm-example-sqs-latest")
+	if err != nil {
 		panic(err)
 	}
 
-	a <- &User{ID: "user", Text: "some text"}
-	b <- &Note{ID: "note", Text: "some text"}
-	c <- &Like{ID: "like", Text: "some text"}
+	user, _ := queue.Enqueue[*User](q)
+	note, _ := queue.Enqueue[*Note](q)
+	like, _ := queue.Enqueue[*Like](q)
 
-	sys.Close()
+	user <- &User{ID: "user", Text: "some text by user"}
 
+	note <- &Note{ID: "note", Text: "some note"}
+
+	like <- &Like{ID: "like", Text: "someone liked it"}
+
+	q.Close()
 }

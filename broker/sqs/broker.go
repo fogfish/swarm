@@ -19,6 +19,7 @@ type SQS interface {
 }
 
 type broker struct {
+	config   *swarm.Config
 	client   *client
 	channels *swarm.Channels
 	context  context.Context
@@ -26,8 +27,14 @@ type broker struct {
 	router   *router.Router
 }
 
-func New(service SQS, queue string) (swarm.Broker, error) {
-	cli, err := newClient(service, queue)
+// New creates broker for AWS SQS
+func New(queue string, opts ...swarm.Option) (swarm.Broker, error) {
+	conf := swarm.NewConfig()
+	for _, opt := range opts {
+		opt(conf)
+	}
+
+	cli, err := newClient(queue, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -35,6 +42,7 @@ func New(service SQS, queue string) (swarm.Broker, error) {
 	ctx, can := context.WithCancel(context.Background())
 
 	return &broker{
+		config:   conf,
 		client:   cli,
 		channels: swarm.NewChannels(),
 		context:  ctx,
@@ -42,6 +50,8 @@ func New(service SQS, queue string) (swarm.Broker, error) {
 		router:   router.New(cli.Ack),
 	}, nil
 }
+
+func (b *broker) Config() *swarm.Config { return b.config }
 
 func (b *broker) Close() {
 	b.channels.Sync()

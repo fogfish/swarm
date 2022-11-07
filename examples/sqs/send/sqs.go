@@ -29,16 +29,20 @@ type Like struct {
 }
 
 func main() {
-	q, _ := sqs.New(nil, "swarm-test")
+	q, err := sqs.New("swarm-test")
+	if err != nil {
+		panic(err)
+	}
+
 	user, _ := queue.Enqueue[*User](q)
 	note, _ := queue.Enqueue[*Note](q)
 	like, _ := queue.Enqueue[*Like](q)
 
-	user <- &User{ID: "user", Text: "some text"}
+	user <- &User{ID: "user", Text: "some text by user"}
 
-	note <- &Note{ID: "note", Text: "some text"}
+	note <- &Note{ID: "note", Text: "some note"}
 
-	like <- &Like{ID: "like", Text: "some text"}
+	like <- &Like{ID: "like", Text: "someone liked it"}
 
 	q.Close()
 }

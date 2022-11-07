@@ -76,6 +76,68 @@ func (ch MsgDeqCh[T]) Close() {
 
 /*
 
+EvtEnqCh is the pair of channel, exposed by the queue to clients to send messages
+*/
+type EvtEnqCh[T any, E EventKind[T]] struct {
+	Msg chan *E // channel to send message out
+	Err chan *E // channel to recv failed messages
+}
+
+func NewEvtEnqCh[T any, E EventKind[T]]() EvtEnqCh[T, E] {
+	return EvtEnqCh[T, E]{
+		Msg: make(chan *E),
+		Err: make(chan *E),
+	}
+}
+
+func (ch EvtEnqCh[T, E]) Sync() {
+	for {
+		time.Sleep(100 * time.Millisecond)
+		if len(ch.Msg)+len(ch.Err) == 0 {
+			break
+		}
+	}
+}
+
+func (ch EvtEnqCh[T, E]) Close() {
+	ch.Sync()
+	close(ch.Msg)
+	close(ch.Err)
+}
+
+/*
+
+msgRecv is the pair of channel, exposed by the queue to clients to recv messages
+*/
+type EvtDeqCh[T any, E EventKind[T]] struct {
+	Msg chan *E // channel to recv message
+	Ack chan *E // channel to send acknowledgement
+}
+
+func NewEvtDeqCh[T any, E EventKind[T]]() EvtDeqCh[T, E] {
+	return EvtDeqCh[T, E]{
+		Msg: make(chan *E),
+		Ack: make(chan *E),
+	}
+}
+
+func (ch EvtDeqCh[T, E]) Sync() {
+	for {
+		time.Sleep(100 * time.Millisecond)
+		if len(ch.Msg)+len(ch.Ack) == 0 {
+			break
+		}
+	}
+}
+
+func (ch EvtDeqCh[T, E]) Close() {
+	ch.Sync()
+	close(ch.Msg)
+	close(ch.Ack)
+}
+
+/*
+
 Channels
 */
 type Channels struct {

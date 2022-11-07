@@ -16,9 +16,7 @@ Bag is an abstract container for octet stream.
 Bag is used by the transport to abstract message on the wire.
 */
 type Bag struct {
-	Queue    string
 	Category string
-
-	Object []byte
-	Digest string
+	Object   []byte
+	Digest   string
 }

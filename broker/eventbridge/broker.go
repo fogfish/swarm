@@ -16,6 +16,7 @@ type EventBridge interface {
 }
 
 type broker struct {
+	config   *swarm.Config
 	client   *client
 	channels *swarm.Channels
 	context  context.Context
@@ -23,8 +24,13 @@ type broker struct {
 	router   *router.Router
 }
 
-func New(service EventBridge, bus string) (swarm.Broker, error) {
-	cli, err := newClient(service, bus)
+func New(bus string, opts ...swarm.Option) (swarm.Broker, error) {
+	conf := swarm.NewConfig()
+	for _, opt := range opts {
+		opt(conf)
+	}
+
+	cli, err := newClient(bus, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -32,13 +38,16 @@ func New(service EventBridge, bus string) (swarm.Broker, error) {
 	ctx, can := context.WithCancel(context.Background())
 
 	return &broker{
+		config:   conf,
 		client:   cli,
 		channels: swarm.NewChannels(),
 		context:  ctx,
 		cancel:   can,
-		router:   router.New(),
+		router:   router.New(nil),
 	}, nil
 }
+
+func (b *broker) Config() *swarm.Config { return b.config }
 
 func (b *broker) Close() {
 	b.channels.Sync()
@@ -50,7 +59,6 @@ func (b *broker) Await() {
 	lambda.Start(
 		func(evt events.CloudWatchEvent) error {
 			bag := swarm.Bag{
-				Queue:    evt.Source,
 				Category: evt.DetailType,
 				Object:   evt.Detail,
 				Digest:   evt.ID,

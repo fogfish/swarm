@@ -58,8 +58,10 @@ func (router *Router) Await(d time.Duration) error {
 	for {
 		select {
 		case bag := <-router.sack:
-			if err := router.onAck(bag); err != nil {
-				return err
+			if router.onAck != nil {
+				if err := router.onAck(bag); err != nil {
+					return err
+				}
 			}
 
 			delete(router.acks, bag.Digest)

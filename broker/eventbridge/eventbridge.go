@@ -12,25 +12,30 @@ import (
 )
 
 type client struct {
-	bus     string
 	service EventBridge
+	bus     string
+	config  *swarm.Config
 }
 
-func newClient(service EventBridge, bus string) (*client, error) {
-	api, err := newService(service)
+func newClient(bus string, config *swarm.Config) (*client, error) {
+	api, err := newService(config)
 	if err != nil {
 		return nil, err
 	}
 
 	return &client{
-		bus:     bus,
 		service: api,
+		bus:     bus,
+		config:  config,
 	}, nil
 }
 
-func newService(service EventBridge) (EventBridge, error) {
-	if service != nil {
-		return service, nil
+func newService(conf *swarm.Config) (EventBridge, error) {
+	if conf.Service != nil {
+		service, ok := conf.Service.(EventBridge)
+		if ok {
+			return service, nil
+		}
 	}
 
 	aws, err := config.LoadDefaultConfig(context.Background())
@@ -49,7 +54,7 @@ func (cli *client) Enq(bag swarm.Bag) error {
 			Entries: []types.PutEventsRequestEntry{
 				{
 					EventBusName: aws.String(cli.bus),
-					Source:       aws.String(bag.Queue),
+					Source:       aws.String(cli.config.Agent),
 					DetailType:   aws.String(bag.Category),
 					Detail:       aws.String(string(bag.Object)),
 				},

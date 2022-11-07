@@ -10,20 +10,28 @@ import (
 	"github.com/fogfish/swarm/internal/router"
 )
 
-func New(service sqs.SQS, queue string) (swarm.Broker, error) {
-	bro, err := sqs.New(service, queue)
+// New creates broker for AWS SQS
+func New(queue string, opts ...swarm.Option) (swarm.Broker, error) {
+	conf := swarm.NewConfig()
+	for _, opt := range opts {
+		opt(conf)
+	}
+
+	bro, err := sqs.New(queue, opts...)
 	if err != nil {
 		return nil, err
 	}
 
 	return &broker{
 		Broker: bro,
-		router: router.New(),
+		config: conf,
+		router: router.New(nil),
 	}, nil
 }
 
 type broker struct {
 	swarm.Broker
+	config *swarm.Config
 	router *router.Router
 }
 
@@ -40,7 +48,6 @@ func (b *broker) Await() {
 			for _, evt := range events.Records {
 				bag := swarm.Bag{
 					Category: attr(&evt, "Category"),
-					Queue:    attr(&evt, "Queue"),
 					Object:   []byte(evt.Body),
 					Digest:   evt.ReceiptHandle,
 				}

@@ -31,11 +31,14 @@ type Like struct {
 }
 
 func main() {
-	q, _ := sqs.New(nil, "swarm-test")
+	q, err := sqs.New("swarm-test")
+	if err != nil {
+		panic(err)
+	}
 
-	go actor[User]("a").handle(queue.Dequeue[User](q))
-	go actor[Note]("b").handle(queue.Dequeue[Note](q))
-	go actor[Like]("c").handle(queue.Dequeue[Like](q))
+	go actor[User]("user").handle(queue.Dequeue[User](q))
+	go actor[Note]("note").handle(queue.Dequeue[Note](q))
+	go actor[Like]("like").handle(queue.Dequeue[Like](q))
 
 	q.Await()
 }
