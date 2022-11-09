@@ -179,9 +179,7 @@ enq, dlq := queue.Enqueue[*Note](q)
 deq, ack := queue.Dequeue[Note](q)
 ```
 
-#### Exactly Once
-
-Not supported by the library.
+**Exactly Once** is not supported by the library.
 
 ### Order of Messages
 
