@@ -29,6 +29,7 @@ func (router *Router) Register(category string) {
 	router.Lock()
 	defer router.Unlock()
 
+	// TODO: capacity
 	router.sock[category] = make(chan swarm.Bag)
 }
 

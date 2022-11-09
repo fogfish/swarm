@@ -26,10 +26,12 @@ changed together with  using unique identifier.
 type Event[T any] struct {
 	//
 	// Unique identity for event
+	// It is automatically defined by the library upon the transmission
 	ID string `json:"@id,omitempty"`
 
 	//
 	// Canonical IRI that defines a type of action.
+	// It is automatically defined by the library upon the transmission
 	Type curie.IRI `json:"@type,omitempty"`
 
 	//
@@ -42,6 +44,7 @@ type Event[T any] struct {
 
 	//
 	// ISO8601 timestamps when action has been created
+	// It is automatically defined by the library upon the transmission
 	Created string `json:"created,omitempty"`
 
 	//

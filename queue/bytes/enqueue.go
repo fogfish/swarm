@@ -10,7 +10,7 @@ import (
 Enqueue creates pair of channels to send messages and dead-letter queue
 */
 func Enqueue(q swarm.Broker, cat string) (chan<- []byte, <-chan []byte) {
-	ch := swarm.NewMsgEnqCh[[]byte]()
+	ch := swarm.NewMsgEnqCh[[]byte](q.Config().EnqueueCapacity)
 
 	sock, err := q.Enqueue(cat, ch)
 	if err != nil {

@@ -48,8 +48,10 @@ func newService(conf *swarm.Config) (EventBridge, error) {
 
 // Enq enqueues message to broker
 func (cli *client) Enq(bag swarm.Bag) error {
-	ret, err := cli.service.PutEvents(
-		context.TODO(),
+	ctx, cancel := context.WithTimeout(context.Background(), cli.config.NetworkTimeout)
+	defer cancel()
+
+	ret, err := cli.service.PutEvents(ctx,
 		&eventbridge.PutEventsInput{
 			Entries: []types.PutEventsRequestEntry{
 				{

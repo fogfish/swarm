@@ -12,7 +12,9 @@ import (
 Dequeue ...
 */
 func Dequeue[T any](q swarm.Broker, category ...string) (<-chan *swarm.Msg[T], chan<- *swarm.Msg[T]) {
-	ch := swarm.NewMsgDeqCh[T]()
+	// TODO: automatically ack At Most Once, no ack channel
+	//       make it as /dev/null
+	ch := swarm.NewMsgDeqCh[T](q.Config().DequeueCapacity)
 
 	cat := typeOf[T]()
 	if len(category) > 0 {

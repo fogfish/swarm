@@ -13,7 +13,7 @@ import (
 Enqueue creates pair of channels to send messages and dead-letter queue
 */
 func Enqueue[T any](q swarm.Broker, category ...string) (chan<- T, <-chan T) {
-	ch := swarm.NewMsgEnqCh[T]()
+	ch := swarm.NewMsgEnqCh[T](q.Config().EnqueueCapacity)
 
 	cat := typeOf[T]()
 	if len(category) > 0 {
@@ -32,11 +32,9 @@ func Enqueue[T any](q swarm.Broker, category ...string) (chan<- T, <-chan T) {
 			return
 		}
 
-		err = sock.Enq(swarm.Bag{
-			Category: cat,
-			Object:   msg,
-		})
-		if err != nil {
+		bag := swarm.Bag{Category: cat, Object: msg}
+
+		if err := sock.Enq(bag); err != nil {
 			ch.Err <- object
 		}
 	})
@@ -57,4 +55,13 @@ func typeOf[T any]() string {
 	}
 
 	return cat
+}
+
+//
+func Must(broker swarm.Broker, err error) swarm.Broker {
+	if err != nil {
+		panic(err)
+	}
+
+	return broker
 }

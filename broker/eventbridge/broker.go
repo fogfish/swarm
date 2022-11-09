@@ -2,7 +2,6 @@ package eventbridge
 
 import (
 	"context"
-	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -11,6 +10,8 @@ import (
 	"github.com/fogfish/swarm/internal/router"
 )
 
+// EventBridge declares the subset of interface from AWS SDK,
+// which is used by the library
 type EventBridge interface {
 	PutEvents(context.Context, *eventbridge.PutEventsInput, ...func(*eventbridge.Options)) (*eventbridge.PutEventsOutput, error)
 }
@@ -24,6 +25,7 @@ type broker struct {
 	router   *router.Router
 }
 
+// New create broker for AWS EventBridge service
 func New(bus string, opts ...swarm.Option) (swarm.Broker, error) {
 	conf := swarm.NewConfig()
 	for _, opt := range opts {
@@ -47,7 +49,9 @@ func New(bus string, opts ...swarm.Option) (swarm.Broker, error) {
 	}, nil
 }
 
-func (b *broker) Config() *swarm.Config { return b.config }
+func (b *broker) Config() *swarm.Config {
+	return b.config
+}
 
 func (b *broker) Close() {
 	b.channels.Sync()
@@ -68,7 +72,7 @@ func (b *broker) Await() {
 				return err
 			}
 
-			return b.router.Await(1 * time.Second /*q.policy.TimeToFlight*/)
+			return b.router.Await(b.config.TimeToFlight)
 		},
 	)
 }

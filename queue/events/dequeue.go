@@ -14,7 +14,7 @@ import (
 Dequeue ...
 */
 func Dequeue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (<-chan *E, chan<- *E) {
-	ch := swarm.NewEvtDeqCh[T, E]()
+	ch := swarm.NewEvtDeqCh[T, E](q.Config().DequeueCapacity)
 
 	cat := strings.ToLower(typeOf[T]()) + ":" + typeOf[E]()
 

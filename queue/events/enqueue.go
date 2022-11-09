@@ -17,7 +17,7 @@ import (
 Enqueue creates pair of channels to send messages and dead-letter queue
 */
 func Enqueue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (chan<- *E, <-chan *E) {
-	ch := swarm.NewEvtEnqCh[T, E]()
+	ch := swarm.NewEvtEnqCh[T, E](q.Config().EnqueueCapacity)
 
 	cat := strings.ToLower(typeOf[T]()) + ":" + typeOf[E]()
 

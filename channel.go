@@ -11,6 +11,8 @@ type Channel interface {
 	Close()
 }
 
+const syncInterval = 10 * time.Millisecond
+
 /*
 
 MsgEnqCh is the pair of channel, exposed by the queue for enqueuing the messages
@@ -20,16 +22,16 @@ type MsgEnqCh[T any] struct {
 	Err chan T // channel to recv failed messages
 }
 
-func NewMsgEnqCh[T any]() MsgEnqCh[T] {
+func NewMsgEnqCh[T any](n int) MsgEnqCh[T] {
 	return MsgEnqCh[T]{
-		Msg: make(chan T),
-		Err: make(chan T),
+		Msg: make(chan T, n),
+		Err: make(chan T, n),
 	}
 }
 
 func (ch MsgEnqCh[T]) Sync() {
 	for {
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(syncInterval)
 		if len(ch.Msg)+len(ch.Err) == 0 {
 			break
 		}
@@ -52,16 +54,16 @@ type MsgDeqCh[T any] struct {
 	Ack chan *Msg[T] // channel to send acknowledgement
 }
 
-func NewMsgDeqCh[T any]() MsgDeqCh[T] {
+func NewMsgDeqCh[T any](n int) MsgDeqCh[T] {
 	return MsgDeqCh[T]{
-		Msg: make(chan *Msg[T]),
-		Ack: make(chan *Msg[T]),
+		Msg: make(chan *Msg[T], n),
+		Ack: make(chan *Msg[T], n),
 	}
 }
 
 func (ch MsgDeqCh[T]) Sync() {
 	for {
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(syncInterval)
 		if len(ch.Msg)+len(ch.Ack) == 0 {
 			break
 		}
@@ -83,16 +85,16 @@ type EvtEnqCh[T any, E EventKind[T]] struct {
 	Err chan *E // channel to recv failed messages
 }
 
-func NewEvtEnqCh[T any, E EventKind[T]]() EvtEnqCh[T, E] {
+func NewEvtEnqCh[T any, E EventKind[T]](n int) EvtEnqCh[T, E] {
 	return EvtEnqCh[T, E]{
-		Msg: make(chan *E),
-		Err: make(chan *E),
+		Msg: make(chan *E, n),
+		Err: make(chan *E, n),
 	}
 }
 
 func (ch EvtEnqCh[T, E]) Sync() {
 	for {
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(syncInterval)
 		if len(ch.Msg)+len(ch.Err) == 0 {
 			break
 		}
@@ -114,16 +116,16 @@ type EvtDeqCh[T any, E EventKind[T]] struct {
 	Ack chan *E // channel to send acknowledgement
 }
 
-func NewEvtDeqCh[T any, E EventKind[T]]() EvtDeqCh[T, E] {
+func NewEvtDeqCh[T any, E EventKind[T]](n int) EvtDeqCh[T, E] {
 	return EvtDeqCh[T, E]{
-		Msg: make(chan *E),
-		Ack: make(chan *E),
+		Msg: make(chan *E, n),
+		Ack: make(chan *E, n),
 	}
 }
 
 func (ch EvtDeqCh[T, E]) Sync() {
 	for {
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(syncInterval)
 		if len(ch.Msg)+len(ch.Ack) == 0 {
 			break
 		}

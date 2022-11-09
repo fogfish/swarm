@@ -10,7 +10,7 @@ import (
 Dequeue ...
 */
 func Dequeue(q swarm.Broker, cat string) (<-chan *swarm.Msg[[]byte], chan<- *swarm.Msg[[]byte]) {
-	ch := swarm.NewMsgDeqCh[[]byte]()
+	ch := swarm.NewMsgDeqCh[[]byte](q.Config().DequeueCapacity)
 
 	sock, err := q.Dequeue(cat, ch)
 	if err != nil {

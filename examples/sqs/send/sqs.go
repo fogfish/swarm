@@ -29,10 +29,7 @@ type Like struct {
 }
 
 func main() {
-	q, err := sqs.New("swarm-test")
-	if err != nil {
-		panic(err)
-	}
+	q := queue.Must(sqs.New("swarm-test"))
 
 	user, _ := queue.Enqueue[*User](q)
 	note, _ := queue.Enqueue[*Note](q)
