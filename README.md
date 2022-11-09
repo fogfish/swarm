@@ -141,21 +141,47 @@ q.Await()
 
 Usage of Golang channels as an abstraction raises a concern about grade of service on the message delivery guarantees provided by the library. The library ensures exactly same grade of service as the underlying queueing system or event broker. It is delivered according to its promise once the messages is accepted by the remote peer of queuing system. The library's built-in retry logic protects losses from temporary unavailability of the remote peer. However, Golang channels are sophisticated "in-memory buffers", which introduce a lag of few milliseconds between scheduling a message to the channel and dispatching message to the remote peer. Use one of the following policy to either accept or protect from the loss all the in-the-flight messages in case of catastrophic failures.
 
-#### At Most Once
-
 **At Most Once** is best effort policy, where a message is published without any formal acknowledgement of receipt, and it isn't replayed. Some messages can be lost as subscribers are not required to acknowledge receipt.  
 
 The library implements asymmetric approaches. The **enqueue** path uses buffered Golang channels for emitter and dead-letter queues. The **dequeue** path also uses buffered Golang channels for delivery message to consumer. The messages are automatically acknowledged to the broker upon successful scheduling. This means that information will be lost if the consumer crashes before it has finished processing the message. 
 
-#### At Least Once
+```go
+// Spawn a new instance of the messaging broker using At Most Once policy.
+// The policy defines the capacity of Golang channel.
+q, err := sqs.New("name-of-the-queue",
+  swarm.WithPolicyAtMostOnce(1000),
+)
+
+// for compatibility reasons two channels are returned on the enqueue path but
+// dead-letter-queue is nil
+enq, dlq := queue.Enqueue[*Note](q)
+
+// for compatibility reasons two channels are returned on the dequeue path but
+// ack channel acts as /dev/null discards any sent message
+deq, ack := queue.Dequeue[Note](q)
+```
 
 **At Least Once** is the default policy used by the library. The policy assume usage of "acknowledgement" protocol, which guarantees a message will be re-sent until it is formally acknowledged by a recipient. Messages should never be lost but it might be delivered more than once causing duplicate work to consumer.  
 
 The library implements also asymmetric approaches. The **enqueue** path uses unbuffered Golang channels to emit messages and handle dead-letter queue, which leads to a delayed guarantee. The delayed guarantee in this context implies that enqueueing of other messages is blocked until dead-letter queue is resolved. Alternatively, the application can use synchronous protocol to enqueue message. The **dequeue** path also uses unbuffered Golang channels for delivery message to consumer and acknowledge its processing. The acknowledgement of message by consumer guarantee reliable delivery of the message but might cause duplicates. 
 
+```go
+// Spawn a new instance of the messaging broker using At Least Once policy.
+// At Least Once policy is the default one, no needs to explicitly declare it.
+// Use it only if you need to define other capacity for dequeue channel than
+// the default one, which creates unbuffered channel
+q, err := sqs.New("name-of-the-queue",
+  swarm.WithPolicyAtLeastOnce(1000),
+)
+
+// all channels behaves as specified earlier.
+enq, dlq := queue.Enqueue[*Note](q)
+deq, ack := queue.Dequeue[Note](q)
+```
+
 #### Exactly Once
 
-Not supported by the library
+Not supported by the library.
 
 ### Order of Messages
 
@@ -211,7 +237,7 @@ Please see example about [event-driven](./examples/events/) consumer/producer.
 
 ### Serverless 
 
-The library support development of serverless event-driven application using AWS service. The library provides AWS CDK Golang constructs to spawn consumers. See example of [serverless consumer](./examples/eventbridge/recv/eventbridge.go) and corresponding AWS CDK [application](./examples/eventbridge/serverless/main.go).
+The library support development of serverless event-driven application using AWS service. The library provides AWS CDK Golang constructs to spawn consumers. See example of [serverless consumer](./examples/eventbridge/dequeue/eventbridge.go) and corresponding AWS CDK [application](./examples/eventbridge/serverless/main.go).
 
 ```go
 package main
@@ -232,7 +258,7 @@ func main() {
       Agents: []string{"swarm-example-eventbridge"},
       Lambda: &scud.FunctionGoProps{
         SourceCodePackage: "github.com/fogfish/swarm",
-        SourceCodeLambda:  "examples/eventbridge/recv",
+        SourceCodeLambda:  "examples/eventbridge/dequeue",
       },
     },
   )
@@ -244,16 +270,16 @@ func main() {
 ### Supported queuing system and event brokers 
 
 - [x] AWS EventBridge (serverless only)
-  - [x] [sending message](examples/eventbridge/send/eventbridge.go)
-  - [x] [receiving message](examples/eventbridge/recv/eventbridge.go) using aws lambda
+  - [x] [sending message](examples/eventbridge/enqueue/eventbridge.go)
+  - [x] [receiving message](examples/eventbridge/dequeue/eventbridge.go) using aws lambda
   - [x] [aws cdk construct](examples/eventbridge/serverless/main.go)
 - [x] AWS SQS (serverless)
-  - [x] [sending message](examples/eventsqs/send/eventsqs.go)
-  - [x] [receiving message](examples/eventsqs/recv/eventsqs.go) using aws lambda
+  - [x] [sending message](examples/eventsqs/enqueue/eventsqs.go)
+  - [x] [receiving message](examples/eventsqs/dequeue/eventsqs.go) using aws lambda
   - [x] [aws cdk construct](examples/eventsqs/serverless/main.go)
 - [x] AWS SQS
-  - [x] [sending message](examples/sqs/send/sqs.go)
-  - [x] [receiving message](examples/sqs/recv/sqs.go)
+  - [x] [sending message](examples/sqs/enqueue/sqs.go)
+  - [x] [receiving message](examples/sqs/dequeue/sqs.go)
 - [ ] AWS SNS
   - [ ] sending message
 - [ ] AWS Kinesis (serverless)

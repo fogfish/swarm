@@ -23,7 +23,7 @@ func main() {
 		&eventsqs.SinkProps{
 			Lambda: &scud.FunctionGoProps{
 				SourceCodePackage: "github.com/fogfish/swarm",
-				SourceCodeLambda:  "examples/eventsqs/recv",
+				SourceCodeLambda:  "examples/eventsqs/dequeue",
 			},
 		},
 	)

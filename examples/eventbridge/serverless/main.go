@@ -24,7 +24,7 @@ func main() {
 			Agents: []string{"swarm-example-eventbridge"},
 			Lambda: &scud.FunctionGoProps{
 				SourceCodePackage: "github.com/fogfish/swarm",
-				SourceCodeLambda:  "examples/eventbridge/recv",
+				SourceCodeLambda:  "examples/eventbridge/dequeue",
 			},
 		},
 	)

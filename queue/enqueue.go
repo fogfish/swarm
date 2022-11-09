@@ -13,6 +13,8 @@ import (
 Enqueue creates pair of channels to send messages and dead-letter queue
 */
 func Enqueue[T any](q swarm.Broker, category ...string) (chan<- T, <-chan T) {
+	// TODO: discard dlq for At Most Once
+	//       make it nil
 	ch := swarm.NewMsgEnqCh[T](q.Config().EnqueueCapacity)
 
 	cat := typeOf[T]()
