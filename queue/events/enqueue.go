@@ -17,7 +17,8 @@ import (
 Enqueue creates pair of channels to send messages and dead-letter queue
 */
 func Enqueue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (chan<- *E, <-chan *E) {
-	ch := swarm.NewEvtEnqCh[T, E](q.Config().EnqueueCapacity)
+	conf := q.Config()
+	ch := swarm.NewEvtEnqCh[T, E](conf.EnqueueCapacity)
 
 	cat := strings.ToLower(typeOf[T]()) + ":" + typeOf[E]()
 
@@ -60,10 +61,8 @@ func Enqueue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (c
 			return
 		}
 
-		err = sock.Enq(swarm.Bag{
-			Category: cat,
-			Object:   msg,
-		})
+		bag := swarm.Bag{Category: cat, Object: msg}
+		err = conf.Backoff.Retry(func() error { return sock.Enq(bag) })
 		if err != nil {
 			ch.Err <- object
 		}

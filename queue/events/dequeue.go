@@ -14,7 +14,8 @@ import (
 Dequeue ...
 */
 func Dequeue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (<-chan *E, chan<- *E) {
-	ch := swarm.NewEvtDeqCh[T, E](q.Config().DequeueCapacity)
+	conf := q.Config()
+	ch := swarm.NewEvtDeqCh[T, E](conf.DequeueCapacity)
 
 	cat := strings.ToLower(typeOf[T]()) + ":" + typeOf[E]()
 
@@ -32,14 +33,21 @@ func Dequeue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (<
 		evt := unsafe.Pointer(object)
 		digest := *(*string)(unsafe.Pointer(uintptr(evt) + offDigest))
 
-		sock.Ack(swarm.Bag{
-			Category: cat,
-			Digest:   digest,
+		// TODO: Error logging
+		conf.Backoff.Retry(func() error {
+			return sock.Ack(swarm.Bag{
+				Category: cat,
+				Digest:   digest,
+			})
 		})
 	})
 
 	pipe.Emit(ch.Msg, q.Config().PollFrequency, func() (*E, error) {
-		bag, err := sock.Deq(cat)
+		var bag swarm.Bag
+		err := conf.Backoff.Retry(func() (err error) {
+			bag, err = sock.Deq(cat)
+			return
+		})
 		if err != nil {
 			return nil, err
 		}

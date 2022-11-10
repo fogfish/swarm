@@ -68,7 +68,6 @@ func (cli *client) Enq(bag swarm.Bag) error {
 			QueueUrl:    cli.queue,
 		},
 	)
-
 	return err
 }
 

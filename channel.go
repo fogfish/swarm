@@ -11,7 +11,7 @@ type Channel interface {
 	Close()
 }
 
-const syncInterval = 10 * time.Millisecond
+const syncInterval = 100 * time.Millisecond
 
 /*
 

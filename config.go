@@ -1,6 +1,10 @@
 package swarm
 
-import "time"
+import (
+	"time"
+
+	"github.com/fogfish/swarm/internal/backoff"
+)
 
 type Policy int
 
@@ -10,9 +14,17 @@ const (
 	PolicyExactlyOnce
 )
 
+type Retry interface {
+	Retry(f func() error) error
+}
+
 type Config struct {
 	// Instance of AWS Service, ...
 	Service any
+
+	// Agent is a direct performer of the event.
+	// A software service that emits action to the stream.
+	Agent string
 
 	// Quality of Service Policy
 	Policy Policy
@@ -21,9 +33,8 @@ type Config struct {
 	EnqueueCapacity int
 	DequeueCapacity int
 
-	// Agent is a direct performer of the event.
-	// A software service that emits action to the stream.
-	Agent string
+	//
+	Backoff Retry
 
 	// Frequency to poll broker api
 	PollFrequency time.Duration
@@ -37,10 +48,11 @@ type Config struct {
 
 func NewConfig() *Config {
 	return &Config{
+		Agent:           "github.com/fogfish/swarm",
 		Policy:          PolicyAtLeastOnce,
 		EnqueueCapacity: 0,
 		DequeueCapacity: 0,
-		Agent:           "github.com/fogfish/swarm",
+		Backoff:         backoff.Exp(10*time.Millisecond, 10, 0.5),
 		PollFrequency:   10 * time.Millisecond,
 		TimeToFlight:    5 * time.Second,
 	}
@@ -60,6 +72,13 @@ func WithService(service any) Option {
 func WithAgent(agent string) Option {
 	return func(conf *Config) {
 		conf.Agent = agent
+	}
+}
+
+//
+func WithRetry(backoff Retry) Option {
+	return func(conf *Config) {
+		conf.Backoff = backoff
 	}
 }
 

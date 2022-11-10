@@ -14,7 +14,8 @@ Dequeue ...
 func Dequeue[T any](q swarm.Broker, category ...string) (<-chan *swarm.Msg[T], chan<- *swarm.Msg[T]) {
 	// TODO: automatically ack At Most Once, no ack channel
 	//       make it as /dev/null
-	ch := swarm.NewMsgDeqCh[T](q.Config().DequeueCapacity)
+	conf := q.Config()
+	ch := swarm.NewMsgDeqCh[T](conf.DequeueCapacity)
 
 	cat := typeOf[T]()
 	if len(category) > 0 {
@@ -27,14 +28,21 @@ func Dequeue[T any](q swarm.Broker, category ...string) (<-chan *swarm.Msg[T], c
 	}
 
 	pipe.ForEach(ch.Ack, func(object *swarm.Msg[T]) {
-		sock.Ack(swarm.Bag{
-			Category: cat,
-			Digest:   object.Digest,
+		// TODO: Error logging
+		conf.Backoff.Retry(func() error {
+			return sock.Ack(swarm.Bag{
+				Category: cat,
+				Digest:   object.Digest,
+			})
 		})
 	})
 
 	pipe.Emit(ch.Msg, q.Config().PollFrequency, func() (*swarm.Msg[T], error) {
-		bag, err := sock.Deq(cat)
+		var bag swarm.Bag
+		err := conf.Backoff.Retry(func() (err error) {
+			bag, err = sock.Deq(cat)
+			return
+		})
 		if err != nil {
 			return nil, err
 		}

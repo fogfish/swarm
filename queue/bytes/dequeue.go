@@ -10,7 +10,8 @@ import (
 Dequeue ...
 */
 func Dequeue(q swarm.Broker, cat string) (<-chan *swarm.Msg[[]byte], chan<- *swarm.Msg[[]byte]) {
-	ch := swarm.NewMsgDeqCh[[]byte](q.Config().DequeueCapacity)
+	conf := q.Config()
+	ch := swarm.NewMsgDeqCh[[]byte](conf.DequeueCapacity)
 
 	sock, err := q.Dequeue(cat, ch)
 	if err != nil {
@@ -18,14 +19,21 @@ func Dequeue(q swarm.Broker, cat string) (<-chan *swarm.Msg[[]byte], chan<- *swa
 	}
 
 	pipe.ForEach(ch.Ack, func(object *swarm.Msg[[]byte]) {
-		sock.Ack(swarm.Bag{
-			Category: cat,
-			Digest:   object.Digest,
+		// TODO: Error logging
+		conf.Backoff.Retry(func() error {
+			return sock.Ack(swarm.Bag{
+				Category: cat,
+				Digest:   object.Digest,
+			})
 		})
 	})
 
 	pipe.Emit(ch.Msg, q.Config().PollFrequency, func() (*swarm.Msg[[]byte], error) {
-		bag, err := sock.Deq(cat)
+		var bag swarm.Bag
+		err := conf.Backoff.Retry(func() (err error) {
+			bag, err = sock.Deq(cat)
+			return
+		})
 		if err != nil {
 			return nil, err
 		}

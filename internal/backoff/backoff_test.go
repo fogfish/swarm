@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/fogfish/it"
-	"github.com/fogfish/swarm/backoff"
+	"github.com/fogfish/swarm/internal/backoff"
 )
 
 func TestConst(t *testing.T) {
