@@ -1,4 +1,4 @@
-package queue
+package bytes
 
 import (
 	"github.com/fogfish/swarm"

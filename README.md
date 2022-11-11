@@ -60,6 +60,7 @@ go get -u github.com/fogfish/swarm
   - [Produce (enqueue) messages](#produce-enqueue-messages)
   - [Consume (dequeue) messages](#consume-dequeue-messages)
   - [Message Delivery Guarantees](#message-delivery-guarantees)
+  - [Delayed Guarantee vs Guarantee](#delayed-guarantee-vs-guarantee)
   - [Order of Messages](#order-of-messages)
   - [Octet streams](#octet-streams)
   - [Generic events](#generic-events)
@@ -181,9 +182,44 @@ deq, ack := queue.Dequeue[Note](q)
 
 **Exactly Once** is not supported by the library.
 
+
+### Delayed Guarantee vs Guarantee
+
+Usage of "At Least Once" policy (unbuffered channels) provides the delayed guarantee for producers. Let's consider the following example. If queue broker fails to send message `A` then the channel `enq` is blocked at sending message `B` until the program consumes message `A` from the dead-letter queue channel.
+
+```go
+enq, dlq := queue.Enqueue[*User](q)
+
+enq <- &User{ID: "A", Text: "some text by A"} // failed to send
+enq <- &User{ID: "B", Text: "some text by B"} // blocked until dlq is processed 
+enq <- &User{ID: "C", Text: "some text by C"}
+```
+
+The delayed guarantee is efficient on batch processing but might cause complication at transactional processing. Therefore, the library also support a synchronous variant to producing a message
+
+```go
+user := queue.New[*User](q)
+
+if err := user.Enqueue(&User{ID: "A", Text: "some text by A"}); err != nil {
+  // handle error
+}
+```
+
 ### Order of Messages
 
-TBD
+The library guarantee ordering of the messages when they are produced over same Golang channel. Let's consider a following example:
+
+```go
+user, _ := queue.Enqueue[*User](q)
+note, _ := queue.Enqueue[*Note](q)
+
+user <- &User{ID: "A", Text: "some text by A"}
+note <- &Note{ID: "B", Text: "some note A"}
+user <- &User{ID: "C", Text: "some text by A"}
+```
+
+The library guarantees following clauses `A before C` and `C after A` because both messages are produced to single channel `note`. It do not guarantee clauses `A before B`, `B before C` or `C after B` because multiple channels are used.
+
 
 ### Octet Streams
 

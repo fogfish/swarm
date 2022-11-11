@@ -2,7 +2,6 @@ package sqs
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
@@ -67,14 +66,15 @@ func (b *broker) Await() {
 		default:
 			bag, err := b.client.Deq("")
 			if err != nil {
-				fmt.Println(err)
+				// TODO: handle error
 				return
 			}
 
 			if bag.Object != nil {
 				b.router.Dispatch(bag)
+				// TODO: configurable timeout
 				if err := b.router.Await(1 * time.Second); err != nil {
-					fmt.Println(err)
+					// TODO: handle error
 					return
 				}
 			}

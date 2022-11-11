@@ -21,6 +21,9 @@ func Enqueue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (c
 	ch := swarm.NewEvtEnqCh[T, E](conf.EnqueueCapacity)
 
 	cat := strings.ToLower(typeOf[T]()) + ":" + typeOf[E]()
+	if len(category) > 0 {
+		cat = category[0]
+	}
 
 	//
 	// building memory layout to make unsafe struct reading

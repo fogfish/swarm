@@ -18,6 +18,9 @@ func Dequeue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (<
 	ch := swarm.NewEvtDeqCh[T, E](conf.DequeueCapacity)
 
 	cat := strings.ToLower(typeOf[T]()) + ":" + typeOf[E]()
+	if len(category) > 0 {
+		cat = category[0]
+	}
 
 	//
 	// building memory layout to make unsafe struct reading
