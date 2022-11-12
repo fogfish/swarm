@@ -26,6 +26,8 @@ const (
 	Message  = "{\"some\":\"message\"}"
 	Event    = ""
 	Receipt  = "0x123456789abcdef"
+
+	EventCategory = "note:Event[*github.com/fogfish/swarm/internal/qtest.Note]"
 )
 
 var (
@@ -126,7 +128,7 @@ func TestEnqueueEvent(t *testing.T, factory enqueue) {
 	t.Helper()
 	eff := make(chan string, 1)
 
-	q := factory(eff, "test-queue", "note:Event[*swarm.Note]", retry200ms)
+	q := factory(eff, "test-queue", EventCategory, retry200ms)
 
 	note, _ := events.Enqueue[*Note, swarm.Event[*Note]](q)
 	user, dlq := events.Enqueue[*User, swarm.Event[*User]](q)
@@ -144,7 +146,7 @@ func TestEnqueueEvent(t *testing.T, factory enqueue) {
 			it.Then(t).
 				Should(it.Nil(err)).
 				Should(it.Equal(*val.Object, Note{Some: "message"})).
-				Should(it.Equal(val.Type, "note:Event[*swarm.Note")). // TODO: fogfish/curie#29
+				Should(it.Equal(val.Type, "note:Event[*github.com/fogfish/swarm/internal/qtest.Note")). // TODO: fogfish/curie#29
 				ShouldNot(it.Equal(len(val.ID), 0)).
 				ShouldNot(it.Equal(len(val.Created), 0))
 
@@ -232,7 +234,7 @@ func TestDequeueEvent(t *testing.T, factory dequeue) {
 		}
 		message, _ := json.Marshal(event)
 
-		q := factory(eff, "test-queue", "note:Event[*swarm.Note]", string(message), Receipt, retry200ms)
+		q := factory(eff, "test-queue", EventCategory, string(message), Receipt, retry200ms)
 
 		msg, ack := events.Dequeue[*Note, swarm.Event[*Note]](q)
 		go q.Await()

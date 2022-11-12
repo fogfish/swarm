@@ -25,13 +25,13 @@ import (
 	"github.com/fogfish/swarm/queue"
 )
 
-func TestEnqueueSQS(t *testing.T) {
+func TestEnqueueEventBridge(t *testing.T) {
 	qtest.TestEnqueueTyped(t, newMockEnqueue)
 	qtest.TestEnqueueBytes(t, newMockEnqueue)
 	qtest.TestEnqueueEvent(t, newMockEnqueue)
 }
 
-func TestDequeueSQS(t *testing.T) {
+func TestDequeueEventBridge(t *testing.T) {
 	qtest.TestDequeueTyped(t, newMockDequeue)
 	qtest.TestDequeueBytes(t, newMockDequeue)
 	qtest.TestDequeueEvent(t, newMockDequeue)

@@ -9,6 +9,10 @@
 package main
 
 import (
+	"fmt"
+	"reflect"
+	"strings"
+
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/sqs"
 	"github.com/fogfish/swarm/queue/events"
@@ -48,6 +52,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	fmt.Println(xxx[*User, EventCreateUser]())
+	fmt.Println(xxx[*Note, swarm.Event[*Note]]())
 
 	userCreated, _ := events.Enqueue[*User, EventCreateUser](q)
 	userUpdated, _ := events.Enqueue[*User, EventUpdateUser](q)
@@ -98,4 +105,23 @@ func main() {
 	}
 
 	q.Close()
+}
+
+func xxx[T any, E swarm.EventKind[T]]() string {
+	return strings.ToLower(typeOf[T]()) + ":" + typeOf[E]()
+}
+
+func typeOf[T any]() string {
+	//
+	// TODO: fix
+	//   Action[*swarm.User] if container type is used
+	//
+
+	typ := reflect.TypeOf(*new(T))
+	cat := typ.Name()
+	if typ.Kind() == reflect.Ptr {
+		cat = typ.Elem().Name()
+	}
+
+	return cat
 }
