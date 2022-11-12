@@ -3,6 +3,7 @@ package eventbridge_test
 import (
 	"testing"
 
+	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/assertions"
 	"github.com/aws/jsii-runtime-go"
 	"github.com/fogfish/scud"
@@ -10,9 +11,14 @@ import (
 )
 
 func TestEventBridgeCDK(t *testing.T) {
-	app := eventbridge.NewServerlessApp()
-
-	stack := app.NewStack("swarm-example-eventbridge")
+	app := awscdk.NewApp(nil)
+	stack := eventbridge.NewServerlessStack(app,
+		jsii.String("swarm-example-eventbridge"),
+		&eventbridge.ServerlessStackProps{
+			Version: "latest",
+			System:  "swarm-example-eventbridge",
+		},
+	)
 	stack.NewEventBus()
 
 	stack.NewSink(
