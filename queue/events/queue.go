@@ -82,11 +82,7 @@ func New[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) Queue[
 		offType:    offType,
 		offCreated: offCreated,
 	}
-	sock, err := q.Enqueue(cat, queue)
-	if err != nil {
-		panic(err)
-	}
-	queue.sock = sock
+	queue.sock = q.Enqueue(cat, queue)
 
 	return queue
 }

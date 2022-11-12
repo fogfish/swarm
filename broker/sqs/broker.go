@@ -1,8 +1,15 @@
+//
+// Copyright (C) 2021 - 2022 Dmitry Kolesnikov
+//
+// This file may be modified and distributed under the terms
+// of the Apache License Version 2.0. See the LICENSE file for details.
+// https://github.com/fogfish/swarm
+//
+
 package sqs
 
 import (
 	"context"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/fogfish/swarm"
@@ -58,39 +65,50 @@ func (b *broker) Close() {
 	b.cancel()
 }
 
+func (b *broker) DSync() {
+	b.channels.Sync()
+}
+
 func (b *broker) Await() {
 	for {
 		select {
 		case <-b.context.Done():
 			return
 		default:
-			bag, err := b.client.Deq("")
-			if err != nil {
-				// TODO: handle error
+			var bag swarm.Bag
+			err := b.config.Backoff.Retry(func() (err error) {
+				bag, err = b.client.Deq("")
 				return
+			})
+			if err != nil {
+				if b.config.StdErr != nil {
+					b.config.StdErr <- err
+				}
+				continue
 			}
 
 			if bag.Object != nil {
 				b.router.Dispatch(bag)
-				// TODO: configurable timeout
-				if err := b.router.Await(1 * time.Second); err != nil {
-					// TODO: handle error
-					return
+				if err := b.router.Await(b.config.TimeToFlight); err != nil {
+					if b.config.StdErr != nil {
+						b.config.StdErr <- err
+					}
+					continue
 				}
 			}
 		}
 	}
 }
 
-func (b *broker) Enqueue(category string, channel swarm.Channel) (swarm.Enqueue, error) {
+func (b *broker) Enqueue(category string, channel swarm.Channel) swarm.Enqueue {
 	b.channels.Attach(category, channel)
 
-	return b.client, nil
+	return b.client
 }
 
-func (b *broker) Dequeue(category string, channel swarm.Channel) (swarm.Dequeue, error) {
+func (b *broker) Dequeue(category string, channel swarm.Channel) swarm.Dequeue {
 	b.channels.Attach(category, channel)
-	b.router.Register(category)
+	b.router.Register(category, b.config.DequeueCapacity)
 
-	return b.router, nil
+	return b.router
 }

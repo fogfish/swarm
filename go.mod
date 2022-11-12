@@ -31,4 +31,5 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.11.9 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.16.7 // indirect
 	github.com/aws/smithy-go v1.11.3 // indirect
+	github.com/fogfish/it/v2 v2.0.0-20220827053314-ff49ca642fd4 // indirect
 )

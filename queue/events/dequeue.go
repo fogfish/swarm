@@ -27,22 +27,21 @@ func Dequeue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (<
 	kindT := swarm.Event[T]{}
 	offDigest := unsafe.Offsetof(kindT.Digest)
 
-	sock, err := q.Dequeue(cat, ch)
-	if err != nil {
-		panic(err)
-	}
+	sock := q.Dequeue(cat, ch)
 
 	pipe.ForEach(ch.Ack, func(object *E) {
 		evt := unsafe.Pointer(object)
 		digest := *(*string)(unsafe.Pointer(uintptr(evt) + offDigest))
 
-		// TODO: Error logging
-		conf.Backoff.Retry(func() error {
+		err := conf.Backoff.Retry(func() error {
 			return sock.Ack(swarm.Bag{
 				Category: cat,
 				Digest:   digest,
 			})
 		})
+		if err != nil && conf.StdErr != nil {
+			conf.StdErr <- err
+		}
 	})
 
 	pipe.Emit(ch.Msg, q.Config().PollFrequency, func() (*E, error) {
@@ -52,11 +51,17 @@ func Dequeue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (<
 			return
 		})
 		if err != nil {
+			if conf.StdErr != nil {
+				conf.StdErr <- err
+			}
 			return nil, err
 		}
 
 		evt := new(E)
 		if err := json.Unmarshal(bag.Object, evt); err != nil {
+			if conf.StdErr != nil {
+				conf.StdErr <- err
+			}
 			return nil, err
 		}
 

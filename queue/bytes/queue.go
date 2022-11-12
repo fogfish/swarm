@@ -31,11 +31,7 @@ func (q queue) Enqueue(object []byte) error {
 //
 func New(q swarm.Broker, category string) Queue {
 	queue := &queue{cat: category, conf: q.Config()}
-	sock, err := q.Enqueue(category, queue)
-	if err != nil {
-		panic(err)
-	}
-	queue.sock = sock
+	queue.sock = q.Enqueue(category, queue)
 
 	return queue
 }

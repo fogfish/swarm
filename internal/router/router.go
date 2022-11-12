@@ -1,3 +1,11 @@
+//
+// Copyright (C) 2021 - 2022 Dmitry Kolesnikov
+//
+// This file may be modified and distributed under the terms
+// of the Apache License Version 2.0. See the LICENSE file for details.
+// https://github.com/fogfish/swarm
+//
+
 package router
 
 import (
@@ -25,12 +33,11 @@ func New(onAck func(swarm.Bag) error) *Router {
 	}
 }
 
-func (router *Router) Register(category string) {
+func (router *Router) Register(category string, n int) {
 	router.Lock()
 	defer router.Unlock()
 
-	// TODO: capacity
-	router.sock[category] = make(chan swarm.Bag)
+	router.sock[category] = make(chan swarm.Bag, n)
 }
 
 func (router *Router) Ack(bag swarm.Bag) error {

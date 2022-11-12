@@ -1,3 +1,11 @@
+//
+// Copyright (C) 2021 - 2022 Dmitry Kolesnikov
+//
+// This file may be modified and distributed under the terms
+// of the Apache License Version 2.0. See the LICENSE file for details.
+// https://github.com/fogfish/swarm
+//
+
 package eventbridge
 
 import (
@@ -10,8 +18,7 @@ import (
 	"github.com/fogfish/swarm/internal/router"
 )
 
-// EventBridge declares the subset of interface from AWS SDK,
-// which is used by the library
+// EventBridge declares the subset of interface from AWS SDK used by the lib.
 type EventBridge interface {
 	PutEvents(context.Context, *eventbridge.PutEventsInput, ...func(*eventbridge.Options)) (*eventbridge.PutEventsOutput, error)
 }
@@ -59,8 +66,22 @@ func (b *broker) Close() {
 	b.cancel()
 }
 
+func (b *broker) DSync() {
+	b.channels.Sync()
+}
+
 func (b *broker) Await() {
-	lambda.Start(
+	starter := lambda.Start
+
+	type Mock interface{ Start(interface{}) }
+	if b.config.Service != nil {
+		service, ok := b.config.Service.(Mock)
+		if ok {
+			starter = service.Start
+		}
+	}
+
+	starter(
 		func(evt events.CloudWatchEvent) error {
 			bag := swarm.Bag{
 				Category: evt.DetailType,
@@ -77,15 +98,15 @@ func (b *broker) Await() {
 	)
 }
 
-func (b *broker) Enqueue(category string, channel swarm.Channel) (swarm.Enqueue, error) {
+func (b *broker) Enqueue(category string, channel swarm.Channel) swarm.Enqueue {
 	b.channels.Attach(category, channel)
 
-	return b.client, nil
+	return b.client
 }
 
-func (b *broker) Dequeue(category string, channel swarm.Channel) (swarm.Dequeue, error) {
+func (b *broker) Dequeue(category string, channel swarm.Channel) swarm.Dequeue {
 	b.channels.Attach(category, channel)
-	b.router.Register(category)
+	b.router.Register(category, b.config.DequeueCapacity)
 
-	return b.router, nil
+	return b.router
 }

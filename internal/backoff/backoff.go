@@ -1,3 +1,11 @@
+//
+// Copyright (C) 2021 - 2022 Dmitry Kolesnikov
+//
+// This file may be modified and distributed under the terms
+// of the Apache License Version 2.0. See the LICENSE file for details.
+// https://github.com/fogfish/swarm
+//
+
 package backoff
 
 import (
@@ -112,4 +120,16 @@ func (seq Seq) Retry(f func() error) (err error) {
 		time.Sleep(t)
 	}
 	return
+}
+
+/*
+
+None is empty delay sequence
+*/
+type None int
+
+func Empty() None { return None(0) }
+
+func (None) Retry(f func() error) (err error) {
+	return f()
 }

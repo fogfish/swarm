@@ -13,19 +13,18 @@ func Dequeue(q swarm.Broker, cat string) (<-chan *swarm.Msg[[]byte], chan<- *swa
 	conf := q.Config()
 	ch := swarm.NewMsgDeqCh[[]byte](conf.DequeueCapacity)
 
-	sock, err := q.Dequeue(cat, ch)
-	if err != nil {
-		panic(err)
-	}
+	sock := q.Dequeue(cat, ch)
 
 	pipe.ForEach(ch.Ack, func(object *swarm.Msg[[]byte]) {
-		// TODO: Error logging
-		conf.Backoff.Retry(func() error {
+		err := conf.Backoff.Retry(func() error {
 			return sock.Ack(swarm.Bag{
 				Category: cat,
 				Digest:   object.Digest,
 			})
 		})
+		if err != nil && conf.StdErr != nil {
+			conf.StdErr <- err
+		}
 	})
 
 	pipe.Emit(ch.Msg, q.Config().PollFrequency, func() (*swarm.Msg[[]byte], error) {
@@ -35,6 +34,9 @@ func Dequeue(q swarm.Broker, cat string) (<-chan *swarm.Msg[[]byte], chan<- *swa
 			return
 		})
 		if err != nil {
+			if conf.StdErr != nil {
+				conf.StdErr <- err
+			}
 			return nil, err
 		}
 

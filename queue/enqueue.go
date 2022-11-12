@@ -1,3 +1,11 @@
+//
+// Copyright (C) 2021 - 2022 Dmitry Kolesnikov
+//
+// This file may be modified and distributed under the terms
+// of the Apache License Version 2.0. See the LICENSE file for details.
+// https://github.com/fogfish/swarm
+//
+
 package queue
 
 import (
@@ -24,10 +32,7 @@ func Enqueue[T any](q swarm.Broker, category ...string) (chan<- T, <-chan T) {
 		cat = category[0]
 	}
 
-	sock, err := q.Enqueue(cat, ch)
-	if err != nil {
-		panic(err)
-	}
+	sock := q.Enqueue(cat, ch)
 
 	pipe.ForEach(ch.Msg, func(object T) {
 		msg, err := json.Marshal(object)

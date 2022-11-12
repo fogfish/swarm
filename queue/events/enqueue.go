@@ -33,10 +33,7 @@ func Enqueue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (c
 		unsafe.Offsetof(kindT.Type),
 		unsafe.Offsetof(kindT.Created)
 
-	sock, err := q.Enqueue(cat, ch)
-	if err != nil {
-		panic(err)
-	}
+	sock := q.Enqueue(cat, ch)
 
 	pipe.ForEach(ch.Msg, func(object *E) {
 		evt := unsafe.Pointer(object)

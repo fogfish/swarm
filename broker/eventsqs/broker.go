@@ -1,8 +1,14 @@
+//
+// Copyright (C) 2021 - 2022 Dmitry Kolesnikov
+//
+// This file may be modified and distributed under the terms
+// of the Apache License Version 2.0. See the LICENSE file for details.
+// https://github.com/fogfish/swarm
+//
+
 package eventsqs
 
 import (
-	"time"
-
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/fogfish/swarm"
@@ -10,7 +16,7 @@ import (
 	"github.com/fogfish/swarm/internal/router"
 )
 
-// New creates broker for AWS SQS
+// New creates broker for AWS EventBridge
 func New(queue string, opts ...swarm.Option) (swarm.Broker, error) {
 	conf := swarm.NewConfig()
 	for _, opt := range opts {
@@ -35,15 +41,25 @@ type broker struct {
 	router *router.Router
 }
 
-func (b *broker) Dequeue(category string, channel swarm.Channel) (swarm.Dequeue, error) {
+func (b *broker) Dequeue(category string, channel swarm.Channel) swarm.Dequeue {
 	b.Broker.Dequeue(category, channel)
-	b.router.Register(category)
+	b.router.Register(category, b.config.DequeueCapacity)
 
-	return b.router, nil
+	return b.router
 }
 
 func (b *broker) Await() {
-	lambda.Start(
+	starter := lambda.Start
+
+	type Mock interface{ Start(interface{}) }
+	if b.config.Service != nil {
+		service, ok := b.config.Service.(Mock)
+		if ok {
+			starter = service.Start
+		}
+	}
+
+	starter(
 		func(events events.SQSEvent) error {
 			for _, evt := range events.Records {
 				bag := swarm.Bag{
@@ -56,46 +72,10 @@ func (b *broker) Await() {
 				}
 			}
 
-			return b.router.Await(1 * time.Second /*q.policy.TimeToFlight*/)
+			return b.router.Await(b.config.TimeToFlight)
 		},
 	)
 }
-
-// func (b *broker) Dequeue(string, swarm.Channel) (swarm.Dequeue, error) {
-
-// }
-
-// func (b *broker) Await() {
-// 	lambda.Start(
-// 		func(events events.SQSEvent) error {
-// 			acks := map[string]bool{}
-
-// 			for _, evt := range events.Records {
-// 				acks[evt.ReceiptHandle] = false
-// 				q.sock <- &swarm.Bag{
-// 					Category: attr(&evt, "Category"),
-// 					Queue:    attr(&evt, "Queue"),
-// 					Object:   []byte(evt.Body),
-// 					Digest:   evt.ReceiptHandle,
-// 				}
-// 			}
-
-// 			for {
-// 				select {
-// 				case bag := <-q.sack:
-// 					delete(acks, bag.Digest)
-// 					if len(acks) == 0 {
-// 						return nil
-// 					}
-// 				case <-time.After(500 * time.Millisecond /*q.policy.TimeToFlight*/):
-// 					// q.logger.Error("timeout message ack")
-// 					return fmt.Errorf("timeout message ack")
-// 				}
-// 			}
-
-// 		},
-// 	)
-// }
 
 func attr(msg *events.SQSMessage, key string) string {
 	val, exists := msg.MessageAttributes[key]
