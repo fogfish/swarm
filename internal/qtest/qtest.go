@@ -190,44 +190,6 @@ func TestDequeueTyped(t *testing.T, factory dequeue) {
 
 		q.Close()
 	})
-
-	/*
-		t.Run("Events", func(t *testing.T) {
-			event := swarm.Event[*Note]{
-				ID:          "id",
-				Type:        "type",
-				Agent:       "agent",
-				Participant: "user",
-				Created:     "created",
-				Object:      &Note{Some: "message"},
-			}
-			message, _ := json.Marshal(event)
-
-			cfg := swarm.DefaultPolicy()
-			sys := system.NewSystem("test-system")
-			deq := factory(sys, cfg, eff, "note:Event[*swarm.Note]", string(message), Receipt)
-			q := sys.Queue("test-queue", nil, deq, cfg)
-
-			msg, ack := events.Dequeue[*Note, swarm.Event[*Note]](q)
-			if err := sys.Listen(); err != nil {
-				panic(err)
-			}
-
-			val := <-msg
-			ack <- val
-
-			it.Ok(t).
-				If(val.Object).Equal(&Note{Some: "message"}).
-				If(string(val.Agent)).Equal("agent").
-				If(string(val.Participant)).Equal("user").
-				If(string(val.Type)).Equal("type").
-				If(string(val.ID)).Equal("id").
-				If(string(val.Created)).Equal("created").
-				If(<-eff).Equal(Receipt)
-
-			sys.Close()
-		})
-	*/
 }
 
 //
@@ -289,42 +251,4 @@ func TestDequeueEvent(t *testing.T, factory dequeue) {
 
 		q.Close()
 	})
-
-	/*
-		t.Run("Events", func(t *testing.T) {
-			event := swarm.Event[*Note]{
-				ID:          "id",
-				Type:        "type",
-				Agent:       "agent",
-				Participant: "user",
-				Created:     "created",
-				Object:      &Note{Some: "message"},
-			}
-			message, _ := json.Marshal(event)
-
-			cfg := swarm.DefaultPolicy()
-			sys := system.NewSystem("test-system")
-			deq := factory(sys, cfg, eff, "note:Event[*swarm.Note]", string(message), Receipt)
-			q := sys.Queue("test-queue", nil, deq, cfg)
-
-			msg, ack := events.Dequeue[*Note, swarm.Event[*Note]](q)
-			if err := sys.Listen(); err != nil {
-				panic(err)
-			}
-
-			val := <-msg
-			ack <- val
-
-			it.Ok(t).
-				If(val.Object).Equal(&Note{Some: "message"}).
-				If(string(val.Agent)).Equal("agent").
-				If(string(val.Participant)).Equal("user").
-				If(string(val.Type)).Equal("type").
-				If(string(val.ID)).Equal("id").
-				If(string(val.Created)).Equal("created").
-				If(<-eff).Equal(Receipt)
-
-			sys.Close()
-		})
-	*/
 }

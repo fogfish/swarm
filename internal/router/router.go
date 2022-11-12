@@ -53,6 +53,7 @@ func (router *Router) Deq(category string) (swarm.Bag, error) {
 func (router *Router) Dispatch(bag swarm.Bag) error {
 	sock, exists := router.sock[bag.Category]
 	if !exists {
+		fmt.Println(router.sock)
 		return fmt.Errorf("not found category %s", bag.Category)
 	}
 
