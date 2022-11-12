@@ -10,8 +10,8 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 
-	"github.com/fogfish/logger"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/sqs"
 	"github.com/fogfish/swarm/queue/events"
@@ -63,7 +63,7 @@ func main() {
 func create(rcv <-chan *EventCreateUser, ack chan<- *EventCreateUser) {
 	for msg := range rcv {
 		v, _ := json.MarshalIndent(msg, "+ |", " ")
-		logger.Debug("create user > \n %s\n", v)
+		fmt.Printf("create user > \n %s\n", v)
 		ack <- msg
 	}
 }
@@ -71,7 +71,7 @@ func create(rcv <-chan *EventCreateUser, ack chan<- *EventCreateUser) {
 func update(rcv <-chan *EventUpdateUser, ack chan<- *EventUpdateUser) {
 	for msg := range rcv {
 		v, _ := json.MarshalIndent(msg, "~ |", " ")
-		logger.Debug("update user > \n %s\n", v)
+		fmt.Printf("update user > \n %s\n", v)
 		ack <- msg
 	}
 }
@@ -79,7 +79,7 @@ func update(rcv <-chan *EventUpdateUser, ack chan<- *EventUpdateUser) {
 func remove(rcv <-chan *EventRemoveUser, ack chan<- *EventRemoveUser) {
 	for msg := range rcv {
 		v, _ := json.MarshalIndent(msg, "- |", " ")
-		logger.Debug("remove user > \n %s\n", v)
+		fmt.Printf("remove user > \n %s\n", v)
 		ack <- msg
 	}
 }
@@ -97,7 +97,7 @@ func common(rcv <-chan *swarm.Event[*Note], ack chan<- *swarm.Event[*Note]) {
 		}
 
 		v, _ := json.MarshalIndent(msg, prefix, " ")
-		logger.Debug("common note > \n %s\n", v)
+		fmt.Printf("common note > \n %s\n", v)
 		ack <- msg
 	}
 }

@@ -64,6 +64,7 @@ go get -u github.com/fogfish/swarm
   - [Order of Messages](#order-of-messages)
   - [Octet streams](#octet-streams)
   - [Generic events](#generic-events)
+  - [Error handling](#error-handling)
   - [Serverless](#serverless)
   - [Supported queuing system and event brokers](#supported-queuing-system-and-event-brokers)
   <!-- - [Error handling](#error-handling) -->
@@ -87,7 +88,7 @@ type Note struct {
 }
 
 // Spawn a new instance of the messaging broker
-q := swarm.Must(sqs.New("name-of-the-queue"))
+q := swarm.Must(sqs.New("name-of-the-queue"), /* config options */)
 
 // creates pair Golang channels dedicated for publishing
 // messages of type Note through the messaging broker. The first channel
@@ -268,6 +269,19 @@ deq, ack := queue.Dequeue[*Note, EventCreateNote](q)
 ```
 
 Please see example about [event-driven](./examples/events/) consumer/producer.
+
+### Error Handling
+
+The error handling on channel level is governed either by [dead-letter queue](#message-delivery-guarantees) or [acknowledge protocol](#consume-dequeue-messages). The library provides `swarm.WithStdErr` configuration option to pass the side channel to consume global errors. Use it as top level error handler. 
+
+```go
+stderr := make(chan error)
+q := queue.Must(sqs.New("swarm-test", swarm.WithStdErr(stderr)))
+
+for err := range stderr {
+  // error handling loop
+}
+```
 
 ### Serverless 
 

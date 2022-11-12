@@ -9,7 +9,8 @@
 package main
 
 import (
-	"github.com/fogfish/logger"
+	"fmt"
+
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/eventsqs"
 	"github.com/fogfish/swarm/queue"
@@ -48,7 +49,7 @@ type actor[T any] string
 
 func (a actor[T]) handle(rcv <-chan *swarm.Msg[T], ack chan<- *swarm.Msg[T]) {
 	for msg := range rcv {
-		logger.Debug("event on %s > %+v", a, msg.Object)
+		fmt.Printf("event on %s > %+v", a, msg.Object)
 		ack <- msg
 	}
 }

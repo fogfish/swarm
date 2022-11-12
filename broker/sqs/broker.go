@@ -88,7 +88,13 @@ func (b *broker) Await() {
 			}
 
 			if bag.Object != nil {
-				b.router.Dispatch(bag)
+				if err := b.router.Dispatch(bag); err != nil {
+					if b.config.StdErr != nil {
+						b.config.StdErr <- err
+					}
+					continue
+				}
+
 				if err := b.router.Await(b.config.TimeToFlight); err != nil {
 					if b.config.StdErr != nil {
 						b.config.StdErr <- err
