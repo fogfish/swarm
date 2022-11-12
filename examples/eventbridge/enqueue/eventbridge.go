@@ -31,7 +31,7 @@ type Like struct {
 
 func main() {
 	q, err := eventbridge.New("swarm-example-eventbridge-latest",
-		swarm.WithAgent("swarm-example-eventbridge"),
+		swarm.WithSource("swarm-example-eventbridge"),
 	)
 	if err != nil {
 		panic(err)

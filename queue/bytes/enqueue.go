@@ -20,6 +20,9 @@ func Enqueue(q swarm.Broker, cat string) (chan<- []byte, <-chan []byte) {
 		err := conf.Backoff.Retry(func() error { return sock.Enq(bag) })
 		if err != nil {
 			ch.Err <- object
+			if conf.StdErr != nil {
+				conf.StdErr <- err
+			}
 		}
 	})
 

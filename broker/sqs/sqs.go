@@ -65,11 +65,13 @@ func newService(conf *swarm.Config) (SQS, error) {
 
 // Enq enqueues message to broker
 func (cli *client) Enq(bag swarm.Bag) error {
-	_, err := cli.service.SendMessage(
-		context.TODO(),
+	ctx, cancel := context.WithTimeout(context.Background(), cli.config.NetworkTimeout)
+	defer cancel()
+
+	_, err := cli.service.SendMessage(ctx,
 		&sqs.SendMessageInput{
 			MessageAttributes: map[string]types.MessageAttributeValue{
-				"Agent":    {StringValue: aws.String(cli.config.Agent), DataType: aws.String("String")},
+				"Source":   {StringValue: aws.String(cli.config.Source), DataType: aws.String("String")},
 				"Category": {StringValue: aws.String(bag.Category), DataType: aws.String("String")},
 			},
 			MessageBody: aws.String(string(bag.Object)),
@@ -81,8 +83,10 @@ func (cli *client) Enq(bag swarm.Bag) error {
 
 // Ack acknowledges message to broker
 func (cli *client) Ack(bag swarm.Bag) error {
-	_, err := cli.service.DeleteMessage(
-		context.TODO(),
+	ctx, cancel := context.WithTimeout(context.Background(), cli.config.NetworkTimeout)
+	defer cancel()
+
+	_, err := cli.service.DeleteMessage(ctx,
 		&sqs.DeleteMessageInput{
 			QueueUrl:      cli.queue,
 			ReceiptHandle: aws.String(string(bag.Digest)),
@@ -93,8 +97,10 @@ func (cli *client) Ack(bag swarm.Bag) error {
 
 // Deq dequeues message from broker
 func (cli client) Deq(cat string) (swarm.Bag, error) {
-	result, err := cli.service.ReceiveMessage(
-		context.TODO(),
+	ctx, cancel := context.WithTimeout(context.Background(), cli.config.NetworkTimeout)
+	defer cancel()
+
+	result, err := cli.service.ReceiveMessage(ctx,
 		&sqs.ReceiveMessageInput{
 			MessageAttributeNames: []string{string(types.QueueAttributeNameAll)},
 			QueueUrl:              cli.queue,

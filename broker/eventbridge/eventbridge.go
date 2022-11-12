@@ -59,12 +59,13 @@ func (cli *client) Enq(bag swarm.Bag) error {
 	ctx, cancel := context.WithTimeout(context.Background(), cli.config.NetworkTimeout)
 	defer cancel()
 
+	fmt.Println(string(bag.Object))
 	ret, err := cli.service.PutEvents(ctx,
 		&eventbridge.PutEventsInput{
 			Entries: []types.PutEventsRequestEntry{
 				{
 					EventBusName: aws.String(cli.bus),
-					Source:       aws.String(cli.config.Agent),
+					Source:       aws.String(cli.config.Source),
 					DetailType:   aws.String(bag.Category),
 					Detail:       aws.String(string(bag.Object)),
 				},

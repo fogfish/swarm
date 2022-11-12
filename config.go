@@ -31,9 +31,9 @@ type Config struct {
 	// Instance of AWS Service, ...
 	Service any
 
-	// Agent is a direct performer of the event.
+	// Source is a direct performer of the event.
 	// A software service that emits action to the stream.
-	Agent string
+	Source string
 
 	// Quality of Service Policy
 	Policy Policy
@@ -60,13 +60,14 @@ type Config struct {
 
 func NewConfig() *Config {
 	return &Config{
-		Agent:           "github.com/fogfish/swarm",
+		Source:          "github.com/fogfish/swarm",
 		Policy:          PolicyAtLeastOnce,
 		EnqueueCapacity: 0,
 		DequeueCapacity: 0,
 		Backoff:         backoff.Exp(10*time.Millisecond, 10, 0.5),
 		PollFrequency:   10 * time.Millisecond,
 		TimeToFlight:    5 * time.Second,
+		NetworkTimeout:  5 * time.Second,
 	}
 }
 
@@ -82,9 +83,9 @@ func WithService(service any) Option {
 
 // Agent is a direct performer of the event.
 // A software service that emits action to the stream.
-func WithAgent(agent string) Option {
+func WithSource(agent string) Option {
 	return func(conf *Config) {
-		conf.Agent = agent
+		conf.Source = agent
 	}
 }
 

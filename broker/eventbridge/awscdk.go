@@ -39,7 +39,7 @@ https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-event-patterns.html
 */
 type SinkProps struct {
 	System     awsevents.IEventBus
-	Agents     []string
+	Source     []string
 	Categories []string
 	Pattern    map[string]interface{}
 	Lambda     *scud.FunctionGoProps
@@ -65,9 +65,9 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 		pattern.DetailType = &seq
 	}
 
-	if props.Agents != nil && len(props.Agents) > 0 {
-		seq := make([]*string, len(props.Agents))
-		for i, agent := range props.Agents {
+	if props.Source != nil && len(props.Source) > 0 {
+		seq := make([]*string, len(props.Source))
+		for i, agent := range props.Source {
 			seq[i] = jsii.String(agent)
 		}
 		pattern.Source = &seq

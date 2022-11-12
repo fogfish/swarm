@@ -38,6 +38,9 @@ func Enqueue[T any](q swarm.Broker, category ...string) (chan<- T, <-chan T) {
 		msg, err := json.Marshal(object)
 		if err != nil {
 			ch.Err <- object
+			if conf.StdErr != nil {
+				conf.StdErr <- err
+			}
 			return
 		}
 
@@ -45,6 +48,9 @@ func Enqueue[T any](q swarm.Broker, category ...string) (chan<- T, <-chan T) {
 		err = conf.Backoff.Retry(func() error { return sock.Enq(bag) })
 		if err != nil {
 			ch.Err <- object
+			if conf.StdErr != nil {
+				conf.StdErr <- err
+			}
 		}
 	})
 

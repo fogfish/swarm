@@ -303,7 +303,7 @@ func main() {
 
   stack.NewSink(
     &eventbridge.SinkProps{
-      Agents: []string{"swarm-example-eventbridge"},
+      Source: []string{"swarm-example-eventbridge"},
       Lambda: &scud.FunctionGoProps{
         SourceCodePackage: "github.com/fogfish/swarm",
         SourceCodeLambda:  "examples/eventbridge/dequeue",
@@ -313,6 +313,29 @@ func main() {
 
   app.Synth(nil)
 }
+```
+
+Note: **AWS Event Bridge** has a feature that allows to [match execution of consumer to the pattern](https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/CloudWatchEventsandEventPatterns.html#CloudWatchEventsPatterns) of JSON object. Use `swarm.Event[T]` type to build reliable matching of incoming events:
+
+```go
+/*
+enq <- &swarm.Event[*User]{
+  Agent:  "swarm:example",
+  Participant: "user",
+  Object: &User{ID: "user", Text: "some text"},
+}
+*/
+
+stack.NewSink(
+  &eventbridge.SinkProps{
+    Pattern: map[string]interface{}{
+      "@type": []string{"[user:Event[*swarm.User]]"},
+      "agent": []string{"[swarm:example]"},
+      "participant": []string{"[user]"},
+    },
+    /* ... */
+  },
+)
 ```
 
 ### Supported queuing system and event brokers 

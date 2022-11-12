@@ -17,18 +17,11 @@ ForEach applies function for each message in the channel
 func ForEach[A any](in <-chan A, f func(A)) {
 	go func() {
 		var (
-			x  A
-			ok bool
+			x A
 		)
 
-		for {
-			select {
-			case x, ok = <-in:
-				if !ok {
-					return
-				}
-				f(x)
-			}
+		for x = range in {
+			f(x)
 		}
 	}()
 }
@@ -42,15 +35,14 @@ func Emit[T any](eg chan<- T, frequency time.Duration, f func() (T, error)) {
 		defer func() {
 			// Note: recover from panic on sending to closed channel
 			if recover() != nil {
+				return
 			}
 		}()
 
 		for {
-			select {
-			case <-time.After(frequency):
-				if x, err := f(); err == nil {
-					eg <- x
-				}
+			time.Sleep(frequency)
+			if x, err := f(); err == nil {
+				eg <- x
 			}
 		}
 	}()
