@@ -70,9 +70,9 @@ go get -u github.com/fogfish/swarm
   - [Octet streams](#octet-streams)
   - [Generic events](#generic-events)
   - [Error handling](#error-handling)
+  - [Internal channel architecture](#internal-channel-architecture)
   - [Serverless](#serverless)
   - [Supported queuing system and event brokers](#supported-queuing-system-and-event-brokers)
-  <!-- - [Error handling](#error-handling) -->
 
 ### Produce (enqueue) messages
 
@@ -305,6 +305,10 @@ for err := range stderr {
   // error handling loop
 }
 ```
+
+### Internal channel architecture
+
+![swarm queue model](./doc/swarm-queue-model.svg "swarm queue model")
 
 ### Serverless 
 

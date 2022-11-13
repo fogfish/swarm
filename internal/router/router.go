@@ -18,26 +18,28 @@ import (
 
 type Router struct {
 	sync.Mutex
-	sack  chan swarm.Bag
-	sock  map[string]chan swarm.Bag
-	acks  map[string]struct{}
-	onAck func(swarm.Bag) error
+	config *swarm.Config
+	sack   chan swarm.Bag
+	sock   map[string]chan swarm.Bag
+	acks   map[string]struct{}
+	onAck  func(swarm.Bag) error
 }
 
-func New(onAck func(swarm.Bag) error) *Router {
+func New(config *swarm.Config, onAck func(swarm.Bag) error) *Router {
 	return &Router{
-		sack:  make(chan swarm.Bag),
-		sock:  make(map[string]chan swarm.Bag),
-		acks:  map[string]struct{}{},
-		onAck: onAck,
+		config: config,
+		sack:   make(chan swarm.Bag, config.DequeueCapacity),
+		sock:   make(map[string]chan swarm.Bag),
+		acks:   map[string]struct{}{},
+		onAck:  onAck,
 	}
 }
 
-func (router *Router) Register(category string, n int) {
+func (router *Router) Register(category string) {
 	router.Lock()
 	defer router.Unlock()
 
-	router.sock[category] = make(chan swarm.Bag, n)
+	router.sock[category] = make(chan swarm.Bag, router.config.DequeueCapacity)
 }
 
 func (router *Router) Ack(bag swarm.Bag) error {
@@ -67,7 +69,10 @@ func (router *Router) Await(d time.Duration) error {
 		select {
 		case bag := <-router.sack:
 			if router.onAck != nil {
-				if err := router.onAck(bag); err != nil {
+				err := router.config.Backoff.Retry(func() error {
+					return router.onAck(bag)
+				})
+				if err != nil {
 					return err
 				}
 			}

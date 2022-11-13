@@ -31,7 +31,7 @@ func New(queue string, opts ...swarm.Option) (swarm.Broker, error) {
 	return &broker{
 		Broker: bro,
 		config: conf,
-		router: router.New(nil),
+		router: router.New(&conf, nil),
 	}, nil
 }
 
@@ -43,7 +43,7 @@ type broker struct {
 
 func (b *broker) Dequeue(category string, channel swarm.Channel) swarm.Dequeue {
 	b.Broker.Dequeue(category, channel)
-	b.router.Register(category, b.config.DequeueCapacity)
+	b.router.Register(category)
 
 	return b.router
 }

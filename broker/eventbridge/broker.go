@@ -52,7 +52,7 @@ func New(bus string, opts ...swarm.Option) (swarm.Broker, error) {
 		channels: swarm.NewChannels(),
 		context:  ctx,
 		cancel:   can,
-		router:   router.New(nil),
+		router:   router.New(&conf, nil),
 	}, nil
 }
 
@@ -106,7 +106,7 @@ func (b *broker) Enqueue(category string, channel swarm.Channel) swarm.Enqueue {
 
 func (b *broker) Dequeue(category string, channel swarm.Channel) swarm.Dequeue {
 	b.channels.Attach(category, channel)
-	b.router.Register(category, b.config.DequeueCapacity)
+	b.router.Register(category)
 
 	return b.router
 }
