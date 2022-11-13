@@ -30,8 +30,10 @@ func newClient(queue string, config *swarm.Config) (*client, error) {
 		return nil, err
 	}
 
-	spec, err := api.GetQueueUrl(
-		context.TODO(),
+	ctx, cancel := context.WithTimeout(context.Background(), config.NetworkTimeout)
+	defer cancel()
+
+	spec, err := api.GetQueueUrl(ctx,
 		&sqs.GetQueueUrlInput{
 			QueueName: aws.String(queue),
 		},
