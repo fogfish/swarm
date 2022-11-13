@@ -1,18 +1,18 @@
-# Design Pattern: Distributed event-driven Golang channels
+# Design Pattern: Golang channels for distributed event-driven architecture
 
-Asynchronous communication is hard to implement. However, it is best reflection about properties of real world. Pure Go channels is a right abstraction for developers because it distills asynchronous semantic of communication into the native Golang code. This design patter defines a fundamental idea how to use Golang channels to represents distributed environment as system of queues. 
+Asynchronous communication is hard to implement. However, it is best reflection about properties of real world. Pure Go channels is a right abstraction for developers because it distills asynchronous semantic of communication into the native Golang code. The design patter "Golang channels for distributed event-driven architecture" defines a fundamental idea how to use Golang channels to represents distributed environment as "system of queues". 
 
 
 ## Context
 
-Queuing systems and Event brokers assist distributed solutions with an asynchronous communication pattern between multiple actors - processes/threads, producers/consumers, etc. These async patterns imply that execution of producer is not blocked while waiting response from recipient. Queuing systems "store-and-forward" enqueued messages until recipient retrieves them. It is important to emphasis that asynchronous actors delegate the responsibility of the message delivery to a queuing system. Actors do not trace the status of the message delivery or expect immediate response from recipient. Instead, they expect particular grade of service (service level objectives) about messages delivery promise.
+Queuing systems and Event brokers assist distributed solutions with an asynchronous communication pattern between multiple actors - processes/threads, producers/consumers, etc. These async patterns imply that execution of producer is not blocked while waiting response from recipient. Queuing systems "store-and-forward" enqueued messages until recipient retrieves them. It is important to emphasis that asynchronous actors delegate the responsibility of the message delivery to a queuing system. Actors do not trace the status of the message delivery or expect immediate response from recipient. Instead, they expect particular grade of service (service level objectives) about messages delivery promises.
 
 
 ## Problem 
 
-Wide adoption of HTTP(S), which offers synchronous client-server communication patterns, has made a "negative" impact on message queues. Existing solution provides "wrong" abstraction for developers. It uses synchronous primitives to reflect pure asynchronous nature of queueing systems. As a result, engineers are forced to implement vendor dependent integrations or onboard layers of abstractions, which impacts on the maintainability and evolution of applications.  
+Wide adoption of HTTP(S) protocol, which offers synchronous client-server communication patterns, has made a "negative" impact on message queues. Existing solution provides "wrong" abstraction for developers. It uses synchronous primitives to reflect pure asynchronous nature of queueing systems. As a result, engineers are forced to implement vendor dependent integrations and onboard layers of abstractions, which impacts on the maintainability and evolution of applications.
 
-Asynchronous communication is hard to implement but it is best reflection about properties of real world. Anything else is unnecessary complication that misleads developers by forcing usage of "wrong" interfaces that hides asynchronous nature behind vendor specific plumbing. The real solution is to write pure Go code instead of vendor specific APIs
+Asynchronous communication is hard to implement but it is best reflection about properties of real world. Anything else is unnecessary complication that misleads developers by forcing usage of "wrong" interfaces that hides asynchronous nature behind vendor specific plumbing. The real desire is to write pure Go code instead of vendor specific APIs and its adapters.
 
 
 ## Solution
@@ -57,7 +57,7 @@ func consume[T any](q <-chan T) {
 ```
 
 We are only missing the method to create these channels. The pattern defined two abstractions:
-* `Broker` is the adapter of queuing systems. It defines synchronous primitives to spawn the new instance of client, enqueue, dequeue and acknowledge the message.   
+* `Broker` is the adapter of queuing systems. It defines synchronous primitives to spawn the new instance of queueing client to enqueue, dequeue and acknowledge the message.   
 * `Channel factory` is a collection of Golang routines that projects synchronous primitives into the channels behind scene.
 
 
@@ -73,7 +73,7 @@ deq := queue.Dequeue[Note](q)
 go consume(deq)
 ```
 
-### Type Safe Channels
+### Type safe channels
 
 Let's consider an asynchronous communication scenario where application publishes messages in the format of JSON object. Application domain types are serialized as JSON messages with consequent exchange using queueing system. It immediately begs the question: Should the application share a single message queue among various types of business transactions or spawn a dedicated queue per type? Unfortunately, there are not a straight forward answer on the question. Each application makes decision based on various requirements such as operation management, separation of concerns, service-level objectives, high-availability, release cycles, etc.
 
@@ -89,10 +89,11 @@ enq := queue.Enqueue[User](q)
 ```
 
 Any message passed through these channels is annotated with following attributes:
-* **Agent** is a direct performer of the message, it is a software service that emits action to the queueing system.
+* **Source** is a direct performer of the message, it is a software service that emits action to the queueing system.
 * **Category** is the identity of data type the message belong to. 
 
-Using these attributes, messages are not only routed through queuing system but also routed to designated type safe channel.
+Using these attributes, messages are not only routed through queuing system but also routed to designated type safe channel. For example, here the broker is associated with two type of business transactions, which are transparently routed into distinct Golang channels: 
+
 ```go
 user := queue.Dequeue[User](q)
 note := queue.Dequeue[Note](q)
@@ -100,17 +101,13 @@ note := queue.Dequeue[Note](q)
 
 ### Delivery Guarantees with Golang channels
 
-Usage of Golang channels as an abstraction raises a concern about grade of service on the message delivery guarantees. The pattern ensures exactly same grade of service as the underlying queueing system. It is delivered according to its promise once the messages is accepted by the remote peer of queueing system.The pattern assumes the retry logic to protect from losses due to temporary unavailability of the remote peer. However, Golang channels are sophisticated "in-memory buffers", which introduce a lag of few milliseconds between scheduling a message to the channel and dispatching message to the remote peer. The pattern assumes one of the following policy to either accept or protect from the loss all the in-the-flight messages in case of catastrophic failures.
-
-#### At Most Once
+Usage of Golang channels as an abstraction raises a concern about grade of service on the message delivery guarantees. The pattern ensures exactly same grade of service as the underlying queueing system. Messages are delivered according to the promise once they are accepted by the remote side of queuing system. The pattern assumes the retry logic to protect from losses due to temporary unavailability of the remote peer. However, Golang channels are sophisticated "in-memory buffers", which introduce a lag of few milliseconds between scheduling a message to the channel and dispatching message to the remote peer. The pattern assumes one of the following policy to either accept or protect from the loss all the in-the-flight messages in case of catastrophic failures.
 
 **At Most Once** is best effort policy, where a message is published without any formal acknowledgement of receipt, and it isn't replayed. Some messages can be lost as subscribers are not required to acknowledge receipt. Usage of buffered Golang channels is right approach to implement this policy.   
 
-#### At Least Once
-
 **At Least Once** is policy assume usage of "acknowledgement" protocol, which guarantees a message will be re-sent until it is formally acknowledged by a recipient. Messages should never be lost but it might be delivered more than once causing duplicate work to consumer.  
 
-The pattern proposes asymmetric approaches.
+The pattern proposes asymmetric approaches to ensure the policy:
 * acknowledges successful consumption of message - there is no guarantee in distributed system that the consumer receive and process message. Thus, the consumer must explicitly acknowledge message when it finishes processing.
 * indicates failure of message transmission to messaging queue - following the statement above, messaging queue must explicitly acknowledge when it successfully scheduled the message for delivery. In case of unavailability, the message re-transmission is required. 
 
@@ -144,8 +141,6 @@ func resend(out chan<- User, dlq <-chan User) {
 }
 ```
 
-#### Exactly Once
-
 **Exactly once** guarantees receive a given message once. Failures and retries may occur by they are invisible for consumer.
 
 The pattern does not solve this policy using any of the sophisticated approaches. It uses a naive approach of deduplicating processed messages at the channel designated for consumer. 
@@ -155,7 +150,7 @@ The pattern does not solve this policy using any of the sophisticated approaches
 
 ### How to ensure order of events?
 
-Golang channels guarantees the order of event only for messages of same kind (labelled with same Category). It preserve orders in the distributed scale only if underlying queueing system or event broker preserve ordering.
+Golang channels guarantees the order of event only for messages of same kind (labelled with same Category) and enqueued via same Golang channel. It preserve orders in the distributed scale only if underlying queueing system or event broker preserve ordering.
 
 ### Are there guarantees of the message delivery?
 
