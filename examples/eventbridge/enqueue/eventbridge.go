@@ -30,20 +30,17 @@ type Like struct {
 }
 
 func main() {
-	q, err := eventbridge.New("swarm-example-eventbridge-latest",
+	q := queue.Must(eventbridge.New("swarm-example-eventbridge-latest",
 		swarm.WithSource("swarm-example-eventbridge"),
-	)
-	if err != nil {
-		panic(err)
-	}
+	))
 
-	a, _ := queue.Enqueue[*User](q)
-	b, _ := queue.Enqueue[*Note](q)
-	c, _ := queue.Enqueue[*Like](q)
+	user, _ := queue.Enqueue[*User](q)
+	note, _ := queue.Enqueue[*Note](q)
+	like, _ := queue.Enqueue[*Like](q)
 
-	a <- &User{ID: "user", Text: "some text"}
-	b <- &Note{ID: "note", Text: "some text"}
-	c <- &Like{ID: "like", Text: "some text"}
+	user <- &User{ID: "user", Text: "some text"}
+	note <- &Note{ID: "note", Text: "some text"}
+	like <- &Like{ID: "like", Text: "some text"}
 
 	q.Close()
 }

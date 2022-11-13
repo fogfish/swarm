@@ -14,6 +14,7 @@ import (
 
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/sqs"
+	"github.com/fogfish/swarm/queue"
 	"github.com/fogfish/swarm/queue/events"
 )
 
@@ -47,10 +48,7 @@ func (EventRemoveUser) HKT1(swarm.EventType) {}
 func (EventRemoveUser) HKT2(*User)           {}
 
 func main() {
-	q, err := sqs.New("swarm-test")
-	if err != nil {
-		panic(err)
-	}
+	q := queue.Must(sqs.New("swarm-test"))
 
 	go create(events.Dequeue[*User, EventCreateUser](q))
 	go update(events.Dequeue[*User, EventUpdateUser](q))

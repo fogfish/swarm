@@ -32,10 +32,7 @@ type Like struct {
 }
 
 func main() {
-	q, err := eventsqs.New("swarm-example-sqs-latest")
-	if err != nil {
-		panic(err)
-	}
+	q := queue.Must(eventsqs.New("swarm-example-sqs-latest"))
 
 	go actor[User]("user").handle(queue.Dequeue[User](q))
 	go actor[Note]("note").handle(queue.Dequeue[Note](q))

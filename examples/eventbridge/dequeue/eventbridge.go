@@ -32,14 +32,11 @@ type Like struct {
 }
 
 func main() {
-	q, err := eventbridge.New("swarm-example-eventbridge")
-	if err != nil {
-		panic(err)
-	}
+	q := queue.Must(eventbridge.New("swarm-example-eventbridge"))
 
-	go actor[User]("a").handle(queue.Dequeue[User](q))
-	go actor[Note]("b").handle(queue.Dequeue[Note](q))
-	go actor[Like]("c").handle(queue.Dequeue[Like](q))
+	go actor[User]("user").handle(queue.Dequeue[User](q))
+	go actor[Note]("note").handle(queue.Dequeue[Note](q))
+	go actor[Like]("like").handle(queue.Dequeue[Like](q))
 
 	q.Await()
 }

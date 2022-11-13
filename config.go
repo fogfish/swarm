@@ -81,7 +81,7 @@ func WithService(service any) Option {
 	}
 }
 
-// Agent is a direct performer of the event.
+// Source is a direct performer of the event.
 // A software service that emits action to the stream.
 func WithSource(agent string) Option {
 	return func(conf *Config) {

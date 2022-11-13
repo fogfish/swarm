@@ -13,18 +13,16 @@ import (
 
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/sqs"
-	queue "github.com/fogfish/swarm/queue/bytes"
+	"github.com/fogfish/swarm/queue"
+	"github.com/fogfish/swarm/queue/bytes"
 )
 
 func main() {
-	q, err := sqs.New("swarm-test")
-	if err != nil {
-		panic(err)
-	}
+	q := queue.Must(sqs.New("swarm-test"))
 
-	go actor("user").handle(queue.Dequeue(q, "User"))
-	go actor("note").handle(queue.Dequeue(q, "Note"))
-	go actor("like").handle(queue.Dequeue(q, "Like"))
+	go actor("user").handle(bytes.Dequeue(q, "User"))
+	go actor("note").handle(bytes.Dequeue(q, "Note"))
+	go actor("like").handle(bytes.Dequeue(q, "Like"))
 
 	q.Await()
 }
