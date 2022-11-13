@@ -10,7 +10,7 @@ package main
 
 import (
 	"github.com/fogfish/scud"
-	"github.com/fogfish/swarm/queue/eventbridge"
+	"github.com/fogfish/swarm/broker/eventbridge"
 )
 
 func main() {
@@ -21,10 +21,10 @@ func main() {
 
 	stack.NewSink(
 		&eventbridge.SinkProps{
-			Queues: []string{"swarm-test"},
+			Source: []string{"swarm-example-eventbridge"},
 			Lambda: &scud.FunctionGoProps{
 				SourceCodePackage: "github.com/fogfish/swarm",
-				SourceCodeLambda:  "examples/eventbridge/recv",
+				SourceCodeLambda:  "examples/eventbridge/dequeue",
 			},
 		},
 	)

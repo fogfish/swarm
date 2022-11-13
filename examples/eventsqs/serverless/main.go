@@ -10,19 +10,23 @@ package main
 
 import (
 	"github.com/fogfish/scud"
-	"github.com/fogfish/swarm/queue/eventsqs"
+	"github.com/fogfish/swarm/broker/eventsqs"
 )
 
 func main() {
-	eventsqs.NewServerlessApp("swarm-example-sqs").
-		CreateQueue().
-		CreateSink(
-			&eventsqs.SinkProps{
-				Lambda: &scud.FunctionGoProps{
-					SourceCodePackage: "github.com/fogfish/swarm",
-					SourceCodeLambda:  "examples/sqs/recv",
-				},
+	app := eventsqs.NewServerlessApp()
+
+	stack := app.NewStack("swarm-example-sqs")
+	stack.NewQueue()
+
+	stack.NewSink(
+		&eventsqs.SinkProps{
+			Lambda: &scud.FunctionGoProps{
+				SourceCodePackage: "github.com/fogfish/swarm",
+				SourceCodeLambda:  "examples/eventsqs/dequeue",
 			},
-		).
-		Synth(nil)
+		},
+	)
+
+	app.Synth(nil)
 }

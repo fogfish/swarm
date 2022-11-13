@@ -14,21 +14,14 @@
 
 "[#] core":
  - '*.go'
- - 'backoff/*'
  - 'queue/*'
- - 'queue/bytes/*'
- - 'queue/events/*'
- - 'internal/system/*'
- - 'internal/queue/adapter'
- - 'internal/queue/qtest'
+ - 'queue/**/*'
+ - 'internal/*'
+ - 'internal/**/*'
 
 "[#] sqs":
- - 'queue/sqs/*'
- - 'internal/queue/sqs/*'
- - 'queue/eventsqs/*'
- - 'internal/queue/eventsqs/*'
+ - 'broker/sqs/*'
+ - 'broker/eventsqs/*'
 
 "[#] eventbridge":
- - 'queue/eventbridge/*'
- - 'internal/eventbridge/sqs/*'
-
+ - 'broker/eventbridge/*'
