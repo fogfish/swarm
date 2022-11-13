@@ -308,7 +308,7 @@ for err := range stderr {
 
 ### Internal channel architecture
 
-<img src="./doc/swarm-queue-model.svg" height="300" />
+<img src="./doc/swarm-queue-model.svg" height="521" />
 
 ### Serverless 
 
