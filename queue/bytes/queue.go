@@ -11,7 +11,7 @@ type Queue interface {
 //
 type queue struct {
 	cat  string
-	conf *swarm.Config
+	conf swarm.Config
 	sock swarm.Enqueue
 }
 

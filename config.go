@@ -58,8 +58,8 @@ type Config struct {
 	NetworkTimeout time.Duration
 }
 
-func NewConfig() *Config {
-	return &Config{
+func NewConfig() Config {
+	return Config{
 		Source:          "github.com/fogfish/swarm",
 		Policy:          PolicyAtLeastOnce,
 		EnqueueCapacity: 0,

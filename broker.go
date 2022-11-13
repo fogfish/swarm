@@ -9,7 +9,7 @@
 package swarm
 
 type Broker interface {
-	Config() *Config
+	Config() Config
 	Close()
 	DSync()
 	Await()

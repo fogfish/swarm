@@ -24,7 +24,7 @@ type EventBridge interface {
 }
 
 type broker struct {
-	config   *swarm.Config
+	config   swarm.Config
 	client   *client
 	channels *swarm.Channels
 	context  context.Context
@@ -36,10 +36,10 @@ type broker struct {
 func New(bus string, opts ...swarm.Option) (swarm.Broker, error) {
 	conf := swarm.NewConfig()
 	for _, opt := range opts {
-		opt(conf)
+		opt(&conf)
 	}
 
-	cli, err := newClient(bus, conf)
+	cli, err := newClient(bus, &conf)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func New(bus string, opts ...swarm.Option) (swarm.Broker, error) {
 	}, nil
 }
 
-func (b *broker) Config() *swarm.Config {
+func (b *broker) Config() swarm.Config {
 	return b.config
 }
 

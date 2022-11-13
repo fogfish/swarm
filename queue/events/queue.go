@@ -17,7 +17,7 @@ type Queue[T any, E swarm.EventKind[T]] interface {
 //
 type queue[T any, E swarm.EventKind[T]] struct {
 	cat  string
-	conf *swarm.Config
+	conf swarm.Config
 	sock swarm.Enqueue
 
 	offID, offType, offCreated uintptr

@@ -20,7 +20,7 @@ import (
 func New(queue string, opts ...swarm.Option) (swarm.Broker, error) {
 	conf := swarm.NewConfig()
 	for _, opt := range opts {
-		opt(conf)
+		opt(&conf)
 	}
 
 	bro, err := sqs.New(queue, opts...)
@@ -37,7 +37,7 @@ func New(queue string, opts ...swarm.Option) (swarm.Broker, error) {
 
 type broker struct {
 	swarm.Broker
-	config *swarm.Config
+	config swarm.Config
 	router *router.Router
 }
 
