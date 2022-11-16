@@ -6,7 +6,7 @@
 // https://github.com/fogfish/swarm
 //
 
-package eventsqs
+package events3
 
 import (
 	"os"
@@ -15,7 +15,7 @@ import (
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambdaeventsources"
-	"github.com/aws/aws-cdk-go/awscdk/v2/awssqs"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awss3"
 	"github.com/aws/constructs-go/constructs/v10"
 	"github.com/aws/jsii-runtime-go"
 
@@ -37,8 +37,9 @@ type Sink struct {
 SinkProps ...
 */
 type SinkProps struct {
-	Queue  awssqs.IQueue
-	Lambda *scud.FunctionGoProps
+	Bucket      awss3.Bucket
+	EventSource *awslambdaeventsources.S3EventSourceProps
+	Lambda      *scud.FunctionGoProps
 }
 
 /*
@@ -49,10 +50,10 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 
 	sink.Handler = scud.NewFunctionGo(sink.Construct, jsii.String("Func"), props.Lambda)
 
-	source := awslambdaeventsources.NewSqsEventSource(props.Queue,
-		&awslambdaeventsources.SqsEventSourceProps{})
-
-	sink.Handler.AddEventSource(source)
+	sink.Handler.AddEventSource(
+		awslambdaeventsources.
+			NewS3EventSource(props.Bucket, props.EventSource),
+	)
 
 	return sink
 }
@@ -71,8 +72,8 @@ type ServerlessStackProps struct {
 
 type ServerlessStack struct {
 	awscdk.Stack
-	queue awssqs.IQueue
-	sinks []*Sink
+	bucket awss3.Bucket
+	sinks  []*Sink
 }
 
 func NewServerlessStack(app awscdk.App, id *string, props *ServerlessStackProps) *ServerlessStack {
@@ -88,38 +89,42 @@ func NewServerlessStack(app awscdk.App, id *string, props *ServerlessStackProps)
 	return stack
 }
 
-func (stack *ServerlessStack) NewQueue(queueName ...string) awssqs.IQueue {
+func (stack *ServerlessStack) NewBucket(bucketName ...string) awss3.Bucket {
 	name := awscdk.Aws_STACK_NAME()
-	if len(queueName) > 0 {
-		name = &queueName[0]
+	if len(bucketName) > 0 {
+		name = &bucketName[0]
 	}
 
-	stack.queue = awssqs.NewQueue(stack.Stack, jsii.String("Queue"),
-		&awssqs.QueueProps{
-			QueueName:         name,
-			VisibilityTimeout: awscdk.Duration_Minutes(jsii.Number(15.0)),
+	stack.bucket = awss3.NewBucket(stack.Stack, jsii.String("Bucket"),
+		&awss3.BucketProps{
+			BucketName: name,
 		},
 	)
 
-	return stack.queue
+	return stack.bucket
 }
 
-func (stack *ServerlessStack) AddQueue(queueName string) awssqs.IQueue {
-	stack.queue = awssqs.Queue_FromQueueAttributes(stack.Stack, jsii.String("Bus"),
-		&awssqs.QueueAttributes{
-			QueueName: jsii.String(queueName),
-		},
-	)
-
-	return stack.queue
+func (stack *ServerlessStack) SetBucket(bucket awss3.Bucket) awss3.Bucket {
+	stack.bucket = bucket
+	return stack.bucket
 }
+
+// func (stack *ServerlessStack) AddBucket(bucketName string) awss3.IBucket {
+// 	stack.queue = awssqs.Queue_FromQueueAttributes(stack.Stack, jsii.String("Bucket"),
+// 		&awssqs.QueueAttributes{
+// 			QueueName: jsii.String(queueName),
+// 		},
+// 	)
+
+// 	return stack.queue
+// }
 
 func (stack *ServerlessStack) NewSink(props *SinkProps) *Sink {
-	if stack.queue == nil {
-		panic("Queue is not defined.")
+	if stack.bucket == nil {
+		panic("Bucket is not defined.")
 	}
 
-	props.Queue = stack.queue
+	props.Bucket = stack.bucket
 
 	name := "Sink" + strconv.Itoa(len(stack.sinks))
 	sink := NewSink(stack.Stack, jsii.String(name), props)
