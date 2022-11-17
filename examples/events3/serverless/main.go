@@ -9,8 +9,10 @@
 package main
 
 import (
+	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambdaeventsources"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awss3"
+	"github.com/aws/jsii-runtime-go"
 	"github.com/fogfish/scud"
 	"github.com/fogfish/swarm/broker/events3"
 )
@@ -19,7 +21,12 @@ func main() {
 	app := events3.NewServerlessApp()
 
 	stack := app.NewStack("swarm-example-s3")
-	stack.NewBucket()
+	bucket := stack.NewBucket()
+	bucket.AddLifecycleRule(&awss3.LifecycleRule{
+		Id:         jsii.String("Garbage collector"),
+		Enabled:    jsii.Bool(true),
+		Expiration: awscdk.Duration_Days(jsii.Number(1.0)),
+	})
 
 	stack.NewSink(
 		&events3.SinkProps{
