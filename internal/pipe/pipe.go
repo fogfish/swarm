@@ -8,10 +8,11 @@
 
 package pipe
 
-import "time"
+import (
+	"time"
+)
 
 /*
-
 ForEach applies function for each message in the channel
 */
 func ForEach[A any](in <-chan A, f func(A)) {
@@ -27,7 +28,6 @@ func ForEach[A any](in <-chan A, f func(A)) {
 }
 
 /*
-
 Emit periodically message from the function
 */
 func Emit[T any](eg chan<- T, frequency time.Duration, f func() (T, error)) {

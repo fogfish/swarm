@@ -10,7 +10,6 @@ package events
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 	"unsafe"
 
@@ -26,7 +25,6 @@ func Dequeue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (<
 	ch := swarm.NewEvtDeqCh[T, E](conf.DequeueCapacity)
 
 	cat := strings.ToLower(typeOf[T]()) + ":" + typeOf[E]()
-	fmt.Println("==> " + cat)
 	if len(category) > 0 {
 		cat = category[0]
 	}
@@ -36,7 +34,7 @@ func Dequeue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (<
 	kindT := swarm.Event[T]{}
 	offDigest := unsafe.Offsetof(kindT.Digest)
 
-	sock := q.Dequeue(cat, ch)
+	sock := q.Dequeue(cat, &ch)
 
 	pipe.ForEach(ch.Ack, func(object *E) {
 		evt := unsafe.Pointer(object)

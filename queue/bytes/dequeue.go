@@ -14,14 +14,13 @@ import (
 )
 
 /*
-
 Dequeue ...
 */
 func Dequeue(q swarm.Broker, cat string) (<-chan *swarm.Msg[[]byte], chan<- *swarm.Msg[[]byte]) {
 	conf := q.Config()
 	ch := swarm.NewMsgDeqCh[[]byte](conf.DequeueCapacity)
 
-	sock := q.Dequeue(cat, ch)
+	sock := q.Dequeue(cat, &ch)
 
 	pipe.ForEach(ch.Ack, func(object *swarm.Msg[[]byte]) {
 		err := conf.Backoff.Retry(func() error {

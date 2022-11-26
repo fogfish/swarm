@@ -21,7 +21,6 @@ import (
 )
 
 /*
-
 Enqueue creates pair of channels to send messages and dead-letter queue
 */
 func Enqueue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (chan<- *E, <-chan *E) {
@@ -41,9 +40,12 @@ func Enqueue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (c
 		unsafe.Offsetof(kindT.Type),
 		unsafe.Offsetof(kindT.Created)
 
-	sock := q.Enqueue(cat, ch)
+	sock := q.Enqueue(cat, &ch)
 
 	pipe.ForEach(ch.Msg, func(object *E) {
+		ch.Busy.Lock()
+		defer ch.Busy.Unlock()
+
 		evt := unsafe.Pointer(object)
 
 		// patch ID

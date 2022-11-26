@@ -17,7 +17,6 @@ import (
 )
 
 /*
-
 Enqueue creates pair of channels to send messages and dead-letter queue
 */
 func Enqueue[T any](q swarm.Broker, category ...string) (chan<- T, <-chan T) {
@@ -32,9 +31,12 @@ func Enqueue[T any](q swarm.Broker, category ...string) (chan<- T, <-chan T) {
 		cat = category[0]
 	}
 
-	sock := q.Enqueue(cat, ch)
+	sock := q.Enqueue(cat, &ch)
 
 	pipe.ForEach(ch.Msg, func(object T) {
+		ch.Busy.Lock()
+		defer ch.Busy.Unlock()
+
 		msg, err := json.Marshal(object)
 		if err != nil {
 			ch.Err <- object
@@ -72,7 +74,6 @@ func typeOf[T any]() string {
 	return cat
 }
 
-//
 func Must(broker swarm.Broker, err error) swarm.Broker {
 	if err != nil {
 		panic(err)
