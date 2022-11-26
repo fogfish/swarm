@@ -18,7 +18,6 @@ import (
 )
 
 /*
-
 Dequeue ...
 */
 func Dequeue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (<-chan *E, chan<- *E) {
@@ -35,7 +34,7 @@ func Dequeue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (<
 	kindT := swarm.Event[T]{}
 	offDigest := unsafe.Offsetof(kindT.Digest)
 
-	sock := q.Dequeue(cat, ch)
+	sock := q.Dequeue(cat, &ch)
 
 	pipe.ForEach(ch.Ack, func(object *E) {
 		evt := unsafe.Pointer(object)
@@ -66,11 +65,18 @@ func Dequeue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (<
 		}
 
 		evt := new(E)
-		if err := json.Unmarshal(bag.Object, evt); err != nil {
-			if conf.StdErr != nil {
-				conf.StdErr <- err
+
+		if bag.Event != nil {
+			evt = bag.Event.(*E)
+		}
+
+		if bag.Object != nil {
+			if err := json.Unmarshal(bag.Object, evt); err != nil {
+				if conf.StdErr != nil {
+					conf.StdErr <- err
+				}
+				return nil, err
 			}
-			return nil, err
 		}
 
 		ptr := unsafe.Pointer(evt)

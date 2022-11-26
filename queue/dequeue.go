@@ -16,7 +16,6 @@ import (
 )
 
 /*
-
 Dequeue ...
 */
 func Dequeue[T any](q swarm.Broker, category ...string) (<-chan *swarm.Msg[T], chan<- *swarm.Msg[T]) {
@@ -30,7 +29,7 @@ func Dequeue[T any](q swarm.Broker, category ...string) (<-chan *swarm.Msg[T], c
 		cat = category[0]
 	}
 
-	sock := q.Dequeue(cat, ch)
+	sock := q.Dequeue(cat, &ch)
 
 	pipe.ForEach(ch.Ack, func(object *swarm.Msg[T]) {
 		err := conf.Backoff.Retry(func() error {

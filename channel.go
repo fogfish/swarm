@@ -22,12 +22,12 @@ type Channel interface {
 const syncInterval = 100 * time.Millisecond
 
 /*
-
 MsgEnqCh is the pair of channel, exposed by the queue for enqueuing the messages
 */
 type MsgEnqCh[T any] struct {
-	Msg chan T // channel to send message out
-	Err chan T // channel to recv failed messages
+	Msg  chan T // channel to send message out
+	Err  chan T // channel to recv failed messages
+	Busy sync.Mutex
 }
 
 func NewMsgEnqCh[T any](n int) MsgEnqCh[T] {
@@ -37,16 +37,20 @@ func NewMsgEnqCh[T any](n int) MsgEnqCh[T] {
 	}
 }
 
-func (ch MsgEnqCh[T]) Sync() {
+func (ch *MsgEnqCh[T]) Sync() {
 	for {
 		time.Sleep(syncInterval)
 		if len(ch.Msg)+len(ch.Err) == 0 {
 			break
 		}
 	}
+
+	time.Sleep(syncInterval)
+	ch.Busy.Lock()
+	defer ch.Busy.Unlock()
 }
 
-func (ch MsgEnqCh[T]) Close() {
+func (ch *MsgEnqCh[T]) Close() {
 	ch.Sync()
 
 	close(ch.Msg)
@@ -54,7 +58,6 @@ func (ch MsgEnqCh[T]) Close() {
 }
 
 /*
-
 msgRecv is the pair of channel, exposed by the queue to clients to recv messages
 */
 type MsgDeqCh[T any] struct {
@@ -69,7 +72,7 @@ func NewMsgDeqCh[T any](n int) MsgDeqCh[T] {
 	}
 }
 
-func (ch MsgDeqCh[T]) Sync() {
+func (ch *MsgDeqCh[T]) Sync() {
 	for {
 		time.Sleep(syncInterval)
 		if len(ch.Msg)+len(ch.Ack) == 0 {
@@ -78,19 +81,19 @@ func (ch MsgDeqCh[T]) Sync() {
 	}
 }
 
-func (ch MsgDeqCh[T]) Close() {
+func (ch *MsgDeqCh[T]) Close() {
 	ch.Sync()
 	close(ch.Msg)
 	close(ch.Ack)
 }
 
 /*
-
 EvtEnqCh is the pair of channel, exposed by the queue to clients to send messages
 */
 type EvtEnqCh[T any, E EventKind[T]] struct {
-	Msg chan *E // channel to send message out
-	Err chan *E // channel to recv failed messages
+	Msg  chan *E // channel to send message out
+	Err  chan *E // channel to recv failed messages
+	Busy sync.Mutex
 }
 
 func NewEvtEnqCh[T any, E EventKind[T]](n int) EvtEnqCh[T, E] {
@@ -100,23 +103,26 @@ func NewEvtEnqCh[T any, E EventKind[T]](n int) EvtEnqCh[T, E] {
 	}
 }
 
-func (ch EvtEnqCh[T, E]) Sync() {
+func (ch *EvtEnqCh[T, E]) Sync() {
 	for {
 		time.Sleep(syncInterval)
 		if len(ch.Msg)+len(ch.Err) == 0 {
 			break
 		}
 	}
+
+	time.Sleep(syncInterval)
+	ch.Busy.Lock()
+	defer ch.Busy.Unlock()
 }
 
-func (ch EvtEnqCh[T, E]) Close() {
+func (ch *EvtEnqCh[T, E]) Close() {
 	ch.Sync()
 	close(ch.Msg)
 	close(ch.Err)
 }
 
 /*
-
 msgRecv is the pair of channel, exposed by the queue to clients to recv messages
 */
 type EvtDeqCh[T any, E EventKind[T]] struct {
@@ -131,7 +137,7 @@ func NewEvtDeqCh[T any, E EventKind[T]](n int) EvtDeqCh[T, E] {
 	}
 }
 
-func (ch EvtDeqCh[T, E]) Sync() {
+func (ch *EvtDeqCh[T, E]) Sync() {
 	for {
 		time.Sleep(syncInterval)
 		if len(ch.Msg)+len(ch.Ack) == 0 {
@@ -140,14 +146,13 @@ func (ch EvtDeqCh[T, E]) Sync() {
 	}
 }
 
-func (ch EvtDeqCh[T, E]) Close() {
+func (ch *EvtDeqCh[T, E]) Close() {
 	ch.Sync()
 	close(ch.Msg)
 	close(ch.Ack)
 }
 
 /*
-
 Channels
 */
 type Channels struct {
