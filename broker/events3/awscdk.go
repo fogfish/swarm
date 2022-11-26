@@ -50,9 +50,17 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 
 	sink.Handler = scud.NewFunctionGo(sink.Construct, jsii.String("Func"), props.Lambda)
 
+	eventsource := &awslambdaeventsources.S3EventSourceProps{
+		Events: &[]awss3.EventType{
+			awss3.EventType_OBJECT_CREATED,
+		},
+	}
+	if props.EventSource != nil {
+		eventsource = props.EventSource
+	}
+
 	sink.Handler.AddEventSource(
-		awslambdaeventsources.
-			NewS3EventSource(props.Bucket, props.EventSource),
+		awslambdaeventsources.NewS3EventSource(props.Bucket, eventsource),
 	)
 
 	return sink

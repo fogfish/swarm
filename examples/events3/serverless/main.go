@@ -10,7 +10,6 @@ package main
 
 import (
 	"github.com/aws/aws-cdk-go/awscdk/v2"
-	"github.com/aws/aws-cdk-go/awscdk/v2/awslambdaeventsources"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awss3"
 	"github.com/aws/jsii-runtime-go"
 	"github.com/fogfish/scud"
@@ -30,12 +29,7 @@ func main() {
 
 	stack.NewSink(
 		&events3.SinkProps{
-			// TODO: make this default
-			EventSource: &awslambdaeventsources.S3EventSourceProps{
-				Events: &[]awss3.EventType{
-					awss3.EventType_OBJECT_CREATED,
-				},
-			},
+			// Note: the default property of EventSource captures OBJECT_CREATED events
 			Lambda: &scud.FunctionGoProps{
 				SourceCodePackage: "github.com/fogfish/swarm",
 				SourceCodeLambda:  "examples/events3/dequeue",
