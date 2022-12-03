@@ -79,6 +79,9 @@ func (router *Router) Await(d time.Duration) error {
 
 			delete(router.acks, bag.Digest)
 			if len(router.acks) == 0 {
+				if router.config.HookCommit != nil {
+					router.config.HookCommit()
+				}
 				return nil
 			}
 		case <-time.After(d):

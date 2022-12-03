@@ -50,8 +50,6 @@ type receipt = string
 type enqueue = func(effect, queueName, category, ...swarm.Option) swarm.Broker
 type dequeue = func(effect, queueName, category, message, receipt, ...swarm.Option) swarm.Broker
 
-//
-//
 func TestEnqueueTyped(t *testing.T, factory enqueue) {
 	t.Helper()
 	eff := make(chan string, 1)
@@ -86,8 +84,6 @@ func TestEnqueueTyped(t *testing.T, factory enqueue) {
 	q.Close()
 }
 
-//
-//
 func TestEnqueueBytes(t *testing.T, factory enqueue) {
 	t.Helper()
 	eff := make(chan string, 1)
@@ -122,8 +118,6 @@ func TestEnqueueBytes(t *testing.T, factory enqueue) {
 	q.Close()
 }
 
-//
-//
 func TestEnqueueEvent(t *testing.T, factory enqueue) {
 	t.Helper()
 	eff := make(chan string, 1)
@@ -171,8 +165,6 @@ func TestEnqueueEvent(t *testing.T, factory enqueue) {
 	q.Close()
 }
 
-//
-//
 func TestDequeueTyped(t *testing.T, factory dequeue) {
 	t.Helper()
 	eff := make(chan string, 1)
@@ -192,10 +184,27 @@ func TestDequeueTyped(t *testing.T, factory dequeue) {
 
 		q.Close()
 	})
+
+	t.Run("Commit", func(t *testing.T) {
+		commited := false
+
+		q := factory(eff, "test-queue", Category, Message, Receipt, retry200ms, swarm.WithHookCommit(func() { commited = true }))
+
+		msg, ack := queue.Dequeue[Note](q)
+		go q.Await()
+
+		val := <-msg
+		ack <- val
+
+		it.Then(t).
+			Should(it.Equal(val.Object, Note{Some: "message"})).
+			Should(it.Equal(<-eff, Receipt)).
+			Should(it.True(commited))
+
+		q.Close()
+	})
 }
 
-//
-//
 func TestDequeueBytes(t *testing.T, factory dequeue) {
 	t.Helper()
 	eff := make(chan string, 1)
@@ -217,8 +226,6 @@ func TestDequeueBytes(t *testing.T, factory dequeue) {
 	})
 }
 
-//
-//
 func TestDequeueEvent(t *testing.T, factory dequeue) {
 	t.Helper()
 	eff := make(chan string, 1)

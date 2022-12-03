@@ -56,6 +56,9 @@ type Config struct {
 
 	// Timeout for any network operations
 	NetworkTimeout time.Duration
+
+	// Commit hook (executed after each loop iteration)
+	HookCommit func()
 }
 
 func NewConfig() Config {
@@ -172,5 +175,11 @@ func WithPolicyAtLeastOnce(n int) Option {
 		conf.Policy = PolicyAtLeastOnce
 		conf.EnqueueCapacity = 0
 		conf.DequeueCapacity = n
+	}
+}
+
+func WithHookCommit(hook func()) Option {
+	return func(conf *Config) {
+		conf.HookCommit = hook
 	}
 }
