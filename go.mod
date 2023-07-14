@@ -12,7 +12,7 @@ require (
 	github.com/aws/constructs-go/constructs/v10 v10.2.69
 	github.com/aws/jsii-runtime-go v1.84.0
 	github.com/fogfish/curie v1.8.2
-	github.com/fogfish/golem v0.9.2
+	github.com/fogfish/golem/pure v0.10.1
 	github.com/fogfish/guid v1.1.0
 	github.com/fogfish/it v1.0.0
 	github.com/fogfish/it/v2 v2.0.1
