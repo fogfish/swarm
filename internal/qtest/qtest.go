@@ -140,7 +140,7 @@ func TestEnqueueEvent(t *testing.T, factory enqueue) {
 			it.Then(t).
 				Should(it.Nil(err)).
 				Should(it.Equal(*val.Object, Note{Some: "message"})).
-				Should(it.Equal(val.Type, "note:Event[*github.com/fogfish/swarm/internal/qtest.Note")). // TODO: fogfish/curie#29
+				Should(it.Equal(val.Type, "note:Event[*github.com/fogfish/swarm/internal/qtest.Note]")).
 				ShouldNot(it.Equal(len(val.ID), 0)).
 				ShouldNot(it.Equal(len(val.Created), 0))
 
