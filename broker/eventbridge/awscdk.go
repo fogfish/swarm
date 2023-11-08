@@ -10,7 +10,6 @@ package eventbridge
 
 import (
 	"os"
-	"strconv"
 
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsevents"
@@ -18,6 +17,7 @@ import (
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
 	"github.com/aws/constructs-go/constructs/v10"
 	"github.com/aws/jsii-runtime-go"
+	"github.com/fogfish/guid"
 	"github.com/fogfish/scud"
 )
 
@@ -32,11 +32,7 @@ type Sink struct {
 	Handler awslambda.IFunction
 }
 
-/*
-
-SinkProps ...
-https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-event-patterns.html
-*/
+// See https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-event-patterns.html
 type SinkProps struct {
 	System     awsevents.IEventBus
 	Source     []string
@@ -45,10 +41,6 @@ type SinkProps struct {
 	Lambda     *scud.FunctionGoProps
 }
 
-/*
-
-NewSink ...
-*/
 func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	sink := &Sink{Construct: constructs.NewConstruct(scope, id)}
 
@@ -114,8 +106,7 @@ type ServerlessStackProps struct {
 
 type ServerlessStack struct {
 	awscdk.Stack
-	bus   awsevents.IEventBus
-	sinks []*Sink
+	bus awsevents.IEventBus
 }
 
 func NewServerlessStack(app awscdk.App, id *string, props *ServerlessStackProps) *ServerlessStack {
@@ -157,10 +148,9 @@ func (stack *ServerlessStack) NewSink(props *SinkProps) *Sink {
 
 	props.System = stack.bus
 
-	name := "Sink" + strconv.Itoa(len(stack.sinks))
+	name := "Sink" + guid.L.K(guid.Clock).String()
 	sink := NewSink(stack.Stack, jsii.String(name), props)
 
-	stack.sinks = append(stack.sinks, sink)
 	return sink
 }
 
@@ -170,29 +160,25 @@ func (stack *ServerlessStack) NewSink(props *SinkProps) *Sink {
 //
 //------------------------------------------------------------------------------
 
-/*
-
-ServerlessApp ...
-*/
 type ServerlessApp struct {
 	awscdk.App
 }
 
-/*
-
-NewServerlessApp ...
-*/
 func NewServerlessApp() *ServerlessApp {
 	app := awscdk.NewApp(nil)
 	return &ServerlessApp{App: app}
 }
 
-func (app *ServerlessApp) NewStack(name string) *ServerlessStack {
+func (app *ServerlessApp) NewStack(name string, props ...*awscdk.StackProps) *ServerlessStack {
 	config := &awscdk.StackProps{
 		Env: &awscdk.Environment{
 			Account: jsii.String(os.Getenv("CDK_DEFAULT_ACCOUNT")),
 			Region:  jsii.String(os.Getenv("CDK_DEFAULT_REGION")),
 		},
+	}
+
+	if len(props) == 1 {
+		config = props[0]
 	}
 
 	return NewServerlessStack(app.App, jsii.String(name), &ServerlessStackProps{
@@ -202,7 +188,6 @@ func (app *ServerlessApp) NewStack(name string) *ServerlessStack {
 	})
 }
 
-//
 func FromContext(app awscdk.App, key string) string {
 	val := app.Node().TryGetContext(jsii.String(key))
 	switch v := val.(type) {
@@ -213,7 +198,6 @@ func FromContext(app awscdk.App, key string) string {
 	}
 }
 
-//
 func FromContextVsn(app awscdk.App) string {
 	vsn := FromContext(app, "vsn")
 	if vsn == "" {
