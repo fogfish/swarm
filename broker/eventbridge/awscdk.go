@@ -32,11 +32,7 @@ type Sink struct {
 	Handler awslambda.IFunction
 }
 
-/*
-
-SinkProps ...
-https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-event-patterns.html
-*/
+// See https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-event-patterns.html
 type SinkProps struct {
 	System     awsevents.IEventBus
 	Source     []string
@@ -45,10 +41,6 @@ type SinkProps struct {
 	Lambda     *scud.FunctionGoProps
 }
 
-/*
-
-NewSink ...
-*/
 func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	sink := &Sink{Construct: constructs.NewConstruct(scope, id)}
 
@@ -170,18 +162,10 @@ func (stack *ServerlessStack) NewSink(props *SinkProps) *Sink {
 //
 //------------------------------------------------------------------------------
 
-/*
-
-ServerlessApp ...
-*/
 type ServerlessApp struct {
 	awscdk.App
 }
 
-/*
-
-NewServerlessApp ...
-*/
 func NewServerlessApp() *ServerlessApp {
 	app := awscdk.NewApp(nil)
 	return &ServerlessApp{App: app}
@@ -202,7 +186,6 @@ func (app *ServerlessApp) NewStack(name string) *ServerlessStack {
 	})
 }
 
-//
 func FromContext(app awscdk.App, key string) string {
 	val := app.Node().TryGetContext(jsii.String(key))
 	switch v := val.(type) {
@@ -213,7 +196,6 @@ func FromContext(app awscdk.App, key string) string {
 	}
 }
 
-//
 func FromContextVsn(app awscdk.App) string {
 	vsn := FromContext(app, "vsn")
 	if vsn == "" {

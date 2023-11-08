@@ -33,17 +33,11 @@ type Sink struct {
 	Handler awslambda.IFunction
 }
 
-/*
-SinkProps ...
-*/
 type SinkProps struct {
 	Queue  awssqs.IQueue
 	Lambda *scud.FunctionGoProps
 }
 
-/*
-NewSink ...
-*/
 func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	sink := &Sink{Construct: constructs.NewConstruct(scope, id)}
 
@@ -134,16 +128,10 @@ func (stack *ServerlessStack) NewSink(props *SinkProps) *Sink {
 //
 //------------------------------------------------------------------------------
 
-/*
-ServerlessApp ...
-*/
 type ServerlessApp struct {
 	awscdk.App
 }
 
-/*
-NewServerlessApp ...
-*/
 func NewServerlessApp() *ServerlessApp {
 	app := awscdk.NewApp(nil)
 	return &ServerlessApp{App: app}
