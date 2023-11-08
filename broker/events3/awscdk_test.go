@@ -6,7 +6,7 @@
 // https://github.com/fogfish/swarm
 //
 
-package eventbridge_test
+package events3_test
 
 import (
 	"testing"
@@ -14,30 +14,29 @@ import (
 	"github.com/aws/aws-cdk-go/awscdk/v2/assertions"
 	"github.com/aws/jsii-runtime-go"
 	"github.com/fogfish/scud"
-	"github.com/fogfish/swarm/broker/eventbridge"
+	"github.com/fogfish/swarm/broker/events3"
 )
 
 func TestEventBridgeCDK(t *testing.T) {
-	app := eventbridge.NewServerlessApp()
-	stack := app.NewStack("swarm-example-eventbridge", nil)
-	stack.NewEventBus()
+	app := events3.NewServerlessApp()
+	stack := app.NewStack("swarm-example-events3", nil)
+	stack.NewBucket()
 
 	stack.NewSink(
-		&eventbridge.SinkProps{
-			Source: []string{"swarm-example-eventbridge"},
+		&events3.SinkProps{
 			Lambda: &scud.FunctionGoProps{
 				SourceCodePackage: "github.com/fogfish/swarm",
-				SourceCodeLambda:  "examples/eventbridge/dequeue",
+				SourceCodeLambda:  "examples/events3/dequeue",
 			},
 		},
 	)
 
 	require := map[*string]*float64{
-		jsii.String("AWS::Events::EventBus"): jsii.Number(1),
-		jsii.String("AWS::Events::Rule"):     jsii.Number(1),
-		jsii.String("AWS::IAM::Role"):        jsii.Number(2),
-		jsii.String("AWS::Lambda::Function"): jsii.Number(2),
-		jsii.String("Custom::LogRetention"):  jsii.Number(1),
+		jsii.String("AWS::S3::Bucket"):               jsii.Number(1),
+		jsii.String("Custom::S3BucketNotifications"): jsii.Number(1),
+		jsii.String("AWS::IAM::Role"):                jsii.Number(3),
+		jsii.String("AWS::Lambda::Function"):         jsii.Number(3),
+		jsii.String("Custom::LogRetention"):          jsii.Number(1),
 	}
 
 	template := assertions.Template_FromStack(stack.Stack, nil)

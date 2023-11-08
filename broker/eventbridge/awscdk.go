@@ -169,12 +169,16 @@ func NewServerlessApp() *ServerlessApp {
 	return &ServerlessApp{App: app}
 }
 
-func (app *ServerlessApp) NewStack(name string) *ServerlessStack {
+func (app *ServerlessApp) NewStack(name string, props ...*awscdk.StackProps) *ServerlessStack {
 	config := &awscdk.StackProps{
 		Env: &awscdk.Environment{
 			Account: jsii.String(os.Getenv("CDK_DEFAULT_ACCOUNT")),
 			Region:  jsii.String(os.Getenv("CDK_DEFAULT_REGION")),
 		},
+	}
+
+	if len(props) == 1 {
+		config = props[0]
 	}
 
 	return NewServerlessStack(app.App, jsii.String(name), &ServerlessStackProps{

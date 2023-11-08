@@ -11,7 +11,6 @@ package eventsqs_test
 import (
 	"testing"
 
-	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/assertions"
 	"github.com/aws/jsii-runtime-go"
 	"github.com/fogfish/scud"
@@ -19,14 +18,8 @@ import (
 )
 
 func TestEventBridgeCDK(t *testing.T) {
-	app := awscdk.NewApp(nil)
-	stack := eventsqs.NewServerlessStack(app,
-		jsii.String("swarm-example-eventsqs"),
-		&eventsqs.ServerlessStackProps{
-			Version: "latest",
-			System:  "swarm-example-eventsqs",
-		},
-	)
+	app := eventsqs.NewServerlessApp()
+	stack := app.NewStack("swarm-example-eventsqs", nil)
 	stack.NewQueue()
 
 	stack.NewSink(
