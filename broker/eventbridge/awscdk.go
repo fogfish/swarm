@@ -10,7 +10,6 @@ package eventbridge
 
 import (
 	"os"
-	"strconv"
 
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsevents"
@@ -18,6 +17,7 @@ import (
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
 	"github.com/aws/constructs-go/constructs/v10"
 	"github.com/aws/jsii-runtime-go"
+	"github.com/fogfish/guid"
 	"github.com/fogfish/scud"
 )
 
@@ -106,8 +106,7 @@ type ServerlessStackProps struct {
 
 type ServerlessStack struct {
 	awscdk.Stack
-	bus   awsevents.IEventBus
-	sinks []*Sink
+	bus awsevents.IEventBus
 }
 
 func NewServerlessStack(app awscdk.App, id *string, props *ServerlessStackProps) *ServerlessStack {
@@ -149,10 +148,9 @@ func (stack *ServerlessStack) NewSink(props *SinkProps) *Sink {
 
 	props.System = stack.bus
 
-	name := "Sink" + strconv.Itoa(len(stack.sinks))
+	name := "Sink" + guid.L.K(guid.Clock).String()
 	sink := NewSink(stack.Stack, jsii.String(name), props)
 
-	stack.sinks = append(stack.sinks, sink)
 	return sink
 }
 

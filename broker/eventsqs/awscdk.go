@@ -10,7 +10,6 @@ package eventsqs
 
 import (
 	"os"
-	"strconv"
 
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
@@ -19,6 +18,7 @@ import (
 	"github.com/aws/constructs-go/constructs/v10"
 	"github.com/aws/jsii-runtime-go"
 
+	"github.com/fogfish/guid"
 	"github.com/fogfish/scud"
 )
 
@@ -66,7 +66,6 @@ type ServerlessStackProps struct {
 type ServerlessStack struct {
 	awscdk.Stack
 	queue awssqs.IQueue
-	sinks []*Sink
 }
 
 func NewServerlessStack(app awscdk.App, id *string, props *ServerlessStackProps) *ServerlessStack {
@@ -115,10 +114,9 @@ func (stack *ServerlessStack) NewSink(props *SinkProps) *Sink {
 
 	props.Queue = stack.queue
 
-	name := "Sink" + strconv.Itoa(len(stack.sinks))
+	name := "Sink" + guid.L.K(guid.Clock).String()
 	sink := NewSink(stack.Stack, jsii.String(name), props)
 
-	stack.sinks = append(stack.sinks, sink)
 	return sink
 }
 
