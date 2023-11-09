@@ -78,6 +78,10 @@ func (router *Router) Await(d time.Duration) error {
 			}
 
 			delete(router.acks, bag.Digest)
+			if bag.Err != nil {
+				return bag.Err
+			}
+
 			if len(router.acks) == 0 {
 				if router.config.HookCommit != nil {
 					router.config.HookCommit()

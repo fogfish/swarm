@@ -17,20 +17,17 @@ type EventType any
 
 type EventKind[A any] pure.HKT[EventType, A]
 
-/*
-
-Event defines immutable fact(s) placed into the queueing system.
-Event resembles the concept of Action as it is defined by schema.org.
-
-  > An action performed by a direct agent and indirect participants upon a direct object.
-
-This type supports development of event-driven solutions that treat data as
-a collection of immutable facts, which are queried and processed in real-time.
-These applications processes logical log of events, each event defines a change
-to current state of the object, i.e. which attributes were inserted,
-updated or deleted (a kind of diff). The event identifies the object that was
-changed together with  using unique identifier.
-*/
+// Event defines immutable fact(s) placed into the queueing system.
+// Event resembles the concept of Action as it is defined by schema.org.
+//
+//	> An action performed by a direct agent and indirect participants upon a direct object.
+//
+// This type supports development of event-driven solutions that treat data as
+// a collection of immutable facts, which are queried and processed in real-time.
+// These applications processes logical log of events, each event defines a change
+// to current state of the object, i.e. which attributes were inserted,
+// updated or deleted (a kind of diff). The event identifies the object that was
+// changed together with  using unique identifier.
 type Event[T any] struct {
 	//
 	// Unique identity for event
@@ -58,6 +55,10 @@ type Event[T any] struct {
 	//
 	// The digest of received event (used internally to ack processing)
 	Digest string `json:"-"`
+
+	//
+	// The error of event handling (used internally to ack processing)
+	Err error `json:"-"`
 
 	//
 	// The object upon which the event is carried out.

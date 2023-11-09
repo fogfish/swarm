@@ -14,7 +14,7 @@
     </a>
     <!-- Build Status  -->
     <a href="https://github.com/fogfish/swarm/actions/">
-      <img src="https://github.com/fogfish/swarm/workflows/build/badge.svg" />
+      <img src="https://github.com/fogfish/swarm/workflows/test/badge.svg" />
     </a>
     <!-- GitHub -->
     <a href="http://github.com/fogfish/swarm">
@@ -27,10 +27,6 @@
     <!-- Go Card -->
     <a href="https://goreportcard.com/report/github.com/fogfish/swarm">
       <img src="https://goreportcard.com/badge/github.com/fogfish/swarm" />
-    </a>
-    <!-- Maintainability -->
-    <a href="https://codeclimate.com/github/fogfish/swarm/maintainability">
-      <img src="https://api.codeclimate.com/v1/badges/6d525662ecccc2b9ff04/maintainability" />
     </a>
   </p>
 </p>
@@ -70,6 +66,7 @@ go get -u github.com/fogfish/swarm
   - [Octet streams](#octet-streams)
   - [Generic events](#generic-events)
   - [Error handling](#error-handling)
+  - [Fail Fast](#fail-fast)
   - [Internal channel architecture](#internal-channel-architecture)
   - [Serverless](#serverless)
   - [Supported queuing system and event brokers](#supported-queuing-system-and-event-brokers)
@@ -137,6 +134,7 @@ deq, ack := queue.Dequeue[Note](q)
 
 // consume messages and then acknowledge it
 for msg := range deq {
+  /* ... do something with msg.Object ...*/
   ack <- msg
 }
 
@@ -194,8 +192,10 @@ q, err := sqs.New("name-of-the-queue",
   swarm.WithPolicyAtLeastOnce(1000),
 )
 
-// all channels behaves as specified earlier.
+// both channels are unbuffered
 enq, dlq := queue.Enqueue[Note](q)
+
+// buffered channels of capacity n
 deq, ack := queue.Dequeue[Note](q)
 ```
 
@@ -240,7 +240,7 @@ note <- &Note{ID: "B", Text: "some note A"}
 user <- &User{ID: "C", Text: "some text by A"}
 ```
 
-The library guarantees following clauses `A before C` and `C after A` because both messages are produced to single channel `note`. It do not guarantee clauses `A before B`, `B before C` or `C after B` because multiple channels are used.
+The library guarantees following clauses `A before C` and `C after A` because both messages are produced to single channel `user`. It do not guarantee clauses `A before B`, `B before C` or `C after B` because multiple channels are used.
 
 
 ### Octet Streams
@@ -305,6 +305,27 @@ for err := range stderr {
   // error handling loop
 }
 ```
+
+### Fail Fast
+
+Existing message routing architecture assumes that micro-batch of messages is read from broker. These messages are dispatched to channels and it waits for acks. New micro-batch is not read until all messages are acknowledged or `TimeToFlight` timer is expired. In the time critical system or serverless application "fail fast" is the best strategy (e.g. lambda function does not need to idle for timeout).
+
+Send negative acknowledgement to `ack` channel to indicate error on message processing.
+
+```go
+deq, ack := queue.Dequeue[Note](q)
+
+// consume messages and then acknowledge it
+for msg := range deq {
+  // negative ack on the error
+  if err := doSomething(msg.Object); err != nil {
+    ack <- msg.Fail(err)
+    continue
+  } 
+  ack <- msg
+}
+```
+
 
 ### Internal channel architecture
 

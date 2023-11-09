@@ -32,18 +32,21 @@ func Dequeue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (<
 	//
 	// building memory layout to make unsafe struct reading
 	kindT := swarm.Event[T]{}
-	offDigest := unsafe.Offsetof(kindT.Digest)
+	offDigest, offFail := unsafe.Offsetof(kindT.Digest),
+		unsafe.Offsetof(kindT.Err)
 
 	sock := q.Dequeue(cat, &ch)
 
 	pipe.ForEach(ch.Ack, func(object *E) {
 		evt := unsafe.Pointer(object)
 		digest := *(*string)(unsafe.Pointer(uintptr(evt) + offDigest))
+		fail := *(*error)(unsafe.Pointer(uintptr(evt) + offFail))
 
 		err := conf.Backoff.Retry(func() error {
 			return sock.Ack(swarm.Bag{
 				Category: cat,
 				Digest:   digest,
+				Err:      fail,
 			})
 		})
 		if err != nil && conf.StdErr != nil {

@@ -27,6 +27,7 @@ func Dequeue(q swarm.Broker, cat string) (<-chan *swarm.Msg[[]byte], chan<- *swa
 			return sock.Ack(swarm.Bag{
 				Category: cat,
 				Digest:   object.Digest,
+				Err:      object.Err,
 			})
 		})
 		if err != nil && conf.StdErr != nil {

@@ -10,6 +10,7 @@ package events3
 
 import (
 	"os"
+	"strconv"
 
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
@@ -18,7 +19,6 @@ import (
 	"github.com/aws/constructs-go/constructs/v10"
 	"github.com/aws/jsii-runtime-go"
 
-	"github.com/fogfish/guid"
 	"github.com/fogfish/scud"
 )
 
@@ -74,6 +74,7 @@ type ServerlessStackProps struct {
 
 type ServerlessStack struct {
 	awscdk.Stack
+	acc    int
 	Bucket awss3.Bucket
 }
 
@@ -112,7 +113,8 @@ func (stack *ServerlessStack) NewSink(props *SinkProps) *Sink {
 
 	props.Bucket = stack.Bucket
 
-	name := "Sink" + guid.L.K(guid.Clock).String()
+	stack.acc++
+	name := "Sink" + strconv.Itoa(stack.acc)
 	sink := NewSink(stack.Stack, jsii.String(name), props)
 
 	return sink

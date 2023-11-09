@@ -41,7 +41,6 @@ func main() {
 	q.Await()
 }
 
-//
 type actor[T any] string
 
 func (a actor[T]) handle(rcv <-chan *swarm.Msg[T], ack chan<- *swarm.Msg[T]) {
