@@ -10,6 +10,7 @@ package eventbridge
 
 import (
 	"os"
+	"strconv"
 
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsevents"
@@ -17,7 +18,6 @@ import (
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
 	"github.com/aws/constructs-go/constructs/v10"
 	"github.com/aws/jsii-runtime-go"
-	"github.com/fogfish/guid"
 	"github.com/fogfish/scud"
 )
 
@@ -106,7 +106,8 @@ type ServerlessStackProps struct {
 
 type ServerlessStack struct {
 	awscdk.Stack
-	bus awsevents.IEventBus
+	acc int
+	Bus awsevents.IEventBus
 }
 
 func NewServerlessStack(app awscdk.App, id *string, props *ServerlessStackProps) *ServerlessStack {
@@ -128,27 +129,28 @@ func (stack *ServerlessStack) NewEventBus(eventBusName ...string) awsevents.IEve
 		name = &eventBusName[0]
 	}
 
-	stack.bus = awsevents.NewEventBus(stack.Stack, jsii.String("Bus"),
+	stack.Bus = awsevents.NewEventBus(stack.Stack, jsii.String("Bus"),
 		&awsevents.EventBusProps{EventBusName: name},
 	)
 
-	return stack.bus
+	return stack.Bus
 }
 
 func (stack *ServerlessStack) AddEventBus(eventBusName string) awsevents.IEventBus {
-	stack.bus = awsevents.EventBus_FromEventBusName(stack.Stack, jsii.String("Bus"), jsii.String(eventBusName))
+	stack.Bus = awsevents.EventBus_FromEventBusName(stack.Stack, jsii.String("Bus"), jsii.String(eventBusName))
 
-	return stack.bus
+	return stack.Bus
 }
 
 func (stack *ServerlessStack) NewSink(props *SinkProps) *Sink {
-	if stack.bus == nil {
+	if stack.Bus == nil {
 		panic("EventBus is not defined.")
 	}
 
-	props.System = stack.bus
+	props.System = stack.Bus
 
-	name := "Sink" + guid.L.K(guid.Clock).String()
+	stack.acc++
+	name := "Sink" + strconv.Itoa(stack.acc)
 	sink := NewSink(stack.Stack, jsii.String(name), props)
 
 	return sink

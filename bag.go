@@ -13,6 +13,13 @@ package swarm
 type Msg[T any] struct {
 	Object T
 	Digest string
+	Err    error
+}
+
+// Fail message with error
+func (msg *Msg[T]) Fail(err error) *Msg[T] {
+	msg.Err = err
+	return msg
 }
 
 // Bag is an abstract container for octet stream.
@@ -22,4 +29,5 @@ type Bag struct {
 	Event    any
 	Object   []byte
 	Digest   string
+	Err      error
 }

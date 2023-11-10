@@ -68,6 +68,16 @@ func (router *Router) Await(d time.Duration) error {
 	for {
 		select {
 		case bag := <-router.sack:
+			// Note: existing implementation assumes invalidation of batch
+			//       - SQS does not support batching yet (to be done later)
+			//       - Event SQS 1 invocation for 1 message, entire batch invalidated
+			//       - EventBridge does not support batching, 1 invocation for 1 message
+			//       - S3 does not support batching (aws s3 api fakes it), 1 invocation for 1 message.
+			if bag.Err != nil {
+				router.acks = map[string]struct{}{}
+				return bag.Err
+			}
+
 			if router.onAck != nil {
 				err := router.config.Backoff.Retry(func() error {
 					return router.onAck(bag)

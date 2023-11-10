@@ -10,6 +10,7 @@ package eventsqs
 
 import (
 	"os"
+	"strconv"
 
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
@@ -18,7 +19,6 @@ import (
 	"github.com/aws/constructs-go/constructs/v10"
 	"github.com/aws/jsii-runtime-go"
 
-	"github.com/fogfish/guid"
 	"github.com/fogfish/scud"
 )
 
@@ -65,7 +65,8 @@ type ServerlessStackProps struct {
 
 type ServerlessStack struct {
 	awscdk.Stack
-	queue awssqs.IQueue
+	acc   int
+	Queue awssqs.IQueue
 }
 
 func NewServerlessStack(app awscdk.App, id *string, props *ServerlessStackProps) *ServerlessStack {
@@ -87,34 +88,35 @@ func (stack *ServerlessStack) NewQueue(queueName ...string) awssqs.IQueue {
 		name = &queueName[0]
 	}
 
-	stack.queue = awssqs.NewQueue(stack.Stack, jsii.String("Queue"),
+	stack.Queue = awssqs.NewQueue(stack.Stack, jsii.String("Queue"),
 		&awssqs.QueueProps{
 			QueueName:         name,
 			VisibilityTimeout: awscdk.Duration_Minutes(jsii.Number(15.0)),
 		},
 	)
 
-	return stack.queue
+	return stack.Queue
 }
 
 func (stack *ServerlessStack) AddQueue(queueName string) awssqs.IQueue {
-	stack.queue = awssqs.Queue_FromQueueAttributes(stack.Stack, jsii.String("Bus"),
+	stack.Queue = awssqs.Queue_FromQueueAttributes(stack.Stack, jsii.String("Bus"),
 		&awssqs.QueueAttributes{
 			QueueName: jsii.String(queueName),
 		},
 	)
 
-	return stack.queue
+	return stack.Queue
 }
 
 func (stack *ServerlessStack) NewSink(props *SinkProps) *Sink {
-	if stack.queue == nil {
+	if stack.Queue == nil {
 		panic("Queue is not defined.")
 	}
 
-	props.Queue = stack.queue
+	props.Queue = stack.Queue
 
-	name := "Sink" + guid.L.K(guid.Clock).String()
+	stack.acc++
+	name := "Sink" + strconv.Itoa(stack.acc)
 	sink := NewSink(stack.Stack, jsii.String(name), props)
 
 	return sink

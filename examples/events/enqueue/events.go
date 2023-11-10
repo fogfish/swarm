@@ -15,7 +15,6 @@ import (
 	"github.com/fogfish/swarm/queue/events"
 )
 
-//
 // Date type (object) affected by events
 type User struct {
 	ID   string `json:"id"`
@@ -27,7 +26,6 @@ type Note struct {
 	Text string `json:"text"`
 }
 
-//
 // Events
 type EventCreateUser swarm.Event[*User]
 
