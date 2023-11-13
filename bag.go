@@ -8,6 +8,8 @@
 
 package swarm
 
+// TODO: Digest Type combining Digest & Error
+
 // Msg is a generic envelop type for incoming messages.
 // It contains both decoded object and its digest used to acknowledge message.
 type Msg[T any] struct {

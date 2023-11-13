@@ -142,7 +142,7 @@ func TestEnqueueEvent(t *testing.T, factory enqueue) {
 				Should(it.Equal(*val.Object, Note{Some: "message"})).
 				Should(it.Equal(val.Type, "note:Event[*github.com/fogfish/swarm/internal/qtest.Note]")).
 				ShouldNot(it.Equal(len(val.ID), 0)).
-				ShouldNot(it.Equal(len(val.Created), 0))
+				ShouldNot(it.True(val.Created.IsZero()))
 
 		case <-time.After(50 * time.Millisecond):
 			t.Error("failed to send message")
@@ -236,7 +236,7 @@ func TestDequeueEvent(t *testing.T, factory dequeue) {
 			Type:        "type",
 			Agent:       "agent",
 			Participant: "user",
-			Created:     "created",
+			Created:     time.Date(1970, time.January, 1, 0, 0, 0, 0, time.UTC),
 			Object:      &Note{Some: "message"},
 		}
 		message, _ := json.Marshal(event)
@@ -255,7 +255,7 @@ func TestDequeueEvent(t *testing.T, factory dequeue) {
 			Should(it.Equal(val.Participant, "user")).
 			Should(it.Equal(val.Type, "type")).
 			Should(it.Equal(val.ID, "id")).
-			Should(it.Equal(val.Created, "created")).
+			Should(it.Equal(val.Created, time.Date(1970, time.January, 1, 0, 0, 0, 0, time.UTC))).
 			Should(it.Equal(<-eff, Receipt))
 
 		q.Close()
