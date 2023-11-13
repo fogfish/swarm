@@ -13,16 +13,17 @@ import (
 	"reflect"
 	"strings"
 	"time"
-	"unsafe"
 
+	"github.com/fogfish/curie"
+	"github.com/fogfish/golem/optics"
 	"github.com/fogfish/guid"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/internal/pipe"
 )
 
-/*
-Enqueue creates pair of channels to send messages and dead-letter queue
-*/
+// Enqueue creates pair of channels
+// - to send messages
+// - failed messages (dead-letter queue)
 func Enqueue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (chan<- *E, <-chan *E) {
 	conf := q.Config()
 	ch := swarm.NewEvtEnqCh[T, E](conf.EnqueueCapacity)
@@ -32,13 +33,7 @@ func Enqueue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (c
 		cat = category[0]
 	}
 
-	//
-	// building memory layout to make unsafe struct reading
-	kindT := swarm.Event[T]{}
-	offID, offType, offCreated :=
-		unsafe.Offsetof(kindT.ID),
-		unsafe.Offsetof(kindT.Type),
-		unsafe.Offsetof(kindT.Created)
+	shape := optics.ForShape4[E, string, curie.IRI, curie.IRI, time.Time]("ID", "Type", "Agent", "Created")
 
 	sock := q.Enqueue(cat, &ch)
 
@@ -46,24 +41,17 @@ func Enqueue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (c
 		ch.Busy.Lock()
 		defer ch.Busy.Unlock()
 
-		evt := unsafe.Pointer(object)
-
-		// patch ID
-		if len(*(*string)(unsafe.Pointer(uintptr(evt) + offID))) == 0 {
-			id := guid.G.K(guid.Clock).String()
-			*(*string)(unsafe.Pointer(uintptr(evt) + offID)) = id
+		_, knd, src, _ := shape.Get(object)
+		if knd == "" {
+			knd = curie.IRI(cat)
 		}
 
-		// patch Type
-		if len(*(*string)(unsafe.Pointer(uintptr(evt) + offType))) == 0 {
-			*(*string)(unsafe.Pointer(uintptr(evt) + offType)) = cat
+		if src == "" {
+			src = curie.IRI(q.Config().Source)
 		}
 
-		// patch Created
-		if len(*(*string)(unsafe.Pointer(uintptr(evt) + offCreated))) == 0 {
-			t := time.Now().Format(time.RFC3339)
-			*(*string)(unsafe.Pointer(uintptr(evt) + offCreated)) = t
-		}
+		// TODO: migrate to v2
+		shape.Put(object, guid.G.K(guid.Clock).String(), knd, src, time.Now())
 
 		msg, err := json.Marshal(object)
 		if err != nil {

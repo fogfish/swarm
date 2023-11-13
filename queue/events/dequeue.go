@@ -11,8 +11,8 @@ package events
 import (
 	"encoding/json"
 	"strings"
-	"unsafe"
 
+	"github.com/fogfish/golem/optics"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/internal/pipe"
 )
@@ -29,18 +29,12 @@ func Dequeue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (<
 		cat = category[0]
 	}
 
-	//
-	// building memory layout to make unsafe struct reading
-	kindT := swarm.Event[T]{}
-	offDigest, offFail := unsafe.Offsetof(kindT.Digest),
-		unsafe.Offsetof(kindT.Err)
+	shape := optics.ForShape2[E, string, error]("Digest", "Err")
 
 	sock := q.Dequeue(cat, &ch)
 
 	pipe.ForEach(ch.Ack, func(object *E) {
-		evt := unsafe.Pointer(object)
-		digest := *(*string)(unsafe.Pointer(uintptr(evt) + offDigest))
-		fail := *(*error)(unsafe.Pointer(uintptr(evt) + offFail))
+		digest, fail := shape.Get(object)
 
 		err := conf.Backoff.Retry(func() error {
 			return sock.Ack(swarm.Bag{
@@ -82,8 +76,7 @@ func Dequeue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (<
 			}
 		}
 
-		ptr := unsafe.Pointer(evt)
-		*(*string)(unsafe.Pointer(uintptr(ptr) + offDigest)) = bag.Digest
+		shape.Put(evt, bag.Digest, nil)
 
 		return evt, nil
 	})

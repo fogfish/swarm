@@ -9,6 +9,8 @@
 package swarm
 
 import (
+	"time"
+
 	"github.com/fogfish/curie"
 	"github.com/fogfish/golem/pure"
 )
@@ -41,6 +43,7 @@ type Event[T any] struct {
 
 	//
 	// Direct performer of the event, a software service that emits action to the stream.
+	// It is automatically defined by the library upon the transmission
 	Agent curie.IRI `json:"agent,omitempty"`
 
 	//
@@ -50,7 +53,11 @@ type Event[T any] struct {
 	//
 	// ISO8601 timestamps when action has been created
 	// It is automatically defined by the library upon the transmission
-	Created string `json:"created,omitempty"`
+	Created time.Time `json:"created,omitempty"`
+
+	//
+	// The object upon which the event is carried out.
+	Object T `json:"object,omitempty"`
 
 	//
 	// The digest of received event (used internally to ack processing)
@@ -59,10 +66,6 @@ type Event[T any] struct {
 	//
 	// The error of event handling (used internally to ack processing)
 	Err error `json:"-"`
-
-	//
-	// The object upon which the event is carried out.
-	Object T `json:"object,omitempty"`
 }
 
 func (Event[T]) HKT1(EventType) {}
