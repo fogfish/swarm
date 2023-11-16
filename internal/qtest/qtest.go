@@ -27,7 +27,7 @@ const (
 	Event    = ""
 	Receipt  = "0x123456789abcdef"
 
-	EventCategory = "note:Event[*github.com/fogfish/swarm/internal/qtest.Note]"
+	EventCategory = "Event[Note]"
 )
 
 var (
@@ -140,7 +140,7 @@ func TestEnqueueEvent(t *testing.T, factory enqueue) {
 			it.Then(t).
 				Should(it.Nil(err)).
 				Should(it.Equal(*val.Object, Note{Some: "message"})).
-				Should(it.Equal(val.Type, "note:Event[*github.com/fogfish/swarm/internal/qtest.Note]")).
+				Should(it.Equal(val.Type, "note:Event[Note]")).
 				ShouldNot(it.Equal(len(val.ID), 0)).
 				ShouldNot(it.True(val.Created.IsZero()))
 
