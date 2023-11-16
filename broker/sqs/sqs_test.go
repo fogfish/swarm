@@ -35,9 +35,7 @@ func TestDequeueSQS(t *testing.T) {
 	qtest.TestDequeueEvent(t, newMockDequeue)
 }
 
-//
 // Mock AWS SQS Enqueue
-//
 type mockEnqueue struct {
 	sut.SQS
 	expectCategory string
@@ -75,9 +73,7 @@ func (m *mockEnqueue) SendMessage(ctx context.Context, req *sqs.SendMessageInput
 	return &sqs.SendMessageOutput{}, nil
 }
 
-//
 // Mock AWS SQS Dequeue
-//
 type mockDequeue struct {
 	sut.SQS
 	returnCategory string

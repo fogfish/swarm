@@ -10,10 +10,10 @@ package events
 
 import (
 	"encoding/json"
-	"strings"
 	"time"
-	"unsafe"
 
+	"github.com/fogfish/curie"
+	"github.com/fogfish/golem/optics"
 	"github.com/fogfish/guid"
 	"github.com/fogfish/swarm"
 )
@@ -22,37 +22,28 @@ type Queue[T any, E swarm.EventKind[T]] interface {
 	Enqueue(*E) error
 }
 
-//
 type queue[T any, E swarm.EventKind[T]] struct {
-	cat  string
-	conf swarm.Config
-	sock swarm.Enqueue
-
-	offID, offType, offCreated uintptr
+	cat   string
+	conf  swarm.Config
+	sock  swarm.Enqueue
+	shape optics.Lens4[E, string, curie.IRI, curie.IRI, time.Time]
 }
 
 func (q queue[T, E]) Sync()  {}
 func (q queue[T, E]) Close() {}
 
 func (q queue[T, E]) Enqueue(object *E) error {
-	evt := unsafe.Pointer(object)
-
-	// patch ID
-	if len(*(*string)(unsafe.Pointer(uintptr(evt) + q.offID))) == 0 {
-		id := guid.G.K(guid.Clock).String()
-		*(*string)(unsafe.Pointer(uintptr(evt) + q.offID)) = id
+	_, knd, src, _ := q.shape.Get(object)
+	if knd == "" {
+		knd = curie.IRI(q.cat)
 	}
 
-	// patch Type
-	if len(*(*string)(unsafe.Pointer(uintptr(evt) + q.offType))) == 0 {
-		*(*string)(unsafe.Pointer(uintptr(evt) + q.offType)) = q.cat
+	if src == "" {
+		src = curie.IRI(q.conf.Source)
 	}
 
-	// patch Created
-	if len(*(*string)(unsafe.Pointer(uintptr(evt) + q.offCreated))) == 0 {
-		t := time.Now().Format(time.RFC3339)
-		*(*string)(unsafe.Pointer(uintptr(evt) + q.offCreated)) = t
-	}
+	// TODO: migrate to v2
+	q.shape.Put(object, guid.G.K(guid.Clock).String(), knd, src, time.Now())
 
 	msg, err := json.Marshal(object)
 	if err != nil {
@@ -68,29 +59,20 @@ func (q queue[T, E]) Enqueue(object *E) error {
 	return nil
 }
 
-//
 func New[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) Queue[T, E] {
-	cat := strings.ToLower(typeOf[T]()) + ":" + typeOf[E]()
+	catE := categoryOf[E]()
 	if len(category) > 0 {
-		cat = category[0]
+		catE = category[0]
 	}
 
-	//
-	// building memory layout to make unsafe struct reading
-	kindT := swarm.Event[T]{}
-	offID, offType, offCreated :=
-		unsafe.Offsetof(kindT.ID),
-		unsafe.Offsetof(kindT.Type),
-		unsafe.Offsetof(kindT.Created)
+	shape := optics.ForShape4[E, string, curie.IRI, curie.IRI, time.Time]("ID", "Type", "Agent", "Created")
 
 	queue := &queue[T, E]{
-		cat:        cat,
-		conf:       q.Config(),
-		offID:      offID,
-		offType:    offType,
-		offCreated: offCreated,
+		cat:   catE,
+		conf:  q.Config(),
+		shape: shape,
 	}
-	queue.sock = q.Enqueue(cat, queue)
+	queue.sock = q.Enqueue(catE, queue)
 
 	return queue
 }

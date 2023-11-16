@@ -18,7 +18,6 @@ import (
 	"github.com/fogfish/swarm/queue/events"
 )
 
-//
 // Date type (object) affected by events
 type User struct {
 	ID   string `json:"id"`
@@ -30,7 +29,6 @@ type Note struct {
 	Text string `json:"text"`
 }
 
-//
 // Events
 type EventCreateUser swarm.Event[*User]
 
@@ -47,13 +45,18 @@ type EventRemoveUser swarm.Event[*User]
 func (EventRemoveUser) HKT1(swarm.EventType) {}
 func (EventRemoveUser) HKT2(*User)           {}
 
+type EventNote swarm.Event[*Note]
+
+func (EventNote) HKT1(swarm.EventType) {}
+func (EventNote) HKT2(*Note)           {}
+
 func main() {
 	q := queue.Must(sqs.New("swarm-test"))
 
 	go create(events.Dequeue[*User, EventCreateUser](q))
 	go update(events.Dequeue[*User, EventUpdateUser](q))
 	go remove(events.Dequeue[*User, EventRemoveUser](q))
-	go common(events.Dequeue[*Note, swarm.Event[*Note]](q))
+	go common(events.Dequeue[*Note, EventNote](q))
 
 	q.Await()
 }
@@ -82,7 +85,7 @@ func remove(rcv <-chan *EventRemoveUser, ack chan<- *EventRemoveUser) {
 	}
 }
 
-func common(rcv <-chan *swarm.Event[*Note], ack chan<- *swarm.Event[*Note]) {
+func common(rcv <-chan *EventNote, ack chan<- *EventNote) {
 	for msg := range rcv {
 		prefix := ""
 		switch string(msg.Type) {

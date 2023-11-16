@@ -26,7 +26,6 @@ type Note struct {
 	Text string `json:"text"`
 }
 
-// Events
 type EventCreateUser swarm.Event[*User]
 
 func (EventCreateUser) HKT1(swarm.EventType) {}
@@ -42,13 +41,18 @@ type EventRemoveUser swarm.Event[*User]
 func (EventRemoveUser) HKT1(swarm.EventType) {}
 func (EventRemoveUser) HKT2(*User)           {}
 
+type EventNote swarm.Event[*Note]
+
+func (EventNote) HKT1(swarm.EventType) {}
+func (EventNote) HKT2(*Note)           {}
+
 func main() {
 	q := queue.Must(sqs.New("swarm-test"))
 
 	userCreated, _ := events.Enqueue[*User, EventCreateUser](q)
 	userUpdated, _ := events.Enqueue[*User, EventUpdateUser](q)
 	userRemoved, _ := events.Enqueue[*User, EventRemoveUser](q)
-	note, _ := events.Enqueue[*Note, swarm.Event[*Note]](q)
+	note, _ := events.Enqueue[*Note, EventNote](q)
 
 	//
 	// Multiple channels emits events
@@ -72,21 +76,21 @@ func main() {
 
 	//
 	// Single channel emits event
-	note <- &swarm.Event[*Note]{
+	note <- &EventNote{
 		Type:        "note:EventCreateNote",
 		Agent:       "example",
 		Participant: "user",
 		Object:      &Note{ID: "note", Text: "some text"},
 	}
 
-	note <- &swarm.Event[*Note]{
+	note <- &EventNote{
 		Type:        "note:EventUpdateNote",
 		Agent:       "example",
 		Participant: "user",
 		Object:      &Note{ID: "note", Text: "some text with changes"},
 	}
 
-	note <- &swarm.Event[*Note]{
+	note <- &EventNote{
 		Type:        "note:EventRemoveNote",
 		Agent:       "example",
 		Participant: "user",

@@ -24,7 +24,7 @@ func Dequeue[T any](q swarm.Broker, category ...string) (<-chan *swarm.Msg[T], c
 	conf := q.Config()
 	ch := swarm.NewMsgDeqCh[T](conf.DequeueCapacity)
 
-	cat := typeOf[T]()
+	cat := categoryOf[T]()
 	if len(category) > 0 {
 		cat = category[0]
 	}

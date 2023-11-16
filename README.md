@@ -242,6 +242,8 @@ user <- &User{ID: "C", Text: "some text by A"}
 
 The library guarantees following clauses `A before C` and `C after A` because both messages are produced to single channel `user`. It do not guarantee clauses `A before B`, `B before C` or `C after B` because multiple channels are used.
 
+The library does not provide any higher guarantee than underlying message broker. For example, using SQS would not guarantee any ordering while SQS FIFO makes sure that messages of same type is ordered.
+
 
 ### Octet Streams
 

@@ -10,6 +10,7 @@ package sqs
 
 import (
 	"context"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -22,6 +23,7 @@ type client struct {
 	service SQS
 	config  *swarm.Config
 	queue   *string
+	isFIFO  bool
 }
 
 func newClient(queue string, config *swarm.Config) (*client, error) {
@@ -46,6 +48,7 @@ func newClient(queue string, config *swarm.Config) (*client, error) {
 		service: api,
 		config:  config,
 		queue:   spec.QueueUrl,
+		isFIFO:  strings.HasSuffix(queue, ".fifo"),
 	}, nil
 }
 
@@ -70,14 +73,20 @@ func (cli *client) Enq(bag swarm.Bag) error {
 	ctx, cancel := context.WithTimeout(context.Background(), cli.config.NetworkTimeout)
 	defer cancel()
 
+	var idMsgGroup *string
+	if cli.isFIFO {
+		idMsgGroup = aws.String(bag.Category)
+	}
+
 	_, err := cli.service.SendMessage(ctx,
 		&sqs.SendMessageInput{
 			MessageAttributes: map[string]types.MessageAttributeValue{
 				"Source":   {StringValue: aws.String(cli.config.Source), DataType: aws.String("String")},
 				"Category": {StringValue: aws.String(bag.Category), DataType: aws.String("String")},
 			},
-			MessageBody: aws.String(string(bag.Object)),
-			QueueUrl:    cli.queue,
+			MessageGroupId: idMsgGroup,
+			MessageBody:    aws.String(string(bag.Object)),
+			QueueUrl:       cli.queue,
 		},
 	)
 	return err

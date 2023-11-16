@@ -18,7 +18,6 @@ type Queue[T any] interface {
 	Enqueue(T) error
 }
 
-//
 type queue[T any] struct {
 	cat  string
 	conf swarm.Config
@@ -43,9 +42,8 @@ func (q queue[T]) Enqueue(object T) error {
 	return nil
 }
 
-//
 func New[T any](q swarm.Broker, category ...string) Queue[T] {
-	cat := typeOf[T]()
+	cat := categoryOf[T]()
 	if len(category) > 0 {
 		cat = category[0]
 	}

@@ -1,6 +1,6 @@
 module github.com/fogfish/swarm
 
-go 1.18
+go 1.21
 
 require (
 	github.com/aws/aws-cdk-go/awscdk/v2 v2.106.1

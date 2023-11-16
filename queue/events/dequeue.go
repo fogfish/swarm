@@ -10,7 +10,6 @@ package events
 
 import (
 	"encoding/json"
-	"strings"
 
 	"github.com/fogfish/golem/optics"
 	"github.com/fogfish/swarm"
@@ -24,21 +23,21 @@ func Dequeue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (<
 	conf := q.Config()
 	ch := swarm.NewEvtDeqCh[T, E](conf.DequeueCapacity)
 
-	cat := strings.ToLower(typeOf[T]()) + ":" + typeOf[E]()
+	catE := categoryOf[E]()
 	if len(category) > 0 {
-		cat = category[0]
+		catE = category[0]
 	}
 
 	shape := optics.ForShape2[E, string, error]("Digest", "Err")
 
-	sock := q.Dequeue(cat, &ch)
+	sock := q.Dequeue(catE, &ch)
 
 	pipe.ForEach(ch.Ack, func(object *E) {
 		digest, fail := shape.Get(object)
 
 		err := conf.Backoff.Retry(func() error {
 			return sock.Ack(swarm.Bag{
-				Category: cat,
+				Category: catE,
 				Digest:   digest,
 				Err:      fail,
 			})
@@ -51,7 +50,7 @@ func Dequeue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (<
 	pipe.Emit(ch.Msg, q.Config().PollFrequency, func() (*E, error) {
 		var bag swarm.Bag
 		err := conf.Backoff.Retry(func() (err error) {
-			bag, err = sock.Deq(cat)
+			bag, err = sock.Deq(catE)
 			return
 		})
 		if err != nil {
