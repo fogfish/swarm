@@ -11,6 +11,7 @@ package queue
 import (
 	"encoding/json"
 	"reflect"
+	"strings"
 
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/internal/pipe"
@@ -26,7 +27,7 @@ func Enqueue[T any](q swarm.Broker, category ...string) (chan<- T, <-chan T) {
 	conf := q.Config()
 	ch := swarm.NewMsgEnqCh[T](conf.EnqueueCapacity)
 
-	cat := typeOf[T]()
+	cat := categoryOf[T]()
 	if len(category) > 0 {
 		cat = category[0]
 	}
@@ -59,19 +60,22 @@ func Enqueue[T any](q swarm.Broker, category ...string) (chan<- T, <-chan T) {
 	return ch.Msg, ch.Err
 }
 
-func typeOf[T any]() string {
-	//
-	// TODO: fix
-	//   Action[*swarm.User] if container type is used
-	//
-
-	typ := reflect.TypeOf(*new(T))
+// normalized type name
+func categoryOf[T any]() string {
+	typ := reflect.TypeOf(new(T)).Elem()
 	cat := typ.Name()
 	if typ.Kind() == reflect.Ptr {
 		cat = typ.Elem().Name()
 	}
 
-	return cat
+	seq := strings.Split(strings.Trim(cat, "]"), "[")
+	tkn := make([]string, len(seq))
+	for i, s := range seq {
+		r := strings.Split(s, ".")
+		tkn[i] = r[len(r)-1]
+	}
+
+	return strings.Join(tkn, "[") + strings.Repeat("]", len(tkn)-1)
 }
 
 func Must(broker swarm.Broker, err error) swarm.Broker {

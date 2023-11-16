@@ -28,14 +28,15 @@ func Enqueue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (c
 	conf := q.Config()
 	ch := swarm.NewEvtEnqCh[T, E](conf.EnqueueCapacity)
 
-	cat := strings.ToLower(typeOf[T]()) + ":" + typeOf[E]()
+	catT := strings.ToLower(categoryOf[T]())
+	catE := categoryOf[E]()
 	if len(category) > 0 {
-		cat = category[0]
+		catE = category[0]
 	}
 
 	shape := optics.ForShape4[E, string, curie.IRI, curie.IRI, time.Time]("ID", "Type", "Agent", "Created")
 
-	sock := q.Enqueue(cat, &ch)
+	sock := q.Enqueue(catE, &ch)
 
 	pipe.ForEach(ch.Msg, func(object *E) {
 		ch.Busy.Lock()
@@ -43,7 +44,7 @@ func Enqueue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (c
 
 		_, knd, src, _ := shape.Get(object)
 		if knd == "" {
-			knd = curie.IRI(cat)
+			knd = curie.IRI(catT + ":" + catE)
 		}
 
 		if src == "" {
@@ -62,7 +63,7 @@ func Enqueue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (c
 			return
 		}
 
-		bag := swarm.Bag{Category: cat, Object: msg}
+		bag := swarm.Bag{Category: catE, Object: msg}
 		err = conf.Backoff.Retry(func() error { return sock.Enq(bag) })
 		if err != nil {
 			ch.Err <- object
@@ -75,17 +76,20 @@ func Enqueue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (c
 	return ch.Msg, ch.Err
 }
 
-func typeOf[T any]() string {
-	//
-	// TODO: fix
-	//   Action[*swarm.User] if container type is used
-	//
-
-	typ := reflect.TypeOf(*new(T))
+// normalized type name
+func categoryOf[T any]() string {
+	typ := reflect.TypeOf(new(T)).Elem()
 	cat := typ.Name()
 	if typ.Kind() == reflect.Ptr {
 		cat = typ.Elem().Name()
 	}
 
-	return cat
+	seq := strings.Split(strings.Trim(cat, "]"), "[")
+	tkn := make([]string, len(seq))
+	for i, s := range seq {
+		r := strings.Split(s, ".")
+		tkn[i] = r[len(r)-1]
+	}
+
+	return strings.Join(tkn, "[") + strings.Repeat("]", len(tkn)-1)
 }
