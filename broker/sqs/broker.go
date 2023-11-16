@@ -10,6 +10,7 @@ package sqs
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/fogfish/swarm"
@@ -47,6 +48,7 @@ func New(queue string, opts ...swarm.Option) (swarm.Broker, error) {
 
 	ctx, can := context.WithCancel(context.Background())
 
+	slog.Info("created broker", "type", "sqs")
 	return &broker{
 		config:   conf,
 		client:   cli,

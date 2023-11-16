@@ -47,12 +47,12 @@ func (EventNote) HKT1(swarm.EventType) {}
 func (EventNote) HKT2(*Note)           {}
 
 func main() {
-	q := queue.Must(sqs.New("swarm-test"))
+	q := queue.Must(sqs.New("swarm-test", swarm.WithLogStdErr()))
 
-	userCreated, _ := events.Enqueue[*User, EventCreateUser](q)
-	userUpdated, _ := events.Enqueue[*User, EventUpdateUser](q)
-	userRemoved, _ := events.Enqueue[*User, EventRemoveUser](q)
-	note, _ := events.Enqueue[*Note, EventNote](q)
+	userCreated := queue.LogDeadLetters(events.Enqueue[*User, EventCreateUser](q))
+	userUpdated := queue.LogDeadLetters(events.Enqueue[*User, EventUpdateUser](q))
+	userRemoved := queue.LogDeadLetters(events.Enqueue[*User, EventRemoveUser](q))
+	note := queue.LogDeadLetters(events.Enqueue[*Note, EventNote](q))
 
 	//
 	// Multiple channels emits events

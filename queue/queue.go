@@ -10,6 +10,7 @@ package queue
 
 import (
 	"encoding/json"
+	"log/slog"
 
 	"github.com/fogfish/swarm"
 )
@@ -50,6 +51,8 @@ func New[T any](q swarm.Broker, category ...string) Queue[T] {
 
 	queue := &queue[T]{cat: cat, conf: q.Config()}
 	queue.sock = q.Enqueue(cat, queue)
+
+	slog.Debug("Created sync emitter", "kind", "typed", "category", cat)
 
 	return queue
 }

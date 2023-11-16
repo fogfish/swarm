@@ -9,6 +9,10 @@
 package main
 
 import (
+	"log/slog"
+	"os"
+
+	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/sqs"
 	"github.com/fogfish/swarm/queue"
 )
@@ -29,11 +33,21 @@ type Like struct {
 }
 
 func main() {
-	q := queue.Must(sqs.New("swarm-test"))
+	slog.SetDefault(
+		slog.New(
+			slog.NewTextHandler(os.Stdout,
+				&slog.HandlerOptions{
+					Level: slog.LevelDebug,
+				},
+			),
+		),
+	)
 
-	user, _ := queue.Enqueue[*User](q)
-	note, _ := queue.Enqueue[*Note](q)
-	like, _ := queue.Enqueue[*Like](q)
+	q := queue.Must(sqs.New("swarm-test", swarm.WithLogStdErr()))
+
+	user := queue.LogDeadLetters(queue.Enqueue[*User](q))
+	note := queue.LogDeadLetters(queue.Enqueue[*Note](q))
+	like := queue.LogDeadLetters(queue.Enqueue[*Like](q))
 
 	user <- &User{ID: "user", Text: "some text by user"}
 

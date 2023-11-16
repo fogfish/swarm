@@ -9,7 +9,7 @@
 package main
 
 import (
-	"fmt"
+	"log/slog"
 
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/eventsqs"
@@ -32,7 +32,7 @@ type Like struct {
 }
 
 func main() {
-	q := queue.Must(eventsqs.New("swarm-example-sqs-latest"))
+	q := queue.Must(eventsqs.New("swarm-example-sqs-latest", swarm.WithLogStdErr()))
 
 	go actor[User]("user").handle(queue.Dequeue[User](q))
 	go actor[Note]("note").handle(queue.Dequeue[Note](q))
@@ -41,12 +41,11 @@ func main() {
 	q.Await()
 }
 
-//
 type actor[T any] string
 
 func (a actor[T]) handle(rcv <-chan *swarm.Msg[T], ack chan<- *swarm.Msg[T]) {
 	for msg := range rcv {
-		fmt.Printf("event on %s > %+v", a, msg.Object)
+		slog.Info("Event", "type", a, "msg", msg.Object)
 		ack <- msg
 	}
 }

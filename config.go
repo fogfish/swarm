@@ -9,9 +9,11 @@
 package swarm
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/fogfish/swarm/internal/backoff"
+	"github.com/fogfish/swarm/internal/pipe"
 )
 
 // Grade of Service Policy
@@ -127,10 +129,23 @@ func WithRetry(backoff Retry) Option {
 	}
 }
 
-// Configure Channel for global errors
+// Configure broker to route global errors to channel
 func WithStdErr(stderr chan<- error) Option {
 	return func(conf *Config) {
 		conf.StdErr = stderr
+	}
+}
+
+// Configure broker to log standard errors
+func WithLogStdErr() Option {
+	err := make(chan error)
+
+	pipe.ForEach(err, func(err error) {
+		slog.Error("Broker fialed", "error", err)
+	})
+
+	return func(conf *Config) {
+		conf.StdErr = err
 	}
 }
 

@@ -41,7 +41,7 @@ func newClient(queue string, config *swarm.Config) (*client, error) {
 		},
 	)
 	if err != nil {
-		return nil, err
+		return nil, swarm.ErrServiceIO.New(err)
 	}
 
 	return &client{
@@ -62,7 +62,7 @@ func newService(conf *swarm.Config) (SQS, error) {
 
 	aws, err := config.LoadDefaultConfig(context.Background())
 	if err != nil {
-		return nil, err
+		return nil, swarm.ErrServiceIO.New(err)
 	}
 
 	return sqs.NewFromConfig(aws), nil
@@ -89,7 +89,11 @@ func (cli *client) Enq(bag swarm.Bag) error {
 			QueueUrl:       cli.queue,
 		},
 	)
-	return err
+	if err != nil {
+		return swarm.ErrEnqueue.New(err)
+	}
+
+	return nil
 }
 
 // Ack acknowledges message to broker
@@ -103,7 +107,11 @@ func (cli *client) Ack(bag swarm.Bag) error {
 			ReceiptHandle: aws.String(string(bag.Digest)),
 		},
 	)
-	return err
+	if err != nil {
+		return swarm.ErrServiceIO.New(err)
+	}
+
+	return nil
 }
 
 // Deq dequeues message from broker
@@ -120,7 +128,7 @@ func (cli client) Deq(cat string) (swarm.Bag, error) {
 		},
 	)
 	if err != nil {
-		return swarm.Bag{}, err
+		return swarm.Bag{}, swarm.ErrDequeue.New(err)
 	}
 
 	if len(result.Messages) == 0 {

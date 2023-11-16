@@ -9,7 +9,7 @@
 package main
 
 import (
-	"fmt"
+	"log/slog"
 
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/sqs"
@@ -18,7 +18,7 @@ import (
 )
 
 func main() {
-	q := queue.Must(sqs.New("swarm-test"))
+	q := queue.Must(sqs.New("swarm-test", swarm.WithLogStdErr()))
 
 	go actor("user").handle(bytes.Dequeue(q, "User"))
 	go actor("note").handle(bytes.Dequeue(q, "Note"))
@@ -27,12 +27,11 @@ func main() {
 	q.Await()
 }
 
-//
 type actor string
 
 func (a actor) handle(rcv <-chan *swarm.Msg[[]byte], ack chan<- *swarm.Msg[[]byte]) {
 	for msg := range rcv {
-		fmt.Printf("event on %s > %s\n", a, msg.Object)
+		slog.Info("Event", "type", a, "msg", msg.Object)
 		ack <- msg
 	}
 }

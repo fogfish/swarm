@@ -10,6 +10,7 @@ package queue
 
 import (
 	"encoding/json"
+	"log/slog"
 
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/internal/pipe"
@@ -67,6 +68,8 @@ func Dequeue[T any](q swarm.Broker, category ...string) (<-chan *swarm.Msg[T], c
 
 		return msg, nil
 	})
+
+	slog.Debug("Created dequeue channels: rcv, ack", "category", cat)
 
 	return ch.Msg, ch.Ack
 }

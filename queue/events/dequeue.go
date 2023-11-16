@@ -10,6 +10,7 @@ package events
 
 import (
 	"encoding/json"
+	"log/slog"
 
 	"github.com/fogfish/golem/optics"
 	"github.com/fogfish/swarm"
@@ -79,6 +80,8 @@ func Dequeue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (<
 
 		return evt, nil
 	})
+
+	slog.Debug("Created dequeue channels: rcv, ack", "kind", "event", "category", catE)
 
 	return ch.Msg, ch.Ack
 }

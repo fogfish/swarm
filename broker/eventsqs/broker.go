@@ -9,6 +9,8 @@
 package eventsqs
 
 import (
+	"log/slog"
+
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/fogfish/swarm"
@@ -28,6 +30,7 @@ func New(queue string, opts ...swarm.Option) (swarm.Broker, error) {
 		return nil, err
 	}
 
+	slog.Info("created broker", "type", "event-sqs")
 	return &broker{
 		Broker: bro,
 		config: conf,

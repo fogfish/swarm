@@ -10,6 +10,7 @@ package events
 
 import (
 	"encoding/json"
+	"log/slog"
 	"time"
 
 	"github.com/fogfish/curie"
@@ -73,6 +74,8 @@ func New[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) Queue[
 		shape: shape,
 	}
 	queue.sock = q.Enqueue(catE, queue)
+
+	slog.Debug("Created sync emitter", "kind", "event", "category", catE)
 
 	return queue
 }

@@ -9,6 +9,8 @@
 package bytes
 
 import (
+	"log/slog"
+
 	"github.com/fogfish/swarm"
 )
 
@@ -16,7 +18,6 @@ type Queue interface {
 	Enqueue([]byte) error
 }
 
-//
 type queue struct {
 	cat  string
 	conf swarm.Config
@@ -36,10 +37,11 @@ func (q queue) Enqueue(object []byte) error {
 	return nil
 }
 
-//
 func New(q swarm.Broker, category string) Queue {
 	queue := &queue{cat: category, conf: q.Config()}
 	queue.sock = q.Enqueue(category, queue)
+
+	slog.Debug("Created sync emitter", "kind", "bytes", "category", category)
 
 	return queue
 }

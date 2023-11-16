@@ -9,6 +9,8 @@
 package bytes
 
 import (
+	"log/slog"
+
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/internal/pipe"
 )
@@ -55,6 +57,8 @@ func Dequeue(q swarm.Broker, cat string) (<-chan *swarm.Msg[[]byte], chan<- *swa
 
 		return msg, nil
 	})
+
+	slog.Debug("Created dequeue channels: rcv, ack", "kind", "bytes", "category", cat)
 
 	return ch.Msg, ch.Ack
 }

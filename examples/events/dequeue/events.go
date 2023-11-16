@@ -51,7 +51,7 @@ func (EventNote) HKT1(swarm.EventType) {}
 func (EventNote) HKT2(*Note)           {}
 
 func main() {
-	q := queue.Must(sqs.New("swarm-test"))
+	q := queue.Must(sqs.New("swarm-test", swarm.WithLogStdErr()))
 
 	go create(events.Dequeue[*User, EventCreateUser](q))
 	go update(events.Dequeue[*User, EventUpdateUser](q))

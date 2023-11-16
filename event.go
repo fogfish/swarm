@@ -70,3 +70,9 @@ type Event[T any] struct {
 
 func (Event[T]) HKT1(EventType) {}
 func (Event[T]) HKT2(T)         {}
+
+// Fail Event with error
+func (evt *Event[T]) Fail(err error) *Event[T] {
+	evt.Err = err
+	return evt
+}

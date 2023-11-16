@@ -10,6 +10,7 @@ package events3
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -27,6 +28,7 @@ func New(queue string, opts ...swarm.Option) (swarm.Broker, error) {
 
 	ctx, can := context.WithCancel(context.Background())
 
+	slog.Info("created broker", "type", "event-s3")
 	return &broker{
 		config:   conf,
 		channels: swarm.NewChannels(),
