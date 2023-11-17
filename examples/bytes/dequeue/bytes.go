@@ -10,6 +10,7 @@ package main
 
 import (
 	"log/slog"
+	"os"
 
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/sqs"
@@ -18,6 +19,16 @@ import (
 )
 
 func main() {
+	slog.SetDefault(
+		slog.New(
+			slog.NewTextHandler(os.Stdout,
+				&slog.HandlerOptions{
+					Level: slog.LevelDebug,
+				},
+			),
+		),
+	)
+
 	q := queue.Must(sqs.New("swarm-test", swarm.WithLogStdErr()))
 
 	go actor("user").handle(bytes.Dequeue(q, "User"))

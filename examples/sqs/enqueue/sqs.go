@@ -45,9 +45,9 @@ func main() {
 
 	q := queue.Must(sqs.New("swarm-test", swarm.WithLogStdErr()))
 
-	user := queue.LogDeadLetters(queue.Enqueue[*User](q))
-	note := queue.LogDeadLetters(queue.Enqueue[*Note](q))
-	like := queue.LogDeadLetters(queue.Enqueue[*Like](q))
+	user := swarm.LogDeadLetters(queue.Enqueue[*User](q))
+	note := swarm.LogDeadLetters(queue.Enqueue[*Note](q))
+	like := swarm.LogDeadLetters(queue.Enqueue[*Like](q))
 
 	user <- &User{ID: "user", Text: "some text by user"}
 

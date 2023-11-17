@@ -31,9 +31,9 @@ func main() {
 
 	q := queue.Must(sqs.New("swarm-test", swarm.WithLogStdErr()))
 
-	user := queue.LogDeadLetters(bytes.Enqueue(q, "User"))
-	note := queue.LogDeadLetters(bytes.Enqueue(q, "Note"))
-	like := queue.LogDeadLetters(bytes.Enqueue(q, "Like"))
+	user := swarm.LogDeadLetters(bytes.Enqueue(q, "User"))
+	note := swarm.LogDeadLetters(bytes.Enqueue(q, "Note"))
+	like := swarm.LogDeadLetters(bytes.Enqueue(q, "Like"))
 
 	user <- []byte("user|some text by user")
 

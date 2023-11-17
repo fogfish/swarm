@@ -6,7 +6,7 @@
 // https://github.com/fogfish/swarm
 //
 
-package queue
+package swarm
 
 import (
 	"log/slog"
@@ -16,7 +16,7 @@ import (
 
 // Consumes dead letter messages
 //
-// queue.LogDeadLetters(queue.Enqueue(...))
+// swarm.LogDeadLetters(queue.Enqueue(...))
 func LogDeadLetters[T any](out chan<- T, err <-chan T) chan<- T {
 	pipe.ForEach[T](err, func(t T) {
 		slog.Error("Fail to emit", "object", t)
