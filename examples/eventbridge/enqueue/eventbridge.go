@@ -13,6 +13,7 @@ import (
 	"github.com/fogfish/swarm/broker/eventbridge"
 	"github.com/fogfish/swarm/internal/qtest"
 	"github.com/fogfish/swarm/queue"
+	"github.com/fogfish/swarm/queue/events"
 )
 
 type User struct {
@@ -30,6 +31,11 @@ type Like struct {
 	Text string `json:"text"`
 }
 
+type EventNote swarm.Event[*Note]
+
+func (EventNote) HKT1(swarm.EventType) {}
+func (EventNote) HKT2(*Note)           {}
+
 func main() {
 	qtest.NewLogger()
 
@@ -41,10 +47,34 @@ func main() {
 	user := swarm.LogDeadLetters(queue.Enqueue[*User](q))
 	note := swarm.LogDeadLetters(queue.Enqueue[*Note](q))
 	like := swarm.LogDeadLetters(queue.Enqueue[*Like](q))
+	ebus := swarm.LogDeadLetters(events.Enqueue[*Note, EventNote](q))
 
 	user <- &User{ID: "user", Text: "some text"}
 	note <- &Note{ID: "note", Text: "some text"}
 	like <- &Like{ID: "like", Text: "some text"}
+
+	//
+	// Single channel emits event
+	ebus <- &EventNote{
+		Type:        "note:EventCreateNote",
+		Agent:       "example",
+		Participant: "user",
+		Object:      &Note{ID: "note", Text: "some text"},
+	}
+
+	ebus <- &EventNote{
+		Type:        "note:EventUpdateNote",
+		Agent:       "example",
+		Participant: "user",
+		Object:      &Note{ID: "note", Text: "some text with changes"},
+	}
+
+	ebus <- &EventNote{
+		Type:        "note:EventRemoveNote",
+		Agent:       "example",
+		Participant: "user",
+		Object:      &Note{ID: "note"},
+	}
 
 	q.Close()
 }
