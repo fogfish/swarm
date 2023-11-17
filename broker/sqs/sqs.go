@@ -104,7 +104,7 @@ func (cli *client) Ack(bag swarm.Bag) error {
 	_, err := cli.service.DeleteMessage(ctx,
 		&sqs.DeleteMessageInput{
 			QueueUrl:      cli.queue,
-			ReceiptHandle: aws.String(string(bag.Digest)),
+			ReceiptHandle: aws.String(string(bag.Digest.Brief)),
 		},
 	)
 	if err != nil {
@@ -140,7 +140,7 @@ func (cli client) Deq(cat string) (swarm.Bag, error) {
 	return swarm.Bag{
 		Category: attr(&head, "Category"),
 		Object:   []byte(*head.Body),
-		Digest:   *head.ReceiptHandle,
+		Digest:   swarm.Digest{Brief: *head.ReceiptHandle},
 	}, nil
 }
 

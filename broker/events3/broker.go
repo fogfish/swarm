@@ -14,7 +14,7 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/fogfish/guid"
+	"github.com/fogfish/guid/v2"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/internal/router"
 )
@@ -88,7 +88,7 @@ func (b *broker) Await() {
 				bag := swarm.Bag{
 					Category: Category,
 					Event:    &Event{Object: &evt},
-					Digest:   guid.L.K(guid.Clock).String(),
+					Digest:   swarm.Digest{Brief: guid.G(guid.Clock).String()},
 				}
 				if err := b.router.Dispatch(bag); err != nil {
 					return err

@@ -60,7 +60,7 @@ func (router *Router) Dispatch(bag swarm.Bag) error {
 		return fmt.Errorf("not found category %s", bag.Category)
 	}
 
-	router.acks[bag.Digest] = struct{}{}
+	router.acks[bag.Digest.Brief] = struct{}{}
 	sock <- bag
 
 	return nil
@@ -75,9 +75,9 @@ func (router *Router) Await(d time.Duration) error {
 			//       - Event SQS 1 invocation for 1 message, entire batch invalidated
 			//       - EventBridge does not support batching, 1 invocation for 1 message
 			//       - S3 does not support batching (aws s3 api fakes it), 1 invocation for 1 message.
-			if bag.Err != nil {
+			if err := bag.Digest.Error; err != nil {
 				router.acks = map[string]struct{}{}
-				return bag.Err
+				return err
 			}
 
 			if router.onAck != nil {
@@ -89,7 +89,7 @@ func (router *Router) Await(d time.Duration) error {
 				}
 			}
 
-			delete(router.acks, bag.Digest)
+			delete(router.acks, bag.Digest.Brief)
 			if len(router.acks) == 0 {
 				if router.config.HookCommit != nil {
 					router.config.HookCommit()
