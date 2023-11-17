@@ -11,6 +11,7 @@ package main
 import (
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/eventbridge"
+	"github.com/fogfish/swarm/internal/qtest"
 	"github.com/fogfish/swarm/queue"
 )
 
@@ -30,6 +31,8 @@ type Like struct {
 }
 
 func main() {
+	qtest.NewLogger()
+
 	q := queue.Must(eventbridge.New("swarm-example-eventbridge-latest",
 		swarm.WithSource("swarm-example-eventbridge"),
 		swarm.WithLogStdErr(),
