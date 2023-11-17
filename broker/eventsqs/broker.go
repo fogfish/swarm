@@ -30,7 +30,7 @@ func New(queue string, opts ...swarm.Option) (swarm.Broker, error) {
 		return nil, err
 	}
 
-	slog.Info("created broker", "type", "event-sqs")
+	slog.Info("Broker is created", "type", "event-sqs")
 	return &broker{
 		Broker: bro,
 		config: conf,

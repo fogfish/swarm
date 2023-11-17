@@ -47,7 +47,7 @@ func New(bus string, opts ...swarm.Option) (swarm.Broker, error) {
 
 	ctx, can := context.WithCancel(context.Background())
 
-	slog.Info("created broker", "type", "eventbridge")
+	slog.Info("Broker is created", "type", "eventbridge")
 	return &broker{
 		config:   conf,
 		client:   cli,

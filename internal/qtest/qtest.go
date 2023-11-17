@@ -54,7 +54,7 @@ func TestEnqueueTyped(t *testing.T, factory enqueue) {
 	t.Helper()
 	eff := make(chan string, 1)
 
-	q := factory(eff, "test-queue", Category, retry200ms)
+	q := factory(eff, "test-queue.fifo", Category, retry200ms)
 
 	note, _ := queue.Enqueue[Note](q)
 	user, dlq := queue.Enqueue[User](q)

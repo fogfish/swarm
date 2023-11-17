@@ -48,7 +48,7 @@ func New(queue string, opts ...swarm.Option) (swarm.Broker, error) {
 
 	ctx, can := context.WithCancel(context.Background())
 
-	slog.Info("created broker", "broker", "sqs")
+	slog.Info("Broker is created", "broker", "sqs")
 	return &broker{
 		config:   conf,
 		client:   cli,
