@@ -68,7 +68,7 @@ func (b *broker) Await() {
 				bag := swarm.Bag{
 					Category: attr(&evt, "Category"),
 					Object:   []byte(evt.Body),
-					Digest:   evt.ReceiptHandle,
+					Digest:   swarm.Digest{Brief: evt.ReceiptHandle},
 				}
 				if err := b.router.Dispatch(bag); err != nil {
 					return err

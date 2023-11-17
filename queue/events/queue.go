@@ -15,7 +15,7 @@ import (
 
 	"github.com/fogfish/curie"
 	"github.com/fogfish/golem/optics"
-	"github.com/fogfish/guid"
+	"github.com/fogfish/guid/v2"
 	"github.com/fogfish/swarm"
 )
 
@@ -43,8 +43,7 @@ func (q queue[T, E]) Enqueue(object *E) error {
 		src = curie.IRI(q.conf.Source)
 	}
 
-	// TODO: migrate to v2
-	q.shape.Put(object, guid.G.K(guid.Clock).String(), knd, src, time.Now())
+	q.shape.Put(object, guid.G(guid.Clock).String(), knd, src, time.Now())
 
 	msg, err := json.Marshal(object)
 	if err != nil {

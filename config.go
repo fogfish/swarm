@@ -141,7 +141,7 @@ func WithLogStdErr() Option {
 	err := make(chan error)
 
 	pipe.ForEach(err, func(err error) {
-		slog.Error("Broker fialed", "error", err)
+		slog.Error("Broker failed", "error", err)
 	})
 
 	return func(conf *Config) {

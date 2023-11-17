@@ -27,18 +27,17 @@ func Dequeue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (<
 		catE = category[0]
 	}
 
-	shape := optics.ForShape2[E, string, error]("Digest", "Err")
+	lens := optics.ForProduct1[E, swarm.Digest]("Digest")
 
 	sock := q.Dequeue(catE, &ch)
 
 	pipe.ForEach(ch.Ack, func(object *E) {
-		digest, fail := shape.Get(object)
+		digest := lens.Get(object)
 
 		err := conf.Backoff.Retry(func() error {
 			return sock.Ack(swarm.Bag{
 				Category: catE,
 				Digest:   digest,
-				Err:      fail,
 			})
 		})
 		if err != nil && conf.StdErr != nil {
@@ -46,7 +45,7 @@ func Dequeue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (<
 			return
 		}
 
-		slog.Debug("Broker ack'ed object", "kind", "event", "category", catE, "object", object)
+		slog.Debug("Broker ack'ed object", "kind", "event", "category", catE, "object", object, "error", digest.Error)
 	})
 
 	pipe.Emit(ch.Msg, q.Config().PollFrequency, func() (*E, error) {
@@ -77,7 +76,7 @@ func Dequeue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (<
 			}
 		}
 
-		shape.Put(evt, bag.Digest, nil)
+		lens.Put(evt, bag.Digest)
 
 		slog.Debug("Broker received object", "kind", "event", "category", catE, "object", evt)
 

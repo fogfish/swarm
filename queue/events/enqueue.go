@@ -17,7 +17,7 @@ import (
 
 	"github.com/fogfish/curie"
 	"github.com/fogfish/golem/optics"
-	"github.com/fogfish/guid"
+	"github.com/fogfish/guid/v2"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/internal/pipe"
 )
@@ -52,8 +52,7 @@ func Enqueue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (c
 			src = curie.IRI(q.Config().Source)
 		}
 
-		// TODO: migrate to v2
-		shape.Put(object, guid.G.K(guid.Clock).String(), knd, src, time.Now())
+		shape.Put(object, guid.G(guid.Clock).String(), knd, src, time.Now())
 
 		msg, err := json.Marshal(object)
 		if err != nil {

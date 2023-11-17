@@ -61,11 +61,7 @@ type Event[T any] struct {
 
 	//
 	// The digest of received event (used internally to ack processing)
-	Digest string `json:"-"`
-
-	//
-	// The error of event handling (used internally to ack processing)
-	Err error `json:"-"`
+	Digest Digest `json:"-"`
 }
 
 func (Event[T]) HKT1(EventType) {}
@@ -73,6 +69,6 @@ func (Event[T]) HKT2(T)         {}
 
 // Fail Event with error
 func (evt *Event[T]) Fail(err error) *Event[T] {
-	evt.Err = err
+	evt.Digest.Error = err
 	return evt
 }

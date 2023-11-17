@@ -8,19 +8,24 @@
 
 package swarm
 
-// TODO: Digest Type combining Digest & Error
+type Digest struct {
+	// Unique brief summary of the message
+	Brief string
+
+	// Error on the message processing
+	Error error
+}
 
 // Msg is a generic envelop type for incoming messages.
 // It contains both decoded object and its digest used to acknowledge message.
 type Msg[T any] struct {
 	Object T
-	Digest string
-	Err    error
+	Digest Digest
 }
 
 // Fail message with error
 func (msg *Msg[T]) Fail(err error) *Msg[T] {
-	msg.Err = err
+	msg.Digest.Error = err
 	return msg
 }
 
@@ -30,6 +35,5 @@ type Bag struct {
 	Category string
 	Event    any
 	Object   []byte
-	Digest   string
-	Err      error
+	Digest   Digest
 }

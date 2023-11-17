@@ -16,9 +16,7 @@ import (
 	"github.com/fogfish/swarm/internal/pipe"
 )
 
-/*
-Dequeue ...
-*/
+// Dequeue message
 func Dequeue[T any](q swarm.Broker, category ...string) (<-chan *swarm.Msg[T], chan<- *swarm.Msg[T]) {
 	// TODO: automatically ack At Most Once, no ack channel
 	//       make it as /dev/null
@@ -37,7 +35,6 @@ func Dequeue[T any](q swarm.Broker, category ...string) (<-chan *swarm.Msg[T], c
 			return sock.Ack(swarm.Bag{
 				Category: cat,
 				Digest:   object.Digest,
-				Err:      object.Err,
 			})
 		})
 		if err != nil && conf.StdErr != nil {
@@ -45,7 +42,7 @@ func Dequeue[T any](q swarm.Broker, category ...string) (<-chan *swarm.Msg[T], c
 			return
 		}
 
-		slog.Debug("Broker ack'ed object", "kind", "typed", "category", cat, "object", object.Object)
+		slog.Debug("Broker ack'ed object", "kind", "typed", "category", cat, "object", object.Object, "error", object.Digest.Error)
 	})
 
 	pipe.Emit(ch.Msg, q.Config().PollFrequency, func() (*swarm.Msg[T], error) {

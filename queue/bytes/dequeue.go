@@ -27,7 +27,6 @@ func Dequeue(q swarm.Broker, cat string) (<-chan *swarm.Msg[[]byte], chan<- *swa
 			return sock.Ack(swarm.Bag{
 				Category: cat,
 				Digest:   object.Digest,
-				Err:      object.Err,
 			})
 		})
 		if err != nil && conf.StdErr != nil {
@@ -35,7 +34,7 @@ func Dequeue(q swarm.Broker, cat string) (<-chan *swarm.Msg[[]byte], chan<- *swa
 			return
 		}
 
-		slog.Debug("Broker ack'ed object", "kind", "bytes", "category", cat, "object", object.Object)
+		slog.Debug("Broker ack'ed object", "kind", "bytes", "category", cat, "object", object.Object, "error", object.Digest.Error)
 	})
 
 	pipe.Emit(ch.Msg, q.Config().PollFrequency, func() (*swarm.Msg[[]byte], error) {

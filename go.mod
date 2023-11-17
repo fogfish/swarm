@@ -12,9 +12,10 @@ require (
 	github.com/aws/constructs-go/constructs/v10 v10.3.0
 	github.com/aws/jsii-runtime-go v1.91.0
 	github.com/fogfish/curie v1.8.2
+	github.com/fogfish/faults v0.2.0
 	github.com/fogfish/golem/optics v0.11.0
 	github.com/fogfish/golem/pure v0.10.1
-	github.com/fogfish/guid v1.1.0
+	github.com/fogfish/guid/v2 v2.0.4
 	github.com/fogfish/it v1.0.0
 	github.com/fogfish/it/v2 v2.0.1
 	github.com/fogfish/scud v0.6.0
@@ -37,7 +38,6 @@ require (
 	github.com/cdklabs/awscdk-asset-kubectl-go/kubectlv20/v2 v2.1.2 // indirect
 	github.com/cdklabs/awscdk-asset-node-proxy-agent-go/nodeproxyagentv6/v2 v2.0.1 // indirect
 	github.com/fatih/color v1.15.0 // indirect
-	github.com/fogfish/faults v0.2.0 // indirect
 	github.com/fogfish/golem/hseq v1.1.1 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
