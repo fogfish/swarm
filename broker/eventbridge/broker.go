@@ -10,6 +10,7 @@ package eventbridge
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -46,6 +47,7 @@ func New(bus string, opts ...swarm.Option) (swarm.Broker, error) {
 
 	ctx, can := context.WithCancel(context.Background())
 
+	slog.Info("Broker is created", "type", "eventbridge")
 	return &broker{
 		config:   conf,
 		client:   cli,

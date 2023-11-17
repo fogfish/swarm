@@ -10,6 +10,7 @@ package router
 
 import (
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -40,6 +41,7 @@ func (router *Router) Register(category string) {
 	defer router.Unlock()
 
 	router.sock[category] = make(chan swarm.Bag, router.config.DequeueCapacity)
+	slog.Debug("Registered channel for category", "category", category)
 }
 
 func (router *Router) Ack(bag swarm.Bag) error {
@@ -83,7 +85,7 @@ func (router *Router) Await(d time.Duration) error {
 					return router.onAck(bag)
 				})
 				if err != nil {
-					return err
+					return swarm.ErrServiceIO.New(err)
 				}
 			}
 

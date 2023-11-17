@@ -10,6 +10,7 @@ package queue
 
 import (
 	"encoding/json"
+	"log/slog"
 	"reflect"
 	"strings"
 
@@ -55,7 +56,11 @@ func Enqueue[T any](q swarm.Broker, category ...string) (chan<- T, <-chan T) {
 				conf.StdErr <- err
 			}
 		}
+
+		slog.Debug("Enqueued message", "kind", "typed", "category", bag.Category, "object", object)
 	})
+
+	slog.Debug("Created enqueue channels: out, err", "kind", "typed", "category", cat)
 
 	return ch.Msg, ch.Err
 }

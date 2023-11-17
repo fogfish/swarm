@@ -9,7 +9,9 @@
 package main
 
 import (
+	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/eventsqs"
+	"github.com/fogfish/swarm/internal/qtest"
 	"github.com/fogfish/swarm/queue"
 )
 
@@ -29,7 +31,9 @@ type Like struct {
 }
 
 func main() {
-	q := queue.Must(eventsqs.New("swarm-example-sqs-latest"))
+	qtest.NewLogger()
+
+	q := queue.Must(eventsqs.New("swarm-example-sqs-latest", swarm.WithLogStdErr()))
 
 	user, _ := queue.Enqueue[*User](q)
 	note, _ := queue.Enqueue[*Note](q)

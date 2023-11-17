@@ -9,17 +9,21 @@
 package main
 
 import (
+	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/sqs"
+	"github.com/fogfish/swarm/internal/qtest"
 	"github.com/fogfish/swarm/queue"
 	"github.com/fogfish/swarm/queue/bytes"
 )
 
 func main() {
-	q := queue.Must(sqs.New("swarm-test"))
+	qtest.NewLogger()
 
-	user, _ := bytes.Enqueue(q, "User")
-	note, _ := bytes.Enqueue(q, "Note")
-	like, _ := bytes.Enqueue(q, "Like")
+	q := queue.Must(sqs.New("swarm-test", swarm.WithLogStdErr()))
+
+	user := swarm.LogDeadLetters(bytes.Enqueue(q, "User"))
+	note := swarm.LogDeadLetters(bytes.Enqueue(q, "Note"))
+	like := swarm.LogDeadLetters(bytes.Enqueue(q, "Like"))
 
 	user <- []byte("user|some text by user")
 

@@ -9,13 +9,13 @@
 package bytes
 
 import (
+	"log/slog"
+
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/internal/pipe"
 )
 
-/*
-Enqueue creates pair of channels to send messages and dead-letter queue
-*/
+// Enqueue creates pair of channels to send messages and dead-letter queue
 func Enqueue(q swarm.Broker, cat string) (chan<- []byte, <-chan []byte) {
 	conf := q.Config()
 	ch := swarm.NewMsgEnqCh[[]byte](conf.EnqueueCapacity)
@@ -34,7 +34,11 @@ func Enqueue(q swarm.Broker, cat string) (chan<- []byte, <-chan []byte) {
 				conf.StdErr <- err
 			}
 		}
+
+		slog.Debug("Enqueued", "kind", "bytes", "category", bag.Category, "object", object)
 	})
+
+	slog.Debug("Created enqueue channels: out, err", "kind", "bytes", "category", cat)
 
 	return ch.Msg, ch.Err
 }

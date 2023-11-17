@@ -9,10 +9,11 @@
 package main
 
 import (
-	"fmt"
+	"log/slog"
 
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/eventbridge"
+	"github.com/fogfish/swarm/internal/qtest"
 	"github.com/fogfish/swarm/queue"
 )
 
@@ -32,7 +33,9 @@ type Like struct {
 }
 
 func main() {
-	q := queue.Must(eventbridge.New("swarm-example-eventbridge"))
+	qtest.NewLogger()
+
+	q := queue.Must(eventbridge.New("swarm-example-eventbridge", swarm.WithLogStdErr()))
 
 	go actor[User]("user").handle(queue.Dequeue[User](q))
 	go actor[Note]("note").handle(queue.Dequeue[Note](q))
@@ -45,7 +48,7 @@ type actor[T any] string
 
 func (a actor[T]) handle(rcv <-chan *swarm.Msg[T], ack chan<- *swarm.Msg[T]) {
 	for msg := range rcv {
-		fmt.Printf("event on %s > %+v\n", a, msg.Object)
+		slog.Info("Event", "type", a, "msg", msg.Object)
 		ack <- msg
 	}
 }

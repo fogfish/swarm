@@ -10,6 +10,7 @@ package events
 
 import (
 	"encoding/json"
+	"log/slog"
 	"reflect"
 	"strings"
 	"time"
@@ -71,7 +72,11 @@ func Enqueue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (c
 				conf.StdErr <- err
 			}
 		}
+
+		slog.Debug("Enqueued event", "kind", "event", "category", bag.Category, "object", object)
 	})
+
+	slog.Debug("Created enqueue channels: out, err", "kind", "event", "category", catE)
 
 	return ch.Msg, ch.Err
 }

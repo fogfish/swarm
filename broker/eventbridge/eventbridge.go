@@ -48,7 +48,7 @@ func newService(conf *swarm.Config) (EventBridge, error) {
 
 	aws, err := config.LoadDefaultConfig(context.Background())
 	if err != nil {
-		return nil, err
+		return nil, swarm.ErrServiceIO.New(err)
 	}
 
 	return eventbridge.NewFromConfig(aws), nil
@@ -72,7 +72,7 @@ func (cli *client) Enq(bag swarm.Bag) error {
 		},
 	)
 	if err != nil {
-		return err
+		return swarm.ErrEnqueue.New(err)
 	}
 
 	if ret.FailedEntryCount > 0 {
