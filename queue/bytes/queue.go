@@ -34,6 +34,7 @@ func (q queue) Enqueue(object []byte) error {
 		return err
 	}
 
+	slog.Debug("Enqueued bytes", "category", bag.Category, "object", object)
 	return nil
 }
 

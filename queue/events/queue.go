@@ -57,6 +57,7 @@ func (q queue[T, E]) Enqueue(object *E) error {
 		return err
 	}
 
+	slog.Debug("Enqueued event", "category", bag.Category, "object", object)
 	return nil
 }
 

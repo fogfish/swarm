@@ -9,6 +9,9 @@
 package main
 
 import (
+	"log/slog"
+	"os"
+
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/sqs"
 	"github.com/fogfish/swarm/queue"
@@ -16,6 +19,16 @@ import (
 )
 
 func main() {
+	slog.SetDefault(
+		slog.New(
+			slog.NewTextHandler(os.Stdout,
+				&slog.HandlerOptions{
+					Level: slog.LevelDebug,
+				},
+			),
+		),
+	)
+
 	q := queue.Must(sqs.New("swarm-test", swarm.WithLogStdErr()))
 
 	user := queue.LogDeadLetters(bytes.Enqueue(q, "User"))

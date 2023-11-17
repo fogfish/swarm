@@ -17,9 +17,7 @@ import (
 	"github.com/fogfish/swarm/internal/pipe"
 )
 
-/*
-Dequeue ...
-*/
+// Dequeue event
 func Dequeue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (<-chan *E, chan<- *E) {
 	conf := q.Config()
 	ch := swarm.NewEvtDeqCh[T, E](conf.DequeueCapacity)
@@ -45,7 +43,10 @@ func Dequeue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (<
 		})
 		if err != nil && conf.StdErr != nil {
 			conf.StdErr <- err
+			return
 		}
+
+		slog.Debug("Broker ack'ed object", "kind", "event", "category", catE, "object", object)
 	})
 
 	pipe.Emit(ch.Msg, q.Config().PollFrequency, func() (*E, error) {
@@ -77,6 +78,8 @@ func Dequeue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (<
 		}
 
 		shape.Put(evt, bag.Digest, nil)
+
+		slog.Debug("Broker received object", "kind", "event", "category", catE, "object", evt)
 
 		return evt, nil
 	})

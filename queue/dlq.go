@@ -19,7 +19,7 @@ import (
 // queue.LogDeadLetters(queue.Enqueue(...))
 func LogDeadLetters[T any](out chan<- T, err <-chan T) chan<- T {
 	pipe.ForEach[T](err, func(t T) {
-		slog.Error("Fail to emit", "msg", t)
+		slog.Error("Fail to emit", "object", t)
 	})
 
 	return out

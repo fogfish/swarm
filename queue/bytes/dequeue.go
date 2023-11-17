@@ -15,9 +15,7 @@ import (
 	"github.com/fogfish/swarm/internal/pipe"
 )
 
-/*
-Dequeue ...
-*/
+// Dequeue bytes
 func Dequeue(q swarm.Broker, cat string) (<-chan *swarm.Msg[[]byte], chan<- *swarm.Msg[[]byte]) {
 	conf := q.Config()
 	ch := swarm.NewMsgDeqCh[[]byte](conf.DequeueCapacity)
@@ -34,7 +32,10 @@ func Dequeue(q swarm.Broker, cat string) (<-chan *swarm.Msg[[]byte], chan<- *swa
 		})
 		if err != nil && conf.StdErr != nil {
 			conf.StdErr <- err
+			return
 		}
+
+		slog.Debug("Broker ack'ed object", "kind", "bytes", "category", cat, "object", object)
 	})
 
 	pipe.Emit(ch.Msg, q.Config().PollFrequency, func() (*swarm.Msg[[]byte], error) {
@@ -54,6 +55,8 @@ func Dequeue(q swarm.Broker, cat string) (<-chan *swarm.Msg[[]byte], chan<- *swa
 			Object: bag.Object,
 			Digest: bag.Digest,
 		}
+
+		slog.Debug("Broker received object", "kind", "bytes", "category", cat, "object", bag.Object)
 
 		return msg, nil
 	})

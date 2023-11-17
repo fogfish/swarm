@@ -34,6 +34,8 @@ func Enqueue(q swarm.Broker, cat string) (chan<- []byte, <-chan []byte) {
 				conf.StdErr <- err
 			}
 		}
+
+		slog.Debug("Enqueued", "kind", "bytes", "category", bag.Category, "object", object)
 	})
 
 	slog.Debug("Created enqueue channels: out, err", "kind", "bytes", "category", cat)
