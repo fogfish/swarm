@@ -83,17 +83,9 @@ func Enqueue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (c
 // normalized type name
 func categoryOf[T any]() string {
 	typ := reflect.TypeOf(new(T)).Elem()
-	cat := typ.Name()
 	if typ.Kind() == reflect.Ptr {
-		cat = typ.Elem().Name()
+		return typ.Elem().String()
 	}
 
-	seq := strings.Split(strings.Trim(cat, "]"), "[")
-	tkn := make([]string, len(seq))
-	for i, s := range seq {
-		r := strings.Split(s, ".")
-		tkn[i] = r[len(r)-1]
-	}
-
-	return strings.Join(tkn, "[") + strings.Repeat("]", len(tkn)-1)
+	return typ.String()
 }
