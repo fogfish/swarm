@@ -6,7 +6,7 @@
 // https://github.com/fogfish/swarm
 //
 
-package events3_test
+package eventddb_test
 
 import (
 	"testing"
@@ -14,29 +14,29 @@ import (
 	"github.com/aws/aws-cdk-go/awscdk/v2/assertions"
 	"github.com/aws/jsii-runtime-go"
 	"github.com/fogfish/scud"
-	"github.com/fogfish/swarm/broker/events3"
+	"github.com/fogfish/swarm/broker/eventddb"
 )
 
-func TestEventS3CDK(t *testing.T) {
-	app := events3.NewServerlessApp()
-	stack := app.NewStack("swarm-example-events3", nil)
-	stack.NewBucket()
+func TestEventDdbCDK(t *testing.T) {
+	app := eventddb.NewServerlessApp()
+	stack := app.NewStack("swarm-example-eventddb", nil)
+	stack.NewGlobalTable()
 
 	stack.NewSink(
-		&events3.SinkProps{
+		&eventddb.SinkProps{
 			Lambda: &scud.FunctionGoProps{
 				SourceCodePackage: "github.com/fogfish/swarm",
-				SourceCodeLambda:  "examples/events3/dequeue",
+				SourceCodeLambda:  "examples/eventddb/dequeue",
 			},
 		},
 	)
 
 	require := map[*string]*float64{
-		jsii.String("AWS::S3::Bucket"):               jsii.Number(1),
-		jsii.String("Custom::S3BucketNotifications"): jsii.Number(1),
-		jsii.String("AWS::IAM::Role"):                jsii.Number(3),
-		jsii.String("AWS::Lambda::Function"):         jsii.Number(3),
-		jsii.String("Custom::LogRetention"):          jsii.Number(1),
+		jsii.String("AWS::DynamoDB::GlobalTable"):      jsii.Number(1),
+		jsii.String("AWS::Lambda::EventSourceMapping"): jsii.Number(1),
+		jsii.String("AWS::IAM::Role"):                  jsii.Number(2),
+		jsii.String("AWS::Lambda::Function"):           jsii.Number(2),
+		jsii.String("Custom::LogRetention"):            jsii.Number(1),
 	}
 
 	template := assertions.Template_FromStack(stack.Stack, nil)

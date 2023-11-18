@@ -6,19 +6,19 @@
 // https://github.com/fogfish/swarm
 //
 
-package events3
+package eventddb
 
 import (
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-cdk-go/awscdk/v2"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awsdynamodb"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambdaeventsources"
-	"github.com/aws/aws-cdk-go/awscdk/v2/awss3"
 	"github.com/aws/constructs-go/constructs/v10"
 	"github.com/aws/jsii-runtime-go"
-
 	"github.com/fogfish/scud"
 )
 
@@ -34,9 +34,9 @@ type Sink struct {
 }
 
 type SinkProps struct {
-	Bucket      awss3.Bucket
-	EventSource *awslambdaeventsources.S3EventSourceProps
+	Table       awsdynamodb.ITable
 	Lambda      *scud.FunctionGoProps
+	EventSource *awslambdaeventsources.DynamoEventSourceProps
 }
 
 func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
@@ -44,19 +44,16 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 
 	sink.Handler = scud.NewFunctionGo(sink.Construct, jsii.String("Func"), props.Lambda)
 
-	eventsource := &awslambdaeventsources.S3EventSourceProps{
-		Events: &[]awss3.EventType{
-			awss3.EventType_OBJECT_CREATED,
-			awss3.EventType_OBJECT_REMOVED,
-		},
+	eventsource := &awslambdaeventsources.DynamoEventSourceProps{
+		StartingPosition: awslambda.StartingPosition_LATEST,
 	}
 	if props.EventSource != nil {
 		eventsource = props.EventSource
 	}
 
-	sink.Handler.AddEventSource(
-		awslambdaeventsources.NewS3EventSource(props.Bucket, eventsource),
-	)
+	source := awslambdaeventsources.NewDynamoEventSource(props.Table, eventsource)
+
+	sink.Handler.AddEventSource(source)
 
 	return sink
 }
@@ -75,8 +72,9 @@ type ServerlessStackProps struct {
 
 type ServerlessStack struct {
 	awscdk.Stack
-	acc    int
-	Bucket awss3.Bucket
+	acc           int
+	removalPolicy awscdk.RemovalPolicy
+	Table         awsdynamodb.ITable
 }
 
 func NewServerlessStack(app awscdk.App, id *string, props *ServerlessStackProps) *ServerlessStack {
@@ -86,33 +84,91 @@ func NewServerlessStack(app awscdk.App, id *string, props *ServerlessStackProps)
 	}
 
 	stack := &ServerlessStack{
-		Stack: awscdk.NewStack(app, jsii.String(sid), props.StackProps),
+		Stack:         awscdk.NewStack(app, jsii.String(sid), props.StackProps),
+		removalPolicy: awscdk.RemovalPolicy_RETAIN,
+	}
+
+	if strings.HasPrefix(props.Version, "pr") {
+		stack.removalPolicy = awscdk.RemovalPolicy_DESTROY
 	}
 
 	return stack
 }
 
-func (stack *ServerlessStack) NewBucket(bucketName ...string) awss3.Bucket {
+func (stack *ServerlessStack) NewTable(tableName ...string) awsdynamodb.ITable {
 	name := awscdk.Aws_STACK_NAME()
-	if len(bucketName) > 0 {
-		name = &bucketName[0]
+	if len(tableName) > 0 {
+		name = &tableName[0]
 	}
 
-	stack.Bucket = awss3.NewBucket(stack.Stack, jsii.String("Bucket"),
-		&awss3.BucketProps{
-			BucketName: name,
+	stack.Table = awsdynamodb.NewTable(stack.Stack, jsii.String("Table"),
+		&awsdynamodb.TableProps{
+			TableName: name,
+			PartitionKey: &awsdynamodb.Attribute{
+				Type: awsdynamodb.AttributeType_STRING,
+				Name: jsii.String("prefix"),
+			},
+			SortKey: &awsdynamodb.Attribute{
+				Type: awsdynamodb.AttributeType_STRING,
+				Name: jsii.String("suffix"),
+			},
+			BillingMode:   awsdynamodb.BillingMode_PAY_PER_REQUEST,
+			RemovalPolicy: stack.removalPolicy,
+			Stream:        awsdynamodb.StreamViewType_NEW_IMAGE,
 		},
 	)
 
-	return stack.Bucket
+	return stack.Table
+}
+
+func (stack *ServerlessStack) AddTable(tableName string) awsdynamodb.ITable {
+	stack.Table = awsdynamodb.Table_FromTableName(stack.Stack, jsii.String("Table"),
+		jsii.String(tableName),
+	)
+
+	return stack.Table
+}
+
+func (stack *ServerlessStack) NewGlobalTable(tableName ...string) awsdynamodb.ITable {
+	name := awscdk.Aws_STACK_NAME()
+	if len(tableName) > 0 {
+		name = &tableName[0]
+	}
+
+	stack.Table = awsdynamodb.NewTableV2(stack.Stack, jsii.String("Table"),
+		&awsdynamodb.TablePropsV2{
+			TableName: name,
+			PartitionKey: &awsdynamodb.Attribute{
+				Type: awsdynamodb.AttributeType_STRING,
+				Name: jsii.String("prefix"),
+			},
+			SortKey: &awsdynamodb.Attribute{
+				Type: awsdynamodb.AttributeType_STRING,
+				Name: jsii.String("suffix"),
+			},
+			Billing:       awsdynamodb.Billing_OnDemand(),
+			RemovalPolicy: stack.removalPolicy,
+			DynamoStream:  awsdynamodb.StreamViewType_NEW_IMAGE,
+		},
+	)
+
+	return stack.Table
+}
+
+func (stack *ServerlessStack) AddGlobalTable(tableName string) awsdynamodb.ITable {
+	stack.Table = awsdynamodb.TableV2_FromTableName(stack.Stack, jsii.String("Table"),
+		jsii.String(tableName),
+	)
+
+	return stack.Table
 }
 
 func (stack *ServerlessStack) NewSink(props *SinkProps) *Sink {
-	if stack.Bucket == nil {
-		panic("Bucket is not defined.")
+	if stack.Table == nil {
+		panic("Table is not defined.")
 	}
 
-	props.Bucket = stack.Bucket
+	props.Table = stack.Table
 
 	stack.acc++
 	name := "Sink" + strconv.Itoa(stack.acc)

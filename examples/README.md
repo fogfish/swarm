@@ -13,6 +13,12 @@
 - AWS SQS
   - [produce message](examples/sqs/enqueue/sqs.go)
   - [consume message](examples/sqs/dequeue/sqs.go)
+- AWS S3 Serverless
+  - [consume message](./events3/dequeue/ddbstream.go)
+  - [serverless app](./events3/serverless/main.go)
+- AWS DynamoDB Stream Serverless
+  - [consume message](./eventddb/dequeue/ddbstream.go)
+  - [serverless app](./eventddb/serverless/main.go)
 
 ## Examples about different data types
 

@@ -24,10 +24,9 @@ import (
 const (
 	Category = "Note"
 	Message  = "{\"some\":\"message\"}"
-	Event    = ""
 	Receipt  = "0x123456789abcdef"
 
-	EventCategory = "Event[Note]"
+	EventCategory = "qtest.EventNote"
 )
 
 var (
@@ -41,6 +40,11 @@ type Note struct {
 type User struct {
 	Some string `json:"some"`
 }
+
+type EventNote swarm.Event[*Note]
+
+func (EventNote) HKT1(swarm.EventType) {}
+func (EventNote) HKT2(*Note)           {}
 
 type effect = chan string
 type queueName = string
@@ -124,11 +128,11 @@ func TestEnqueueEvent(t *testing.T, factory enqueue) {
 
 	q := factory(eff, "test-queue", EventCategory, retry200ms)
 
-	note, _ := events.Enqueue[*Note, swarm.Event[*Note]](q)
+	note, _ := events.Enqueue[*Note, EventNote](q)
 	user, dlq := events.Enqueue[*User, swarm.Event[*User]](q)
 
 	t.Run("Enqueue", func(t *testing.T) {
-		note <- &swarm.Event[*Note]{
+		note <- &EventNote{
 			Object: &Note{Some: "message"},
 		}
 
@@ -140,7 +144,7 @@ func TestEnqueueEvent(t *testing.T, factory enqueue) {
 			it.Then(t).
 				Should(it.Nil(err)).
 				Should(it.Equal(*val.Object, Note{Some: "message"})).
-				Should(it.Equal(val.Type, "note:Event[Note]")).
+				Should(it.Equal(val.Type, "qtest.EventNote")).
 				ShouldNot(it.Equal(len(val.ID), 0)).
 				ShouldNot(it.True(val.Created.IsZero()))
 
@@ -231,7 +235,7 @@ func TestDequeueEvent(t *testing.T, factory dequeue) {
 	eff := make(chan string, 1)
 
 	t.Run("Typed", func(t *testing.T) {
-		event := swarm.Event[*Note]{
+		event := &EventNote{
 			ID:          "id",
 			Type:        "type",
 			Agent:       "agent",
@@ -243,7 +247,7 @@ func TestDequeueEvent(t *testing.T, factory dequeue) {
 
 		q := factory(eff, "test-queue", EventCategory, string(message), Receipt, retry200ms)
 
-		msg, ack := events.Dequeue[*Note, swarm.Event[*Note]](q)
+		msg, ack := events.Dequeue[*Note, EventNote](q)
 		go q.Await()
 
 		val := <-msg

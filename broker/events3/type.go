@@ -6,7 +6,7 @@ import (
 	queue "github.com/fogfish/swarm/queue/events"
 )
 
-const Category = "s3eventrecord:Event"
+const Category = "events3.Event"
 
 type Event swarm.Event[*events.S3EventRecord]
 

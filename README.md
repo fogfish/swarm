@@ -404,6 +404,12 @@ stack.NewSink(
   - [x] [consume message](examples/sqs/dequeue/sqs.go)
 - [ ] AWS SNS
   - [ ] produce message
+- [x] AWS S3 Event (serverless)
+  - [x] [consume message](./examples/events3/dequeue/events3.go) using aws lambda
+  - [x] [aws cdk construct](./examples/events3/serverless/main.go)
+- [x] AWS DynamoDB Streams (serverless)
+  - [x] [consume message](./examples/events3/dequeue/events3.go) using aws lambda
+  - [x] [aws cdk construct](./examples/events3/serverless/main.go)
 - [ ] AWS Kinesis (serverless)
   - [ ] produce message
   - [ ] consume message using aws lambda

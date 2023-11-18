@@ -29,7 +29,6 @@ func Enqueue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (c
 	conf := q.Config()
 	ch := swarm.NewEvtEnqCh[T, E](conf.EnqueueCapacity)
 
-	catT := strings.ToLower(categoryOf[T]())
 	catE := categoryOf[E]()
 	if len(category) > 0 {
 		catE = category[0]
@@ -45,7 +44,7 @@ func Enqueue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (c
 
 		_, knd, src, _ := shape.Get(object)
 		if knd == "" {
-			knd = curie.IRI(catT + ":" + catE)
+			knd = curie.IRI(catE)
 		}
 
 		if src == "" {
@@ -83,17 +82,11 @@ func Enqueue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (c
 // normalized type name
 func categoryOf[T any]() string {
 	typ := reflect.TypeOf(new(T)).Elem()
-	cat := typ.Name()
+	cat := typ.String()
 	if typ.Kind() == reflect.Ptr {
-		cat = typ.Elem().Name()
+		cat = typ.Elem().String()
 	}
 
-	seq := strings.Split(strings.Trim(cat, "]"), "[")
-	tkn := make([]string, len(seq))
-	for i, s := range seq {
-		r := strings.Split(s, ".")
-		tkn[i] = r[len(r)-1]
-	}
-
-	return strings.Join(tkn, "[") + strings.Repeat("]", len(tkn)-1)
+	seq := strings.Split(cat, "[")
+	return seq[0]
 }
