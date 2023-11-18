@@ -47,6 +47,7 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	eventsource := &awslambdaeventsources.S3EventSourceProps{
 		Events: &[]awss3.EventType{
 			awss3.EventType_OBJECT_CREATED,
+			awss3.EventType_OBJECT_REMOVED,
 		},
 	}
 	if props.EventSource != nil {

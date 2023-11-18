@@ -16,7 +16,7 @@ import (
 func main() {
 	app := eventddb.NewServerlessApp()
 
-	stack := app.NewStack("swarm-example-ddbstream")
+	stack := app.NewStack("swarm-example-eventddb")
 	stack.NewGlobalTable()
 
 	stack.NewSink(
