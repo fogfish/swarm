@@ -10,6 +10,8 @@ package swarm
 
 import (
 	"log/slog"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/fogfish/swarm/internal/backoff"
@@ -168,6 +170,32 @@ func WithNetworkTimeout(t time.Duration) Option {
 	return func(conf *Config) {
 		conf.NetworkTimeout = t
 	}
+}
+
+// Configure from Environment, (all timers in seconds)
+// - CONFIG_SWARM_POLL_FREQUENCY
+// - CONFIG_SWARM_TIME_TO_FLIGHT
+// - CONFIG_SWARM_NETWORK_TIMEOUT
+func WithConfigFromEnv() Option {
+	return func(conf *Config) {
+		conf.PollFrequency = durationFromEnv("CONFIG_SWARM_POLL_FREQUENCY", conf.PollFrequency)
+		conf.TimeToFlight = durationFromEnv("CONFIG_SWARM_TIME_TO_FLIGHT", conf.TimeToFlight)
+		conf.NetworkTimeout = durationFromEnv("CONFIG_SWARM_NETWORK_TIMEOUT", conf.NetworkTimeout)
+	}
+}
+
+func durationFromEnv(key string, def time.Duration) time.Duration {
+	val, has := os.LookupEnv(key)
+	if !has {
+		return def
+	}
+
+	sec, err := strconv.Atoi(val)
+	if err != nil {
+		return def
+	}
+
+	return time.Duration(sec) * time.Second
 }
 
 // AtMostOnce is best effort policy, where a message is published without any
