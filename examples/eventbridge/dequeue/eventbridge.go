@@ -55,17 +55,17 @@ func main() {
 
 type actor[T any] string
 
-func (a actor[T]) handle(rcv <-chan *swarm.Msg[T], ack chan<- *swarm.Msg[T]) {
+func (a actor[T]) handle(rcv <-chan swarm.Msg[T], ack chan<- swarm.Msg[T]) {
 	for msg := range rcv {
 		slog.Info("Event", "type", a, "msg", msg.Object)
 		ack <- msg
 	}
 }
 
-func ebus(rcv <-chan *EventNote, ack chan<- *EventNote) {
+func ebus(rcv <-chan swarm.Msg[*EventNote], ack chan<- swarm.Msg[*EventNote]) {
 	for msg := range rcv {
 		prefix := ""
-		switch string(msg.Type) {
+		switch string(msg.Object.Type) {
 		case "note:EventCreateNote":
 			prefix = "+ |"
 		case "note:EventUpdateNote":

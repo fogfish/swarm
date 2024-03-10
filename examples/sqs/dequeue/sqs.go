@@ -46,7 +46,7 @@ func main() {
 
 type actor[T any] string
 
-func (a actor[T]) handle(rcv <-chan *swarm.Msg[T], ack chan<- *swarm.Msg[T]) {
+func (a actor[T]) handle(rcv <-chan swarm.Msg[T], ack chan<- swarm.Msg[T]) {
 	for msg := range rcv {
 		slog.Info("Event", "type", a, "msg", msg.Object)
 		ack <- msg

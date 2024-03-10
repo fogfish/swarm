@@ -32,7 +32,7 @@ func main() {
 
 type actor string
 
-func (a actor) handle(rcv <-chan *swarm.Msg[[]byte], ack chan<- *swarm.Msg[[]byte]) {
+func (a actor) handle(rcv <-chan swarm.Msg[[]byte], ack chan<- swarm.Msg[[]byte]) {
 	for msg := range rcv {
 		slog.Info("Event", "type", a, "msg", msg.Object)
 		ack <- msg

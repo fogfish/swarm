@@ -17,7 +17,7 @@ func main() {
 	app := eventddb.NewServerlessApp()
 
 	stack := app.NewStack("swarm-example-eventddb")
-	stack.NewGlobalTable()
+	stack.NewTable()
 
 	stack.NewSink(
 		&eventddb.SinkProps{

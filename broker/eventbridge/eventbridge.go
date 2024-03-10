@@ -12,26 +12,65 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/eventbridge"
 	"github.com/aws/aws-sdk-go-v2/service/eventbridge/types"
 	"github.com/fogfish/swarm"
+	"github.com/fogfish/swarm/internal/kernel"
 )
 
-type client struct {
-	service EventBridge
-	bus     string
-	config  *swarm.Config
+// EventBridge declares the subset of interface from AWS SDK used by the lib.
+type EventBridge interface {
+	PutEvents(context.Context, *eventbridge.PutEventsInput, ...func(*eventbridge.Options)) (*eventbridge.PutEventsOutput, error)
 }
 
-func newClient(bus string, config *swarm.Config) (*client, error) {
-	api, err := newService(config)
+type Client struct {
+	service EventBridge
+	bus     string
+	config  swarm.Config
+}
+
+func New(queue string, opts ...swarm.Option) (swarm.Broker, error) {
+	cli, err := NewEventBridge(queue, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	return &client{
+	config := swarm.NewConfig()
+	for _, opt := range opts {
+		opt(&config)
+	}
+
+	starter := lambda.Start
+
+	type Mock interface{ Start(interface{}) }
+	if config.Service != nil {
+		service, ok := config.Service.(Mock)
+		if ok {
+			starter = service.Start
+		}
+	}
+
+	sls := spawner{f: starter, c: config}
+
+	return kernel.New(cli, sls, config), err
+}
+
+func NewEventBridge(bus string, opts ...swarm.Option) (*Client, error) {
+	config := swarm.NewConfig()
+	for _, opt := range opts {
+		opt(&config)
+	}
+
+	api, err := newService(&config)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Client{
 		service: api,
 		bus:     bus,
 		config:  config,
@@ -55,7 +94,7 @@ func newService(conf *swarm.Config) (EventBridge, error) {
 }
 
 // Enq enqueues message to broker
-func (cli *client) Enq(bag swarm.Bag) error {
+func (cli *Client) Enq(bag swarm.Bag) error {
 	ctx, cancel := context.WithTimeout(context.Background(), cli.config.NetworkTimeout)
 	defer cancel()
 
@@ -81,3 +120,30 @@ func (cli *client) Enq(bag swarm.Bag) error {
 
 	return nil
 }
+
+//------------------------------------------------------------------------------
+
+type spawner struct {
+	c swarm.Config
+	f func(any)
+}
+
+func (s spawner) Spawn(k *kernel.Kernel) error {
+	s.f(
+		func(evt events.CloudWatchEvent) error {
+			bag := make([]swarm.Bag, 1)
+			bag[0] = swarm.Bag{
+				Category: evt.DetailType,
+				Object:   evt.Detail,
+				Digest:   swarm.Digest{Brief: evt.ID},
+			}
+
+			return k.Dispatch(bag, s.c.TimeToFlight)
+		},
+	)
+
+	return nil
+}
+
+func (s spawner) Ack(digest string) error   { return nil }
+func (s spawner) Ask() ([]swarm.Bag, error) { return nil, nil }

@@ -189,24 +189,27 @@ func TestDequeueTyped(t *testing.T, factory dequeue) {
 		q.Close()
 	})
 
-	t.Run("Commit", func(t *testing.T) {
-		commited := false
+	//
+	// Note: Commit hook deprecated, kernel implements sync
+	//
+	// t.Run("Commit", func(t *testing.T) {
+	// 	commited := false
+	//
+	// 	q := factory(eff, "test-queue", Category, Message, Receipt, retry200ms, swarm.WithHookCommit(func() { commited = true }))
+	//
+	// 	msg, ack := queue.Dequeue[Note](q)
+	// 	go q.Await()
+	//
+	// 	val := <-msg
+	// 	ack <- val
+	//
+	// 	it.Then(t).
+	// 		Should(it.Equal(val.Object, Note{Some: "message"})).
+	// 		Should(it.Equal(<-eff, Receipt)).
+	// 		Should(it.True(commited))
 
-		q := factory(eff, "test-queue", Category, Message, Receipt, retry200ms, swarm.WithHookCommit(func() { commited = true }))
-
-		msg, ack := queue.Dequeue[Note](q)
-		go q.Await()
-
-		val := <-msg
-		ack <- val
-
-		it.Then(t).
-			Should(it.Equal(val.Object, Note{Some: "message"})).
-			Should(it.Equal(<-eff, Receipt)).
-			Should(it.True(commited))
-
-		q.Close()
-	})
+	// 	q.Close()
+	// })
 }
 
 func TestDequeueBytes(t *testing.T, factory dequeue) {
@@ -254,12 +257,12 @@ func TestDequeueEvent(t *testing.T, factory dequeue) {
 		ack <- val
 
 		it.Then(t).
-			Should(it.Equal(*val.Object, Note{Some: "message"})).
-			Should(it.Equal(val.Agent, "agent")).
-			Should(it.Equal(val.Participant, "user")).
-			Should(it.Equal(val.Type, "type")).
-			Should(it.Equal(val.ID, "id")).
-			Should(it.Equal(val.Created, time.Date(1970, time.January, 1, 0, 0, 0, 0, time.UTC))).
+			Should(it.Equal(*val.Object.Object, Note{Some: "message"})).
+			Should(it.Equal(val.Object.Agent, "agent")).
+			Should(it.Equal(val.Object.Participant, "user")).
+			Should(it.Equal(val.Object.Type, "type")).
+			Should(it.Equal(val.Object.ID, "id")).
+			Should(it.Equal(val.Object.Created, time.Date(1970, time.January, 1, 0, 0, 0, 0, time.UTC))).
 			Should(it.Equal(<-eff, Receipt))
 
 		q.Close()

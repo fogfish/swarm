@@ -9,60 +9,23 @@
 package queue
 
 import (
-	"encoding/json"
-	"log/slog"
 	"reflect"
 	"strings"
 
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/internal/pipe"
+	"github.com/fogfish/swarm/internal/kernel"
 )
 
-/*
-Enqueue creates pair of channels to send messages and dead-letter queue
-*/
+// Create egress and dead-letter queue channels for the category
 func Enqueue[T any](q swarm.Broker, category ...string) (chan<- T, <-chan T) {
-	// TODO: discard dlq for At Most Once
-	//       make it nil
-
-	conf := q.Config()
-	ch := swarm.NewMsgEnqCh[T](conf.EnqueueCapacity)
-
 	cat := categoryOf[T]()
 	if len(category) > 0 {
 		cat = category[0]
 	}
 
-	sock := q.Enqueue(cat, &ch)
+	codec := swarm.NewCodecJson[T]()
 
-	pipe.ForEach(ch.Msg, func(object T) {
-		ch.Busy.Lock()
-		defer ch.Busy.Unlock()
-
-		msg, err := json.Marshal(object)
-		if err != nil {
-			ch.Err <- object
-			if conf.StdErr != nil {
-				conf.StdErr <- err
-			}
-			return
-		}
-
-		bag := swarm.Bag{Category: cat, Object: msg}
-		err = conf.Backoff.Retry(func() error { return sock.Enq(bag) })
-		if err != nil {
-			ch.Err <- object
-			if conf.StdErr != nil {
-				conf.StdErr <- err
-			}
-		}
-
-		slog.Debug("Enqueued message", "kind", "typed", "category", bag.Category, "object", object)
-	})
-
-	slog.Debug("Created enqueue channels: out, err", "kind", "typed", "category", cat)
-
-	return ch.Msg, ch.Err
+	return kernel.Enqueue(q.(*kernel.Kernel), cat, codec)
 }
 
 // normalized type name

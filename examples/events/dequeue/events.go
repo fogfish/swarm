@@ -64,7 +64,7 @@ func main() {
 	q.Await()
 }
 
-func create(rcv <-chan *EventCreateUser, ack chan<- *EventCreateUser) {
+func create(rcv <-chan swarm.Msg[*EventCreateUser], ack chan<- swarm.Msg[*EventCreateUser]) {
 	for msg := range rcv {
 		v, _ := json.MarshalIndent(msg, "+ |", " ")
 		fmt.Printf("create user > \n %s\n", v)
@@ -72,7 +72,7 @@ func create(rcv <-chan *EventCreateUser, ack chan<- *EventCreateUser) {
 	}
 }
 
-func update(rcv <-chan *EventUpdateUser, ack chan<- *EventUpdateUser) {
+func update(rcv <-chan swarm.Msg[*EventUpdateUser], ack chan<- swarm.Msg[*EventUpdateUser]) {
 	for msg := range rcv {
 		v, _ := json.MarshalIndent(msg, "~ |", " ")
 		fmt.Printf("update user > \n %s\n", v)
@@ -80,7 +80,7 @@ func update(rcv <-chan *EventUpdateUser, ack chan<- *EventUpdateUser) {
 	}
 }
 
-func remove(rcv <-chan *EventRemoveUser, ack chan<- *EventRemoveUser) {
+func remove(rcv <-chan swarm.Msg[*EventRemoveUser], ack chan<- swarm.Msg[*EventRemoveUser]) {
 	for msg := range rcv {
 		v, _ := json.MarshalIndent(msg, "- |", " ")
 		fmt.Printf("remove user > \n %s\n", v)
@@ -88,10 +88,10 @@ func remove(rcv <-chan *EventRemoveUser, ack chan<- *EventRemoveUser) {
 	}
 }
 
-func common(rcv <-chan *EventNote, ack chan<- *EventNote) {
+func common(rcv <-chan swarm.Msg[*EventNote], ack chan<- swarm.Msg[*EventNote]) {
 	for msg := range rcv {
 		prefix := ""
-		switch string(msg.Type) {
+		switch string(msg.Object.Type) {
 		case "note:EventCreateNote":
 			prefix = "+ |"
 		case "note:EventUpdateNote":

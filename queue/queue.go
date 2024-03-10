@@ -9,10 +9,10 @@
 package queue
 
 import (
-	"encoding/json"
 	"log/slog"
 
 	"github.com/fogfish/swarm"
+	"github.com/fogfish/swarm/internal/kernel"
 )
 
 type Queue[T any] interface {
@@ -20,22 +20,22 @@ type Queue[T any] interface {
 }
 
 type queue[T any] struct {
-	cat  string
-	conf swarm.Config
-	sock swarm.Enqueue
+	cat   string
+	codec kernel.Codec[T]
+	emit  kernel.Emitter
 }
 
 func (q queue[T]) Sync()  {}
 func (q queue[T]) Close() {}
 
 func (q queue[T]) Enqueue(object T) error {
-	msg, err := json.Marshal(object)
+	msg, err := q.codec.Encode(object)
 	if err != nil {
 		return err
 	}
 
 	bag := swarm.Bag{Category: q.cat, Object: msg}
-	err = q.conf.Backoff.Retry(func() error { return q.sock.Enq(bag) })
+	err = q.emit.Enq(bag)
 	if err != nil {
 		return err
 	}
@@ -45,13 +45,16 @@ func (q queue[T]) Enqueue(object T) error {
 }
 
 func New[T any](q swarm.Broker, category ...string) Queue[T] {
+	k := q.(*kernel.Kernel)
+
 	cat := categoryOf[T]()
 	if len(category) > 0 {
 		cat = category[0]
 	}
 
-	queue := &queue[T]{cat: cat, conf: q.Config()}
-	queue.sock = q.Enqueue(cat, queue)
+	codec := swarm.NewCodecJson[T]()
+
+	queue := &queue[T]{cat: cat, codec: codec, emit: k.Emitter}
 
 	slog.Debug("Created sync emitter", "kind", "typed", "category", cat)
 

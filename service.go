@@ -10,17 +10,25 @@ package swarm
 
 import (
 	"log/slog"
-
-	"github.com/fogfish/swarm/internal/pipe"
 )
+
+// Message broker
+type Broker interface {
+	Close()
+	Await()
+}
 
 // Consumes dead letter messages
 //
 // swarm.LogDeadLetters(queue.Enqueue(...))
 func LogDeadLetters[T any](out chan<- T, err <-chan T) chan<- T {
-	pipe.ForEach[T](err, func(t T) {
-		slog.Error("Fail to emit", "object", t)
-	})
+	go func() {
+		var x T
+
+		for x = range err {
+			slog.Error("Fail to emit", "object", x)
+		}
+	}()
 
 	return out
 }

@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/fogfish/swarm/internal/backoff"
-	"github.com/fogfish/swarm/internal/pipe"
 )
 
 // Grade of Service Policy
@@ -32,7 +31,7 @@ type Retry interface {
 }
 
 type Config struct {
-	// Instance of AWS Service, ...
+	// Instance of AWS Service, used to overwrite default client
 	Service any
 
 	// Source is a direct performer of the event.
@@ -42,9 +41,11 @@ type Config struct {
 	// Quality of Service Policy
 	Policy Policy
 
-	// Queue capacity
-	EnqueueCapacity int
-	DequeueCapacity int
+	// Queue capacity (enhance with individual capacities)
+	CapOut int
+	CapDLQ int
+	CapRcv int
+	CapAck int
 
 	// Retry Policy for service calls
 	Backoff Retry
@@ -60,21 +61,20 @@ type Config struct {
 
 	// Timeout for any network operations
 	NetworkTimeout time.Duration
-
-	// Commit hook (executed after each loop iteration)
-	HookCommit func()
 }
 
 func NewConfig() Config {
 	return Config{
-		Source:          "github.com/fogfish/swarm",
-		Policy:          PolicyAtLeastOnce,
-		EnqueueCapacity: 0,
-		DequeueCapacity: 0,
-		Backoff:         backoff.Exp(10*time.Millisecond, 10, 0.5),
-		PollFrequency:   10 * time.Millisecond,
-		TimeToFlight:    5 * time.Second,
-		NetworkTimeout:  5 * time.Second,
+		Source:         "github.com/fogfish/swarm",
+		Policy:         PolicyAtLeastOnce,
+		CapOut:         0,
+		CapDLQ:         0,
+		CapRcv:         0,
+		CapAck:         0,
+		Backoff:        backoff.Exp(10*time.Millisecond, 10, 0.5),
+		PollFrequency:  10 * time.Millisecond,
+		TimeToFlight:   5 * time.Second,
+		NetworkTimeout: 5 * time.Second,
 	}
 }
 
@@ -142,9 +142,12 @@ func WithStdErr(stderr chan<- error) Option {
 func WithLogStdErr() Option {
 	err := make(chan error)
 
-	pipe.ForEach(err, func(err error) {
-		slog.Error("Broker failed", "error", err)
-	})
+	go func() {
+		var x error
+		for x = range err {
+			slog.Error("Broker failed", "error", x)
+		}
+	}()
 
 	return func(conf *Config) {
 		conf.StdErr = err
@@ -205,8 +208,10 @@ func durationFromEnv(key string, def time.Duration) time.Duration {
 func WithPolicyAtMostOnce(n int) Option {
 	return func(conf *Config) {
 		conf.Policy = PolicyAtMostOnce
-		conf.EnqueueCapacity = n
-		conf.DequeueCapacity = n
+		conf.CapOut = n
+		conf.CapDLQ = n
+		conf.CapRcv = n
+		conf.CapAck = n
 	}
 }
 
@@ -216,13 +221,9 @@ func WithPolicyAtMostOnce(n int) Option {
 func WithPolicyAtLeastOnce(n int) Option {
 	return func(conf *Config) {
 		conf.Policy = PolicyAtLeastOnce
-		conf.EnqueueCapacity = 0
-		conf.DequeueCapacity = n
-	}
-}
-
-func WithHookCommit(hook func()) Option {
-	return func(conf *Config) {
-		conf.HookCommit = hook
+		conf.CapOut = 0
+		conf.CapDLQ = 0
+		conf.CapRcv = n
+		conf.CapAck = n
 	}
 }
