@@ -8,12 +8,7 @@
 
 package queue
 
-import (
-	"encoding/json"
-	"log/slog"
-
-	"github.com/fogfish/swarm"
-)
+/*
 
 type Queue[T any] interface {
 	Enqueue(T) error
@@ -57,3 +52,5 @@ func New[T any](q swarm.Broker, category ...string) Queue[T] {
 
 	return queue
 }
+
+*/

@@ -9,69 +9,70 @@
 package queue
 
 import (
-	"encoding/json"
-	"log/slog"
-
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/internal/pipe"
+	"github.com/fogfish/swarm/internal/kernel"
 )
 
 // Dequeue message
-func Dequeue[T any](q swarm.Broker, category ...string) (<-chan *swarm.Msg[T], chan<- *swarm.Msg[T]) {
-	// TODO: automatically ack At Most Once, no ack channel
-	//       make it as /dev/null
-	conf := q.Config()
-	ch := swarm.NewMsgDeqCh[T](conf.DequeueCapacity)
-
+func Dequeue[T any](q swarm.Broker, category ...string) (<-chan swarm.Msg[T], chan<- swarm.Msg[T]) {
 	cat := categoryOf[T]()
 	if len(category) > 0 {
 		cat = category[0]
 	}
 
-	sock := q.Dequeue(cat, &ch)
+	codec := swarm.NewCodecJson[T]()
 
-	pipe.ForEach(ch.Ack, func(object *swarm.Msg[T]) {
-		err := conf.Backoff.Retry(func() error {
-			return sock.Ack(swarm.Bag{
-				Category: cat,
-				Digest:   object.Digest,
-			})
-		})
-		if err != nil && conf.StdErr != nil {
-			conf.StdErr <- err
-			return
-		}
+	return kernel.Dequeue(q.(*kernel.Kernel), cat, codec)
 
-		slog.Debug("Broker ack'ed object", "kind", "typed", "category", cat, "object", object.Object, "error", object.Digest.Error)
-	})
+	// // TODO: automatically ack At Most Once, no ack channel
+	// //       make it as /dev/null
+	// conf := q.Config()
+	// ch := swarm.NewMsgDeqCh[T](conf.DequeueCapacity)
 
-	pipe.Emit(ch.Msg, q.Config().PollFrequency, func() (*swarm.Msg[T], error) {
-		var bag swarm.Bag
-		err := conf.Backoff.Retry(func() (err error) {
-			bag, err = sock.Deq(cat)
-			return
-		})
-		if err != nil {
-			if conf.StdErr != nil {
-				conf.StdErr <- err
-			}
-			return nil, err
-		}
+	// sock := q.Dequeue(cat, &ch)
 
-		msg := &swarm.Msg[T]{Digest: bag.Digest}
-		if err := json.Unmarshal(bag.Object, &msg.Object); err != nil {
-			if conf.StdErr != nil {
-				conf.StdErr <- err
-			}
-			return nil, err
-		}
+	// pipe.ForEach(ch.Ack, func(object *swarm.Msg[T]) {
+	// 	err := conf.Backoff.Retry(func() error {
+	// 		return sock.Ack(swarm.Bag{
+	// 			Category: cat,
+	// 			Digest:   object.Digest,
+	// 		})
+	// 	})
+	// 	if err != nil && conf.StdErr != nil {
+	// 		conf.StdErr <- err
+	// 		return
+	// 	}
 
-		slog.Debug("Broker received object", "kind", "typed", "category", cat, "object", msg.Object)
+	// 	slog.Debug("Broker ack'ed object", "kind", "typed", "category", cat, "object", object.Object, "error", object.Digest.Error)
+	// })
 
-		return msg, nil
-	})
+	// pipe.Emit(ch.Msg, q.Config().PollFrequency, func() (*swarm.Msg[T], error) {
+	// 	var bag swarm.Bag
+	// 	err := conf.Backoff.Retry(func() (err error) {
+	// 		bag, err = sock.Deq(cat)
+	// 		return
+	// 	})
+	// 	if err != nil {
+	// 		if conf.StdErr != nil {
+	// 			conf.StdErr <- err
+	// 		}
+	// 		return nil, err
+	// 	}
 
-	slog.Debug("Created dequeue channels: rcv, ack", "kind", "typed", "category", cat)
+	// 	msg := &swarm.Msg[T]{Digest: bag.Digest}
+	// 	if err := json.Unmarshal(bag.Object, &msg.Object); err != nil {
+	// 		if conf.StdErr != nil {
+	// 			conf.StdErr <- err
+	// 		}
+	// 		return nil, err
+	// 	}
 
-	return ch.Msg, ch.Ack
+	// 	slog.Debug("Broker received object", "kind", "typed", "category", cat, "object", msg.Object)
+
+	// 	return msg, nil
+	// })
+
+	// slog.Debug("Created dequeue channels: rcv, ack", "kind", "typed", "category", cat)
+
+	// return ch.Msg, ch.Ack
 }

@@ -8,12 +8,7 @@
 
 package bytes
 
-import (
-	"log/slog"
-
-	"github.com/fogfish/swarm"
-)
-
+/*
 type Queue interface {
 	Enqueue([]byte) error
 }
@@ -46,3 +41,4 @@ func New(q swarm.Broker, category string) Queue {
 
 	return queue
 }
+*/

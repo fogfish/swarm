@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/events3"
 	"github.com/fogfish/swarm/internal/qtest"
@@ -28,7 +29,7 @@ func main() {
 	q.Await()
 }
 
-func common(rcv <-chan *events3.Event, ack chan<- *events3.Event) {
+func common(rcv <-chan swarm.Msg[*events.S3EventRecord], ack chan<- swarm.Msg[*events.S3EventRecord]) {
 	for msg := range rcv {
 
 		v, _ := json.MarshalIndent(msg, "", " ")

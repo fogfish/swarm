@@ -8,17 +8,7 @@
 
 package events
 
-import (
-	"encoding/json"
-	"log/slog"
-	"time"
-
-	"github.com/fogfish/curie"
-	"github.com/fogfish/golem/optics"
-	"github.com/fogfish/guid/v2"
-	"github.com/fogfish/swarm"
-)
-
+/*
 type Queue[T any, E swarm.EventKind[T]] interface {
 	Enqueue(*E) error
 }
@@ -79,3 +69,4 @@ func New[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) Queue[
 
 	return queue
 }
+*/

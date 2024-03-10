@@ -9,19 +9,24 @@
 package swarm
 
 type Broker interface {
-	Config() Config
+	// Config() Config
 	Close()
-	DSync()
+	// DSync()
 	Await()
-	Enqueue(string, Channel) Enqueue
-	Dequeue(string, Channel) Dequeue
+	// Enqueue(string, Channel) Enqueue
+	// Dequeue(string, Channel) Dequeue
 }
 
-type Enqueue interface {
-	Enq(Bag) error
-}
+// type Enqueue interface {
+// 	Enq(Bag) error
+// }
 
-type Dequeue interface {
-	Deq(string) (Bag, error)
-	Ack(Bag) error
-}
+// type Dequeue interface {
+// 	Deq(string) (Bag, error)
+// 	Ack(Bag) error
+// }
+
+// type Kernel interface {
+// 	Close()
+// 	Await()
+// }

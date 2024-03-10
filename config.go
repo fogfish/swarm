@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/fogfish/swarm/internal/backoff"
-	"github.com/fogfish/swarm/internal/pipe"
 )
 
 // Grade of Service Policy
@@ -32,7 +31,7 @@ type Retry interface {
 }
 
 type Config struct {
-	// Instance of AWS Service, ...
+	// Instance of AWS Service, used to overwrite default client
 	Service any
 
 	// Source is a direct performer of the event.
@@ -42,7 +41,7 @@ type Config struct {
 	// Quality of Service Policy
 	Policy Policy
 
-	// Queue capacity
+	// Queue capacity (enhance with individual capacities)
 	EnqueueCapacity int
 	DequeueCapacity int
 
@@ -60,9 +59,6 @@ type Config struct {
 
 	// Timeout for any network operations
 	NetworkTimeout time.Duration
-
-	// Commit hook (executed after each loop iteration)
-	HookCommit func()
 }
 
 func NewConfig() Config {
@@ -142,9 +138,12 @@ func WithStdErr(stderr chan<- error) Option {
 func WithLogStdErr() Option {
 	err := make(chan error)
 
-	pipe.ForEach(err, func(err error) {
-		slog.Error("Broker failed", "error", err)
-	})
+	go func() {
+		var x error
+		for x = range err {
+			slog.Error("Broker failed", "error", x)
+		}
+	}()
 
 	return func(conf *Config) {
 		conf.StdErr = err
@@ -218,11 +217,5 @@ func WithPolicyAtLeastOnce(n int) Option {
 		conf.Policy = PolicyAtLeastOnce
 		conf.EnqueueCapacity = 0
 		conf.DequeueCapacity = n
-	}
-}
-
-func WithHookCommit(hook func()) Option {
-	return func(conf *Config) {
-		conf.HookCommit = hook
 	}
 }

@@ -9,36 +9,38 @@
 package bytes
 
 import (
-	"log/slog"
-
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/internal/pipe"
+	"github.com/fogfish/swarm/internal/kernel"
 )
 
 // Enqueue creates pair of channels to send messages and dead-letter queue
 func Enqueue(q swarm.Broker, cat string) (chan<- []byte, <-chan []byte) {
-	conf := q.Config()
-	ch := swarm.NewMsgEnqCh[[]byte](conf.EnqueueCapacity)
+	codec := swarm.NewCodecByte()
 
-	sock := q.Enqueue(cat, &ch)
+	return kernel.Enqueue(q.(*kernel.Kernel), cat, codec)
 
-	pipe.ForEach(ch.Msg, func(object []byte) {
-		ch.Busy.Lock()
-		defer ch.Busy.Unlock()
+	// conf := q.Config()
+	// ch := swarm.NewMsgEnqCh[[]byte](conf.EnqueueCapacity)
 
-		bag := swarm.Bag{Category: cat, Object: object}
-		err := conf.Backoff.Retry(func() error { return sock.Enq(bag) })
-		if err != nil {
-			ch.Err <- object
-			if conf.StdErr != nil {
-				conf.StdErr <- err
-			}
-		}
+	// sock := q.Enqueue(cat, &ch)
 
-		slog.Debug("Enqueued", "kind", "bytes", "category", bag.Category, "object", object)
-	})
+	// pipe.ForEach(ch.Msg, func(object []byte) {
+	// 	ch.Busy.Lock()
+	// 	defer ch.Busy.Unlock()
 
-	slog.Debug("Created enqueue channels: out, err", "kind", "bytes", "category", cat)
+	// 	bag := swarm.Bag{Category: cat, Object: object}
+	// 	err := conf.Backoff.Retry(func() error { return sock.Enq(bag) })
+	// 	if err != nil {
+	// 		ch.Err <- object
+	// 		if conf.StdErr != nil {
+	// 			conf.StdErr <- err
+	// 		}
+	// 	}
 
-	return ch.Msg, ch.Err
+	// 	slog.Debug("Enqueued", "kind", "bytes", "category", bag.Category, "object", object)
+	// })
+
+	// slog.Debug("Created enqueue channels: out, err", "kind", "bytes", "category", cat)
+
+	// return ch.Msg, ch.Err
 }

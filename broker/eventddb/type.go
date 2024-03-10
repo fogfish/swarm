@@ -11,16 +11,11 @@ package eventddb
 import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/fogfish/swarm"
-	queue "github.com/fogfish/swarm/queue/events"
+	queue "github.com/fogfish/swarm/queue"
 )
 
-const Category = "eventddb.Event"
+const Category = "DynamoDBEventRecord"
 
-type Event swarm.Event[*events.DynamoDBEventRecord]
-
-func (Event) HKT1(swarm.EventType)             {}
-func (Event) HKT2(*events.DynamoDBEventRecord) {}
-
-func Dequeue(q swarm.Broker) (<-chan *Event, chan<- *Event) {
-	return queue.Dequeue[*events.DynamoDBEventRecord, Event](q)
+func Dequeue(q swarm.Broker) (<-chan swarm.Msg[*events.DynamoDBEventRecord], chan<- swarm.Msg[*events.DynamoDBEventRecord]) {
+	return queue.Dequeue[*events.DynamoDBEventRecord](q)
 }

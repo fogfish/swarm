@@ -33,7 +33,6 @@ func (msg *Msg[T]) Fail(err error) *Msg[T] {
 // Bag is used by the transport to abstract message on the wire.
 type Bag struct {
 	Category string
-	Event    any
 	Object   []byte
 	Digest   Digest
 }

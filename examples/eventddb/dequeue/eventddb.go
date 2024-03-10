@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/eventddb"
 	"github.com/fogfish/swarm/internal/qtest"
@@ -28,7 +29,7 @@ func main() {
 	q.Await()
 }
 
-func common(rcv <-chan *eventddb.Event, ack chan<- *eventddb.Event) {
+func common(rcv <-chan swarm.Msg[*events.DynamoDBEventRecord], ack chan<- swarm.Msg[*events.DynamoDBEventRecord]) {
 	for msg := range rcv {
 
 		v, _ := json.MarshalIndent(msg, "", " ")

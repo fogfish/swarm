@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2021 - 2022 Dmitry Kolesnikov
+// Copyright (C) 2021 - 2024 Dmitry Kolesnikov
 //
 // This file may be modified and distributed under the terms
 // of the Apache License Version 2.0. See the LICENSE file for details.
@@ -17,17 +17,40 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/fogfish/swarm"
+	"github.com/fogfish/swarm/internal/kernel"
 )
 
-type client struct {
+// SQS
+type SQS interface {
+	GetQueueUrl(context.Context, *sqs.GetQueueUrlInput, ...func(*sqs.Options)) (*sqs.GetQueueUrlOutput, error)
+	SendMessage(context.Context, *sqs.SendMessageInput, ...func(*sqs.Options)) (*sqs.SendMessageOutput, error)
+	ReceiveMessage(context.Context, *sqs.ReceiveMessageInput, ...func(*sqs.Options)) (*sqs.ReceiveMessageOutput, error)
+	DeleteMessage(context.Context, *sqs.DeleteMessageInput, ...func(*sqs.Options)) (*sqs.DeleteMessageOutput, error)
+}
+
+type Client struct {
 	service SQS
-	config  *swarm.Config
+	config  swarm.Config
 	queue   *string
 	isFIFO  bool
 }
 
-func newClient(queue string, config *swarm.Config) (*client, error) {
-	api, err := newService(config)
+func New(queue string, opts ...swarm.Option) (swarm.Broker, error) {
+	cli, err := NewSQS(queue, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return kernel.New(cli, cli), err
+}
+
+func NewSQS(queue string, opts ...swarm.Option) (*Client, error) {
+	config := swarm.NewConfig()
+	for _, opt := range opts {
+		opt(&config)
+	}
+
+	api, err := newService(&config)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +67,7 @@ func newClient(queue string, config *swarm.Config) (*client, error) {
 		return nil, swarm.ErrServiceIO.New(err)
 	}
 
-	return &client{
+	return &Client{
 		service: api,
 		config:  config,
 		queue:   spec.QueueUrl,
@@ -69,7 +92,7 @@ func newService(conf *swarm.Config) (SQS, error) {
 }
 
 // Enq enqueues message to broker
-func (cli *client) Enq(bag swarm.Bag) error {
+func (cli *Client) Enq(bag swarm.Bag) error {
 	ctx, cancel := context.WithTimeout(context.Background(), cli.config.NetworkTimeout)
 	defer cancel()
 
@@ -96,15 +119,14 @@ func (cli *client) Enq(bag swarm.Bag) error {
 	return nil
 }
 
-// Ack acknowledges message to broker
-func (cli *client) Ack(bag swarm.Bag) error {
+func (cli *Client) Ack(digest string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), cli.config.NetworkTimeout)
 	defer cancel()
 
 	_, err := cli.service.DeleteMessage(ctx,
 		&sqs.DeleteMessageInput{
 			QueueUrl:      cli.queue,
-			ReceiptHandle: aws.String(string(bag.Digest.Brief)),
+			ReceiptHandle: aws.String(digest),
 		},
 	)
 	if err != nil {
@@ -114,35 +136,85 @@ func (cli *client) Ack(bag swarm.Bag) error {
 	return nil
 }
 
+// Ack acknowledges message to broker
+// func (cli *Client) Ack(bag swarm.Bag) error {
+// 	ctx, cancel := context.WithTimeout(context.Background(), cli.config.NetworkTimeout)
+// 	defer cancel()
+
+// 	_, err := cli.service.DeleteMessage(ctx,
+// 		&sqs.DeleteMessageInput{
+// 			QueueUrl:      cli.queue,
+// 			ReceiptHandle: aws.String(string(bag.Digest.Brief)),
+// 		},
+// 	)
+// 	if err != nil {
+// 		return swarm.ErrServiceIO.New(err)
+// 	}
+
+// 	return nil
+// }
+
 // Deq dequeues message from broker
-func (cli client) Deq(cat string) (swarm.Bag, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), cli.config.NetworkTimeout)
+func (cli Client) Ask() ([]swarm.Bag, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), cli.config.NetworkTimeout*2)
 	defer cancel()
 
 	result, err := cli.service.ReceiveMessage(ctx,
 		&sqs.ReceiveMessageInput{
 			MessageAttributeNames: []string{string(types.QueueAttributeNameAll)},
 			QueueUrl:              cli.queue,
-			MaxNumberOfMessages:   1,  // TODO
-			WaitTimeSeconds:       10, // TODO
+			MaxNumberOfMessages:   1, // TODO
+			WaitTimeSeconds:       int32(cli.config.NetworkTimeout.Seconds()),
 		},
 	)
 	if err != nil {
-		return swarm.Bag{}, swarm.ErrDequeue.New(err)
+		return nil, swarm.ErrDequeue.New(err)
 	}
 
 	if len(result.Messages) == 0 {
-		return swarm.Bag{}, nil
+		return nil, nil
 	}
 
 	head := result.Messages[0]
 
-	return swarm.Bag{
-		Category: attr(&head, "Category"),
-		Object:   []byte(*head.Body),
-		Digest:   swarm.Digest{Brief: *head.ReceiptHandle},
+	return []swarm.Bag{
+		{
+			Category: attr(&head, "Category"),
+			Object:   []byte(*head.Body),
+			Digest:   swarm.Digest{Brief: *head.ReceiptHandle},
+		},
 	}, nil
 }
+
+// Deq dequeues message from broker
+// func (cli Client) Deq(cat string) (swarm.Bag, error) {
+// 	ctx, cancel := context.WithTimeout(context.Background(), cli.config.NetworkTimeout)
+// 	defer cancel()
+
+// 	result, err := cli.service.ReceiveMessage(ctx,
+// 		&sqs.ReceiveMessageInput{
+// 			MessageAttributeNames: []string{string(types.QueueAttributeNameAll)},
+// 			QueueUrl:              cli.queue,
+// 			MaxNumberOfMessages:   1,  // TODO
+// 			WaitTimeSeconds:       10, // TODO
+// 		},
+// 	)
+// 	if err != nil {
+// 		return swarm.Bag{}, swarm.ErrDequeue.New(err)
+// 	}
+
+// 	if len(result.Messages) == 0 {
+// 		return swarm.Bag{}, nil
+// 	}
+
+// 	head := result.Messages[0]
+
+// 	return swarm.Bag{
+// 		Category: attr(&head, "Category"),
+// 		Object:   []byte(*head.Body),
+// 		Digest:   swarm.Digest{Brief: *head.ReceiptHandle},
+// 	}, nil
+// }
 
 func attr(msg *types.Message, key string) string {
 	val, exists := msg.MessageAttributes[key]

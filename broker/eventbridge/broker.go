@@ -8,107 +8,96 @@
 
 package eventbridge
 
-import (
-	"context"
-	"log/slog"
+// // EventBridge declares the subset of interface from AWS SDK used by the lib.
+// type EventBridge interface {
+// 	PutEvents(context.Context, *eventbridge.PutEventsInput, ...func(*eventbridge.Options)) (*eventbridge.PutEventsOutput, error)
+// }
 
-	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go-v2/service/eventbridge"
-	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/internal/router"
-)
+// type broker struct {
+// 	config   swarm.Config
+// 	client   *client
+// 	channels *swarm.Channels
+// 	context  context.Context
+// 	cancel   context.CancelFunc
+// 	router   *router.Router
+// }
 
-// EventBridge declares the subset of interface from AWS SDK used by the lib.
-type EventBridge interface {
-	PutEvents(context.Context, *eventbridge.PutEventsInput, ...func(*eventbridge.Options)) (*eventbridge.PutEventsOutput, error)
-}
+// // New create broker for AWS EventBridge service
+// func New(bus string, opts ...swarm.Option) (swarm.Broker, error) {
+// 	conf := swarm.NewConfig()
+// 	for _, opt := range opts {
+// 		opt(&conf)
+// 	}
 
-type broker struct {
-	config   swarm.Config
-	client   *client
-	channels *swarm.Channels
-	context  context.Context
-	cancel   context.CancelFunc
-	router   *router.Router
-}
+// 	cli, err := newClient(bus, &conf)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-// New create broker for AWS EventBridge service
-func New(bus string, opts ...swarm.Option) (swarm.Broker, error) {
-	conf := swarm.NewConfig()
-	for _, opt := range opts {
-		opt(&conf)
-	}
+// 	ctx, can := context.WithCancel(context.Background())
 
-	cli, err := newClient(bus, &conf)
-	if err != nil {
-		return nil, err
-	}
+// 	slog.Info("Broker is created", "type", "eventbridge")
+// 	return &broker{
+// 		config:   conf,
+// 		client:   cli,
+// 		channels: swarm.NewChannels(),
+// 		context:  ctx,
+// 		cancel:   can,
+// 		router:   router.New(&conf, nil),
+// 	}, nil
+// }
 
-	ctx, can := context.WithCancel(context.Background())
+// func (b *broker) Config() swarm.Config {
+// 	return b.config
+// }
 
-	slog.Info("Broker is created", "type", "eventbridge")
-	return &broker{
-		config:   conf,
-		client:   cli,
-		channels: swarm.NewChannels(),
-		context:  ctx,
-		cancel:   can,
-		router:   router.New(&conf, nil),
-	}, nil
-}
+// func (b *broker) Close() {
+// 	b.channels.Sync()
+// 	b.channels.Close()
+// 	b.cancel()
+// }
 
-func (b *broker) Config() swarm.Config {
-	return b.config
-}
+// func (b *broker) DSync() {
+// 	b.channels.Sync()
+// }
 
-func (b *broker) Close() {
-	b.channels.Sync()
-	b.channels.Close()
-	b.cancel()
-}
+// func (b *broker) Await() {
+// 	starter := lambda.Start
 
-func (b *broker) DSync() {
-	b.channels.Sync()
-}
+// 	type Mock interface{ Start(interface{}) }
+// 	if b.config.Service != nil {
+// 		service, ok := b.config.Service.(Mock)
+// 		if ok {
+// 			starter = service.Start
+// 		}
+// 	}
 
-func (b *broker) Await() {
-	starter := lambda.Start
+// 	starter(
+// 		func(evt events.CloudWatchEvent) error {
+// 			bag := swarm.Bag{
+// 				Category: evt.DetailType,
+// 				Object:   evt.Detail,
+// 				Digest:   swarm.Digest{Brief: evt.ID},
+// 			}
 
-	type Mock interface{ Start(interface{}) }
-	if b.config.Service != nil {
-		service, ok := b.config.Service.(Mock)
-		if ok {
-			starter = service.Start
-		}
-	}
+// 			if err := b.router.Dispatch(bag); err != nil {
+// 				return err
+// 			}
 
-	starter(
-		func(evt events.CloudWatchEvent) error {
-			bag := swarm.Bag{
-				Category: evt.DetailType,
-				Object:   evt.Detail,
-				Digest:   swarm.Digest{Brief: evt.ID},
-			}
+// 			return b.router.Await(b.config.TimeToFlight)
+// 		},
+// 	)
+// }
 
-			if err := b.router.Dispatch(bag); err != nil {
-				return err
-			}
+// func (b *broker) Enqueue(category string, channel swarm.Channel) swarm.Enqueue {
+// 	b.channels.Attach(category, channel)
 
-			return b.router.Await(b.config.TimeToFlight)
-		},
-	)
-}
+// 	return b.client
+// }
 
-func (b *broker) Enqueue(category string, channel swarm.Channel) swarm.Enqueue {
-	b.channels.Attach(category, channel)
+// func (b *broker) Dequeue(category string, channel swarm.Channel) swarm.Dequeue {
+// 	b.channels.Attach(category, channel)
+// 	b.router.Register(category)
 
-	return b.client
-}
-
-func (b *broker) Dequeue(category string, channel swarm.Channel) swarm.Dequeue {
-	b.channels.Attach(category, channel)
-	b.router.Register(category)
-
-	return b.router
-}
+// 	return b.router
+// }

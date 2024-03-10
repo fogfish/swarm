@@ -35,6 +35,22 @@ type Like struct {
 func main() {
 	qtest.NewLogger()
 
+	// k, err := sqs.New("swarm-test")
+	// // , &swarm.Config{
+	// // 	Source:         "xxx",
+	// // 	NetworkTimeout: 30 * time.Second,
+	// // })
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	// go actor[User]("user").handle(
+	// 	kernel.Dequeue[User](k.(*kernel.Kernel), "user", swarm.NewCodecJson[User]()),
+	// 	// queue.Dequeue[User](q)
+	// )
+
+	// k.Await()
+
 	q := queue.Must(sqs.New("swarm-test", swarm.WithLogStdErr()))
 
 	go actor[User]("user").handle(queue.Dequeue[User](q))
@@ -46,7 +62,7 @@ func main() {
 
 type actor[T any] string
 
-func (a actor[T]) handle(rcv <-chan *swarm.Msg[T], ack chan<- *swarm.Msg[T]) {
+func (a actor[T]) handle(rcv <-chan swarm.Msg[T], ack chan<- swarm.Msg[T]) {
 	for msg := range rcv {
 		slog.Info("Event", "type", a, "msg", msg.Object)
 		ack <- msg
