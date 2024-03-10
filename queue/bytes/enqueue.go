@@ -18,29 +18,4 @@ func Enqueue(q swarm.Broker, cat string) (chan<- []byte, <-chan []byte) {
 	codec := swarm.NewCodecByte()
 
 	return kernel.Enqueue(q.(*kernel.Kernel), cat, codec)
-
-	// conf := q.Config()
-	// ch := swarm.NewMsgEnqCh[[]byte](conf.EnqueueCapacity)
-
-	// sock := q.Enqueue(cat, &ch)
-
-	// pipe.ForEach(ch.Msg, func(object []byte) {
-	// 	ch.Busy.Lock()
-	// 	defer ch.Busy.Unlock()
-
-	// 	bag := swarm.Bag{Category: cat, Object: object}
-	// 	err := conf.Backoff.Retry(func() error { return sock.Enq(bag) })
-	// 	if err != nil {
-	// 		ch.Err <- object
-	// 		if conf.StdErr != nil {
-	// 			conf.StdErr <- err
-	// 		}
-	// 	}
-
-	// 	slog.Debug("Enqueued", "kind", "bytes", "category", bag.Category, "object", object)
-	// })
-
-	// slog.Debug("Created enqueue channels: out, err", "kind", "bytes", "category", cat)
-
-	// return ch.Msg, ch.Err
 }
