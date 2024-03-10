@@ -141,24 +141,6 @@ func (cli *Client) Ack(digest string) error {
 	return nil
 }
 
-// Ack acknowledges message to broker
-// func (cli *Client) Ack(bag swarm.Bag) error {
-// 	ctx, cancel := context.WithTimeout(context.Background(), cli.config.NetworkTimeout)
-// 	defer cancel()
-
-// 	_, err := cli.service.DeleteMessage(ctx,
-// 		&sqs.DeleteMessageInput{
-// 			QueueUrl:      cli.queue,
-// 			ReceiptHandle: aws.String(string(bag.Digest.Brief)),
-// 		},
-// 	)
-// 	if err != nil {
-// 		return swarm.ErrServiceIO.New(err)
-// 	}
-
-// 	return nil
-// }
-
 // Deq dequeues message from broker
 func (cli Client) Ask() ([]swarm.Bag, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), cli.config.NetworkTimeout*2)
@@ -190,36 +172,6 @@ func (cli Client) Ask() ([]swarm.Bag, error) {
 		},
 	}, nil
 }
-
-// Deq dequeues message from broker
-// func (cli Client) Deq(cat string) (swarm.Bag, error) {
-// 	ctx, cancel := context.WithTimeout(context.Background(), cli.config.NetworkTimeout)
-// 	defer cancel()
-
-// 	result, err := cli.service.ReceiveMessage(ctx,
-// 		&sqs.ReceiveMessageInput{
-// 			MessageAttributeNames: []string{string(types.QueueAttributeNameAll)},
-// 			QueueUrl:              cli.queue,
-// 			MaxNumberOfMessages:   1,  // TODO
-// 			WaitTimeSeconds:       10, // TODO
-// 		},
-// 	)
-// 	if err != nil {
-// 		return swarm.Bag{}, swarm.ErrDequeue.New(err)
-// 	}
-
-// 	if len(result.Messages) == 0 {
-// 		return swarm.Bag{}, nil
-// 	}
-
-// 	head := result.Messages[0]
-
-// 	return swarm.Bag{
-// 		Category: attr(&head, "Category"),
-// 		Object:   []byte(*head.Body),
-// 		Digest:   swarm.Digest{Brief: *head.ReceiptHandle},
-// 	}, nil
-// }
 
 func attr(msg *types.Message, key string) string {
 	val, exists := msg.MessageAttributes[key]
