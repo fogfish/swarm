@@ -8,15 +8,21 @@
 
 package bytes
 
-/*
+import (
+	"log/slog"
+
+	"github.com/fogfish/swarm"
+	"github.com/fogfish/swarm/internal/kernel"
+)
+
 type Queue interface {
 	Enqueue([]byte) error
 }
 
 type queue struct {
-	cat  string
-	conf swarm.Config
-	sock swarm.Enqueue
+	cat   string
+	codec kernel.Codec[[]byte]
+	emit  kernel.Emitter
 }
 
 func (q queue) Sync()  {}
@@ -24,7 +30,7 @@ func (q queue) Close() {}
 
 func (q queue) Enqueue(object []byte) error {
 	bag := swarm.Bag{Category: q.cat, Object: object}
-	err := q.conf.Backoff.Retry(func() error { return q.sock.Enq(bag) })
+	err := q.emit.Enq(bag)
 	if err != nil {
 		return err
 	}
@@ -34,11 +40,13 @@ func (q queue) Enqueue(object []byte) error {
 }
 
 func New(q swarm.Broker, category string) Queue {
-	queue := &queue{cat: category, conf: q.Config()}
-	queue.sock = q.Enqueue(category, queue)
+	k := q.(*kernel.Kernel)
+
+	codec := swarm.NewCodecByte()
+
+	queue := &queue{cat: category, codec: codec, emit: k.Emitter}
 
 	slog.Debug("Created sync emitter", "kind", "bytes", "category", category)
 
 	return queue
 }
-*/

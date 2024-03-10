@@ -56,7 +56,7 @@ func New(queue string, opts ...swarm.Option) (swarm.Broker, error) {
 
 	sls := spawner{f: starter, c: config}
 
-	return kernel.New(cli, sls), err
+	return kernel.New(cli, sls, config), err
 }
 
 func NewEventBridge(bus string, opts ...swarm.Option) (*Client, error) {

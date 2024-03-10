@@ -27,15 +27,6 @@ type Spawner interface {
 	Spawn(*Kernel) error
 }
 
-type Config struct {
-	sndCap        int
-	dlqCap        int
-	rcvCap        int
-	ackCap        int
-	pollFrequency time.Duration
-	stdErr        chan<- error
-}
-
 // Event Kernel builds an infrastructure for integrating message brokers,
 // events busses into Golang channel environment.
 // The implementation follows the pattern, defined by
@@ -45,7 +36,7 @@ type Kernel struct {
 	sync.RWMutex
 
 	// Kernel configuartion
-	config Config
+	Config swarm.Config
 
 	// Control-plane stop channel. It is used to notify the kernel to terminate.
 	// Kernel notifies control plane of individual routines.
@@ -63,19 +54,20 @@ type Kernel struct {
 	waiting bool
 
 	// On the wire protocol emitter (writer) and cathode (receiver)
-	emitter Emitter
-	cathode Cathode
+	Emitter Emitter
+	Cathode Cathode
 }
 
 // New routing and dispatch kernel
-func New(emitter Emitter, cathode Cathode) *Kernel {
+func New(emitter Emitter, cathode Cathode, config swarm.Config) *Kernel {
 	return &Kernel{
+		Config:   config,
 		mainStop: make(chan struct{}, 1), // MUST BE buffered
 		ctrlStop: make(chan struct{}),
 
 		router:  map[string]interface{ Route(swarm.Bag) error }{},
-		emitter: emitter,
-		cathode: cathode,
+		Emitter: emitter,
+		Cathode: cathode,
 	}
 }
 
@@ -85,9 +77,9 @@ func (k *Kernel) receive() {
 	k.WaitGroup.Add(1)
 
 	asker := func() {
-		seq, err := k.cathode.Ask()
-		if k.config.stdErr != nil && err != nil {
-			k.config.stdErr <- err
+		seq, err := k.Cathode.Ask()
+		if k.Config.StdErr != nil && err != nil {
+			k.Config.StdErr <- err
 			return
 		}
 
@@ -100,8 +92,8 @@ func (k *Kernel) receive() {
 
 			if has {
 				err := r.Route(bag)
-				if k.config.stdErr != nil && err != nil {
-					k.config.stdErr <- err
+				if k.Config.StdErr != nil && err != nil {
+					k.Config.StdErr <- err
 					return
 				}
 			}
@@ -120,7 +112,7 @@ func (k *Kernel) receive() {
 			select {
 			case <-k.ctrlStop:
 				break exit
-			case <-time.After(k.config.pollFrequency):
+			case <-time.After(k.Config.PollFrequency):
 				asker()
 			}
 		}
@@ -145,7 +137,7 @@ func (k *Kernel) Close() {
 func (k *Kernel) Await() {
 	k.waiting = true
 
-	if spawner, ok := k.cathode.(Spawner); ok {
+	if spawner, ok := k.Cathode.(Spawner); ok {
 		spawner.Spawn(k)
 	} else {
 		k.receive()
@@ -172,8 +164,8 @@ func (k *Kernel) Dispatch(seq []swarm.Bag, timeout time.Duration) error {
 
 		if has {
 			err := r.Route(bag)
-			if k.config.stdErr != nil && err != nil {
-				k.config.stdErr <- err
+			if k.Config.StdErr != nil && err != nil {
+				k.Config.StdErr <- err
 				continue
 			}
 		}
@@ -216,25 +208,25 @@ exit:
 
 // Enqueue channels for kernel
 func Enqueue[T any](k *Kernel, cat string, codec Codec[T]) ( /*snd*/ chan<- T /*dlq*/, <-chan T) {
-	snd := make(chan T, k.config.sndCap)
-	dlq := make(chan T, k.config.dlqCap)
+	snd := make(chan T, k.Config.CapOut)
+	dlq := make(chan T, k.Config.CapDLQ)
 
 	// emitter routine
 	emit := func(obj T) {
 		msg, err := codec.Encode(obj)
 		if err != nil {
 			dlq <- obj
-			if k.config.stdErr != nil {
-				k.config.stdErr <- err
+			if k.Config.StdErr != nil {
+				k.Config.StdErr <- err
 			}
 			return
 		}
 
 		bag := swarm.Bag{Category: cat, Object: msg}
-		if err := k.emitter.Enq(bag); err != nil {
+		if err := k.Emitter.Enq(bag); err != nil {
 			dlq <- obj
-			if k.config.stdErr != nil {
-				k.config.stdErr <- err
+			if k.Config.StdErr != nil {
+				k.Config.StdErr <- err
 			}
 			return
 		}
@@ -300,8 +292,8 @@ func (a router[T]) Route(bag swarm.Bag) error {
 
 // Enqueue channels for kernel
 func Dequeue[T any](k *Kernel, cat string, codec Codec[T]) ( /*rcv*/ <-chan swarm.Msg[T] /*ack*/, chan<- swarm.Msg[T]) {
-	rcv := make(chan swarm.Msg[T], k.config.rcvCap)
-	ack := make(chan swarm.Msg[T], k.config.ackCap)
+	rcv := make(chan swarm.Msg[T], k.Config.CapRcv)
+	ack := make(chan swarm.Msg[T], k.Config.CapAck)
 
 	k.RWMutex.Lock()
 	k.router[cat] = router[T]{ch: rcv, codec: codec}
@@ -310,9 +302,9 @@ func Dequeue[T any](k *Kernel, cat string, codec Codec[T]) ( /*rcv*/ <-chan swar
 	// emitter routine
 	acks := func(msg swarm.Msg[T]) {
 		if msg.Digest.Error == nil {
-			err := k.cathode.Ack(msg.Digest.Brief)
-			if k.config.stdErr != nil && err != nil {
-				k.config.stdErr <- err
+			err := k.Cathode.Ack(msg.Digest.Brief)
+			if k.Config.StdErr != nil && err != nil {
+				k.Config.StdErr <- err
 			}
 
 			slog.Debug("acked ", "cat", cat, "object", msg.Object)

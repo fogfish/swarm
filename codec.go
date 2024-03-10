@@ -9,6 +9,8 @@ import (
 	"github.com/fogfish/guid/v2"
 )
 
+//------------------------------------------------------------------------------
+
 // Json codec for I/O kernel
 type CodecJson[T any] struct{}
 
@@ -23,6 +25,8 @@ func (CodecJson[T]) Decode(b []byte) (x T, err error) {
 
 func NewCodecJson[T any]() CodecJson[T] { return CodecJson[T]{} }
 
+//------------------------------------------------------------------------------
+
 // Byte identity codec for I/O kernet
 type CodecByte struct{}
 
@@ -31,8 +35,9 @@ func (CodecByte) Decode(x []byte) ([]byte, error) { return x, nil }
 
 func NewCodecByte() CodecByte { return CodecByte{} }
 
-// Event codec for I/O kernel
+//------------------------------------------------------------------------------
 
+// Event codec for I/O kernel
 type CodecEvent[T any, E EventKind[T]] struct {
 	source string
 	cat    string
@@ -50,8 +55,6 @@ func (c CodecEvent[T, E]) Encode(obj *E) ([]byte, error) {
 	}
 
 	c.shape.Put(obj, guid.G(guid.Clock).String(), knd, src, time.Now())
-
-	// fmt.Printf("====> %v\n", &obj)
 
 	return json.Marshal(obj)
 }

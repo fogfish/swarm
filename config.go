@@ -42,8 +42,10 @@ type Config struct {
 	Policy Policy
 
 	// Queue capacity (enhance with individual capacities)
-	EnqueueCapacity int
-	DequeueCapacity int
+	CapOut int
+	CapDLQ int
+	CapRcv int
+	CapAck int
 
 	// Retry Policy for service calls
 	Backoff Retry
@@ -63,14 +65,16 @@ type Config struct {
 
 func NewConfig() Config {
 	return Config{
-		Source:          "github.com/fogfish/swarm",
-		Policy:          PolicyAtLeastOnce,
-		EnqueueCapacity: 0,
-		DequeueCapacity: 0,
-		Backoff:         backoff.Exp(10*time.Millisecond, 10, 0.5),
-		PollFrequency:   10 * time.Millisecond,
-		TimeToFlight:    5 * time.Second,
-		NetworkTimeout:  5 * time.Second,
+		Source:         "github.com/fogfish/swarm",
+		Policy:         PolicyAtLeastOnce,
+		CapOut:         0,
+		CapDLQ:         0,
+		CapRcv:         0,
+		CapAck:         0,
+		Backoff:        backoff.Exp(10*time.Millisecond, 10, 0.5),
+		PollFrequency:  10 * time.Millisecond,
+		TimeToFlight:   5 * time.Second,
+		NetworkTimeout: 5 * time.Second,
 	}
 }
 
@@ -204,8 +208,10 @@ func durationFromEnv(key string, def time.Duration) time.Duration {
 func WithPolicyAtMostOnce(n int) Option {
 	return func(conf *Config) {
 		conf.Policy = PolicyAtMostOnce
-		conf.EnqueueCapacity = n
-		conf.DequeueCapacity = n
+		conf.CapOut = n
+		conf.CapDLQ = n
+		conf.CapRcv = n
+		conf.CapAck = n
 	}
 }
 
@@ -215,7 +221,9 @@ func WithPolicyAtMostOnce(n int) Option {
 func WithPolicyAtLeastOnce(n int) Option {
 	return func(conf *Config) {
 		conf.Policy = PolicyAtLeastOnce
-		conf.EnqueueCapacity = 0
-		conf.DequeueCapacity = n
+		conf.CapOut = 0
+		conf.CapDLQ = 0
+		conf.CapRcv = n
+		conf.CapAck = n
 	}
 }

@@ -58,17 +58,7 @@ type Event[T any] struct {
 	//
 	// The object upon which the event is carried out.
 	Object T `json:"object,omitempty"`
-
-	//
-	// The digest of received event (used internally to ack processing)
-	// Digest Digest `json:"-"`
 }
 
 func (Event[T]) HKT1(EventType) {}
 func (Event[T]) HKT2(T)         {}
-
-// Fail Event with error
-// func (evt *Event[T]) Fail(err error) *Event[T] {
-// 	evt.Digest.Error = err
-// 	return evt
-// }

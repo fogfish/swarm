@@ -40,7 +40,7 @@ func New(queue string, opts ...swarm.Option) (swarm.Broker, error) {
 
 	sls := spawner{f: starter, c: config}
 
-	return kernel.New(cli, sls), nil
+	return kernel.New(cli, sls, config), nil
 }
 
 //------------------------------------------------------------------------------

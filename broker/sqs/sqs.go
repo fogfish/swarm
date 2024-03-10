@@ -41,7 +41,12 @@ func New(queue string, opts ...swarm.Option) (swarm.Broker, error) {
 		return nil, err
 	}
 
-	return kernel.New(cli, cli), err
+	config := swarm.NewConfig()
+	for _, opt := range opts {
+		opt(&config)
+	}
+
+	return kernel.New(cli, cli, config), err
 }
 
 func NewSQS(queue string, opts ...swarm.Option) (*Client, error) {
