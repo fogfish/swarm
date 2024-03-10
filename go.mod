@@ -2,8 +2,6 @@ module github.com/fogfish/swarm
 
 go 1.21
 
-replace github.com/fogfish/scud => ../scud
-
 require (
 	github.com/aws/aws-cdk-go/awscdk/v2 v2.132.0
 	github.com/aws/aws-lambda-go v1.46.0

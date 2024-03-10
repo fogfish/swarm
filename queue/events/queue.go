@@ -23,9 +23,6 @@ type queue[T any, E swarm.EventKind[T]] struct {
 	cat   string
 	codec kernel.Codec[*E]
 	emit  kernel.Emitter
-	// conf  swarm.Config
-	// sock  swarm.Enqueue
-	// shape optics.Lens4[E, string, curie.IRI, curie.IRI, time.Time]
 }
 
 func (q queue[T, E]) Sync()  {}
