@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./doc/swarm-v3x.png" height="256" />
+  <img src="./doc/swarm-v3.png" height="256" />
   <h3 align="center">swarm</h3>
   <p align="center"><strong>Go channels for distributed queueing and event-driven systems</strong></p>
 
@@ -38,34 +38,34 @@ Today's wrong abstractions lead to complexity on maintainability in the future. 
 api | examples 
 --- | --- 
 AWS EventBridge ![serverless](https://img.shields.io/badge/serverless-e999b8?style=platic) |
- | [aws cdk](examples/eventbridge/serverless/main.go)
- | [enqueue](examples/eventbridge/enqueue/eventbridge.go)
- | [dequeue](examples/eventbridge/dequeue/eventbridge.go)
+ || [aws cdk](examples/eventbridge/serverless/main.go)
+ || [enqueue](examples/eventbridge/enqueue/eventbridge.go)
+ || [dequeue](examples/eventbridge/dequeue/eventbridge.go)
 AWS SQS ![serverless](https://img.shields.io/badge/serverless-e999b8?style=platic) | 
- | [aws cdk](examples/eventsqs/serverless/main.go)
- | [enqueue](examples/eventsqs/enqueue/eventsqs.go)
- | [dequeue](examples/eventsqs/dequeue/eventsqs.go)
+ || [aws cdk](examples/eventsqs/serverless/main.go)
+ || [enqueue](examples/eventsqs/enqueue/eventsqs.go)
+ || [dequeue](examples/eventsqs/dequeue/eventsqs.go)
 AWS SQS | 
- | [enqueue](examples/sqs/enqueue/sqs.go)
- | [dequeue](examples/sqs/dequeue/sqs.go)
+ || [enqueue](examples/sqs/enqueue/sqs.go)
+ || [dequeue](examples/sqs/dequeue/sqs.go)
 AWS SNS ![coming soon](https://img.shields.io/badge/coming%20soon-00b150?style=platic) |
- | enqueue 
+ || enqueue 
 AWS S3 Event ![serverless](https://img.shields.io/badge/serverless-e999b8?style=platic) |
- | [aws cdk](./examples/events3/serverless/main.go)
- | [dequeue](./examples/events3/dequeue/events3.go)
+ || [aws cdk](./examples/events3/serverless/main.go)
+ || [dequeue](./examples/events3/dequeue/events3.go)
 AWS DynamoDB Streams ![serverless](https://img.shields.io/badge/serverless-e999b8?style=platic) |
- | [aws cdk](./examples/eventddb/serverless/main.go)
- | [dequeue](./examples/eventddb/dequeue/eventddb.go)
+ || [aws cdk](./examples/eventddb/serverless/main.go)
+ || [dequeue](./examples/eventddb/dequeue/eventddb.go)
 AWS WebSocket API ![serverless](https://img.shields.io/badge/serverless-e999b8?style=platic) |
- | [aws cdk](./examples/websocket/serverless/main.go)
- | [dequeue](./examples/websocket/dequeue/websocket.go)
+ || [aws cdk](./examples/websocket/serverless/main.go)
+ || [dequeue](./examples/websocket/dequeue/websocket.go)
 AWS Kinesis  ![serverless](https://img.shields.io/badge/serverless-e999b8?style=platic) ![coming soon](https://img.shields.io/badge/coming%20soon-00b150?style=platic) |
- | aws cdk
- | enqueue
- | dequeue
+ || aws cdk
+ || enqueue
+ || dequeue
 AWS Kinesis ![coming soon](https://img.shields.io/badge/coming%20soon-00b150?style=platic) |
- | enqueue
- | dequeue
+ || enqueue
+ || dequeue
 AWS Redis ![help needed](https://img.shields.io/badge/help%20needed-035392?style=platic) |
 MQTT API ![help needed](https://img.shields.io/badge/help%20needed-035392?style=platic) |
 
