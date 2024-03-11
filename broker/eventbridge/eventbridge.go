@@ -104,7 +104,7 @@ func (cli *Client) Enq(bag swarm.Bag) error {
 				{
 					EventBusName: aws.String(cli.bus),
 					Source:       aws.String(cli.config.Source),
-					DetailType:   aws.String(bag.Category),
+					DetailType:   aws.String(bag.Ctx.Category),
 					Detail:       aws.String(string(bag.Object)),
 				},
 			},
@@ -133,9 +133,8 @@ func (s spawner) Spawn(k *kernel.Kernel) error {
 		func(evt events.CloudWatchEvent) error {
 			bag := make([]swarm.Bag, 1)
 			bag[0] = swarm.Bag{
-				Category: evt.DetailType,
-				Object:   evt.Detail,
-				Digest:   swarm.Digest{Brief: evt.ID},
+				Ctx:    swarm.NewContext(context.Background(), evt.DetailType, evt.ID),
+				Object: evt.Detail,
 			}
 
 			return k.Dispatch(bag, s.c.TimeToFlight)

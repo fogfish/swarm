@@ -9,14 +9,16 @@
 package bytes
 
 import (
+	"context"
 	"log/slog"
 
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/internal/kernel"
 )
 
-type Queue interface {
-	Enqueue([]byte) error
+type Enqueuer interface {
+	Put([]byte) error
+	Enq(string, []byte) error
 }
 
 type queue struct {
@@ -25,21 +27,22 @@ type queue struct {
 	emit  kernel.Emitter
 }
 
-func (q queue) Sync()  {}
-func (q queue) Close() {}
+func (q queue) Put(object []byte) error { return q.Enq(q.cat, object) }
 
-func (q queue) Enqueue(object []byte) error {
-	bag := swarm.Bag{Category: q.cat, Object: object}
+func (q queue) Enq(cat string, object []byte) error {
+	ctx := swarm.NewContext(context.Background(), cat, "")
+	bag := swarm.Bag{Ctx: ctx, Object: object}
+
 	err := q.emit.Enq(bag)
 	if err != nil {
 		return err
 	}
 
-	slog.Debug("Enqueued bytes", "category", bag.Category, "object", object)
+	slog.Debug("Enqueued bytes", "category", bag.Ctx.Category, "object", object)
 	return nil
 }
 
-func New(q swarm.Broker, category string) Queue {
+func New(q swarm.Broker, category string) Enqueuer {
 	k := q.(*kernel.Kernel)
 
 	codec := swarm.NewCodecByte()

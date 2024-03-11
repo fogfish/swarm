@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./doc/swarm-v2.png" height="256" />
+  <img src="./doc/swarm-v3x.png" height="256" />
   <h3 align="center">swarm</h3>
   <p align="center"><strong>Go channels for distributed queueing and event-driven systems</strong></p>
 
@@ -33,7 +33,43 @@
 
 ---
 
-Today's wrong abstractions lead to complexity on maintainability in the future. Usage of synchronous interfaces to reflect asynchronous nature of messaging queues is a good example of inaccurate abstraction. Usage of pure Go channels is a proper solution to distills asynchronous semantic of queueing systems into the idiomatic native Golang code.
+Today's wrong abstractions lead to complexity on maintainability in the future. Usage of synchronous interfaces to reflect asynchronous nature of messaging queues is a good example of inaccurate abstraction. Usage of pure Go channels is a proper solution to distills asynchronous semantic of queueing systems into the idiomatic native Golang code. The library adapts Go channels for various systems and interface. 
+
+api | examples 
+--- | --- 
+AWS EventBridge ![serverless](https://img.shields.io/badge/serverless-e999b8?style=platic) |
+ | [aws cdk](examples/eventbridge/serverless/main.go)
+ | [enqueue](examples/eventbridge/enqueue/eventbridge.go)
+ | [dequeue](examples/eventbridge/dequeue/eventbridge.go)
+AWS SQS ![serverless](https://img.shields.io/badge/serverless-e999b8?style=platic) | 
+ | [aws cdk](examples/eventsqs/serverless/main.go)
+ | [enqueue](examples/eventsqs/enqueue/eventsqs.go)
+ | [dequeue](examples/eventsqs/dequeue/eventsqs.go)
+AWS SQS | 
+ | [enqueue](examples/sqs/enqueue/sqs.go)
+ | [dequeue](examples/sqs/dequeue/sqs.go)
+AWS SNS ![coming soon](https://img.shields.io/badge/coming%20soon-00b150?style=platic) |
+ | enqueue 
+AWS S3 Event ![serverless](https://img.shields.io/badge/serverless-e999b8?style=platic) |
+ | [aws cdk](./examples/events3/serverless/main.go)
+ | [dequeue](./examples/events3/dequeue/events3.go)
+AWS DynamoDB Streams ![serverless](https://img.shields.io/badge/serverless-e999b8?style=platic) |
+ | [aws cdk](./examples/eventddb/serverless/main.go)
+ | [dequeue](./examples/eventddb/dequeue/eventddb.go)
+AWS WebSocket API ![serverless](https://img.shields.io/badge/serverless-e999b8?style=platic) |
+ | [aws cdk](./examples/websocket/serverless/main.go)
+ | [dequeue](./examples/websocket/dequeue/websocket.go)
+AWS Kinesis  ![serverless](https://img.shields.io/badge/serverless-e999b8?style=platic) ![coming soon](https://img.shields.io/badge/coming%20soon-00b150?style=platic) |
+ | aws cdk
+ | enqueue
+ | dequeue
+AWS Kinesis ![coming soon](https://img.shields.io/badge/coming%20soon-00b150?style=platic) |
+ | enqueue
+ | dequeue
+AWS Redis ![help needed](https://img.shields.io/badge/help%20needed-035392?style=platic) |
+MQTT API ![help needed](https://img.shields.io/badge/help%20needed-035392?style=platic) |
+
+
 
 ## Inspiration
 
@@ -222,7 +258,7 @@ user := queue.New[User](q)
 
 // Synchronously enqueue the message. It ensure that message is scheduled for
 // delivery to remote peer once function successfully returns.
-if err := user.Enqueue(&User{ID: "A", Text: "some text by A"}); err != nil {
+if err := user.Put(&User{ID: "A", Text: "some text by A"}); err != nil {
   // handle error
 }
 ```
@@ -329,11 +365,6 @@ for msg := range deq {
 ```
 
 
-### Internal channel architecture
-
-<img src="./doc/swarm-queue-model.svg" height="400" />
-
-
 ### Serverless 
 
 The library support development of serverless event-driven application using AWS service. The library provides AWS CDK Golang constructs to spawn consumers. See example of [serverless consumer](./examples/eventbridge/dequeue/eventbridge.go) and corresponding AWS CDK [application](./examples/eventbridge/serverless/main.go).
@@ -391,37 +422,6 @@ stack.NewSink(
 
 ### Supported queuing system and event brokers 
 
-- [x] AWS EventBridge (serverless only)
-  - [x] [produce message](examples/eventbridge/enqueue/eventbridge.go)
-  - [x] [consume message](examples/eventbridge/dequeue/eventbridge.go) using aws lambda
-  - [x] [aws cdk construct](examples/eventbridge/serverless/main.go)
-- [x] AWS SQS (serverless)
-  - [x] [produce message](examples/eventsqs/enqueue/eventsqs.go)
-  - [x] [consume message](examples/eventsqs/dequeue/eventsqs.go) using aws lambda
-  - [x] [aws cdk construct](examples/eventsqs/serverless/main.go)
-- [x] AWS SQS
-  - [x] [produce message](examples/sqs/enqueue/sqs.go)
-  - [x] [consume message](examples/sqs/dequeue/sqs.go)
-- [ ] AWS SNS
-  - [ ] produce message
-- [x] AWS S3 Event (serverless)
-  - [x] [consume message](./examples/events3/dequeue/events3.go) using aws lambda
-  - [x] [aws cdk construct](./examples/events3/serverless/main.go)
-- [x] AWS DynamoDB Streams (serverless)
-  - [x] [consume message](./examples/events3/dequeue/events3.go) using aws lambda
-  - [x] [aws cdk construct](./examples/events3/serverless/main.go)
-- [ ] AWS Kinesis (serverless)
-  - [ ] produce message
-  - [ ] consume message using aws lambda
-- [ ] AWS Kinesis
-  - [ ] produce message
-  - [ ] consume message
-- [ ] Redis
-  - [ ] produce message
-  - [ ] consume message
-- [ ] MQTT API
-  - [ ] produce message
-  - [ ] consume message
 
 Please let us know via [GitHub issues](https://github.com/fogfish/swarm/issue) your needs about queuing technologies.
 
