@@ -37,37 +37,37 @@ Today's wrong abstractions lead to complexity on maintainability in the future. 
 
 api | examples 
 --- | --- 
-AWS EventBridge | ![serverless](https://img.shields.io/badge/serverless-e999b8?style=platic)
+**AWS EventBridge** | ![serverless](https://img.shields.io/badge/serverless-e999b8?style=platic)
  || [aws cdk](examples/eventbridge/serverless/main.go)
  || [enqueue](examples/eventbridge/enqueue/eventbridge.go)
  || [dequeue](examples/eventbridge/dequeue/eventbridge.go)
-AWS SQS | ![serverless](https://img.shields.io/badge/serverless-e999b8?style=platic)
+**AWS SQS** | ![serverless](https://img.shields.io/badge/serverless-e999b8?style=platic)
  || [aws cdk](examples/eventsqs/serverless/main.go)
  || [enqueue](examples/eventsqs/enqueue/eventsqs.go)
  || [dequeue](examples/eventsqs/dequeue/eventsqs.go)
-AWS SQS | 
+**AWS SQS** | 
  || [enqueue](examples/sqs/enqueue/sqs.go)
  || [dequeue](examples/sqs/dequeue/sqs.go)
-AWS SNS | ![coming soon](https://img.shields.io/badge/coming%20soon-00b150?style=platic)
+**AWS SNS** | ![coming soon](https://img.shields.io/badge/coming%20soon-00b150?style=platic)
  || enqueue 
-AWS S3 Event | ![serverless](https://img.shields.io/badge/serverless-e999b8?style=platic)
+**AWS S3 Event** | ![serverless](https://img.shields.io/badge/serverless-e999b8?style=platic)
  || [aws cdk](./examples/events3/serverless/main.go)
  || [dequeue](./examples/events3/dequeue/events3.go)
-AWS DynamoDB Streams | ![serverless](https://img.shields.io/badge/serverless-e999b8?style=platic)
+**AWS DynamoDB Streams** | ![serverless](https://img.shields.io/badge/serverless-e999b8?style=platic)
  || [aws cdk](./examples/eventddb/serverless/main.go)
  || [dequeue](./examples/eventddb/dequeue/eventddb.go)
-AWS WebSocket API | ![serverless](https://img.shields.io/badge/serverless-e999b8?style=platic)
+**AWS WebSocket API** | ![serverless](https://img.shields.io/badge/serverless-e999b8?style=platic)
  || [aws cdk](./examples/websocket/serverless/main.go)
  || [dequeue](./examples/websocket/dequeue/websocket.go)
-AWS Kinesis | ![serverless](https://img.shields.io/badge/serverless-e999b8?style=platic) ![coming soon](https://img.shields.io/badge/coming%20soon-00b150?style=platic)
+**AWS Kinesis** | ![serverless](https://img.shields.io/badge/serverless-e999b8?style=platic) ![coming soon](https://img.shields.io/badge/coming%20soon-00b150?style=platic)
  || aws cdk
  || enqueue
  || dequeue
-AWS Kinesis | ![coming soon](https://img.shields.io/badge/coming%20soon-00b150?style=platic)
+**AWS Kinesis** | ![coming soon](https://img.shields.io/badge/coming%20soon-00b150?style=platic)
  || enqueue
  || dequeue
-AWS Redis | ![help needed](https://img.shields.io/badge/help%20needed-035392?style=platic)
-MQTT API | ![help needed](https://img.shields.io/badge/help%20needed-035392?style=platic)
+**AWS Redis** | ![help needed](https://img.shields.io/badge/help%20needed-035392?style=platic)
+**MQTT API** | ![help needed](https://img.shields.io/badge/help%20needed-035392?style=platic)
 
 
 ## Inspiration
