@@ -43,7 +43,7 @@ type actor struct {
 
 func (a *actor) handle(rcv <-chan swarm.Msg[User], ack chan<- swarm.Msg[User]) {
 	for msg := range rcv {
-		ctx := msg.Ctx.Value("WS.Request").(events.APIGatewayWebsocketProxyRequestContext)
+		ctx := msg.Ctx.Value(websocket.WSRequest).(events.APIGatewayWebsocketProxyRequestContext)
 
 		slog.Info("Event user", "msg", msg.Object, "ctx", ctx)
 

@@ -130,6 +130,10 @@ func (cli *Client) Enq(bag swarm.Bag) error {
 
 //------------------------------------------------------------------------------
 
+type WSContext string
+
+const WSRequest = WSContext("WS.Request")
+
 type spawner struct {
 	c swarm.Config
 	f func(any)
@@ -139,7 +143,7 @@ func (s spawner) Spawn(k *kernel.Kernel) error {
 	s.f(
 		func(evt events.APIGatewayWebsocketProxyRequest) (events.APIGatewayProxyResponse, error) {
 			ctx := swarm.NewContext(
-				context.WithValue(context.Background(), "WS.Request", evt.RequestContext),
+				context.WithValue(context.Background(), WSRequest, evt.RequestContext),
 				evt.RequestContext.RouteKey,
 				evt.RequestContext.ConnectionID,
 			)
