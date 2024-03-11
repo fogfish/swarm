@@ -35,6 +35,7 @@
 
 Today's wrong abstractions lead to complexity on maintainability in the future. Usage of synchronous interfaces to reflect asynchronous nature of messaging queues is a good example of inaccurate abstraction. Usage of pure Go channels is a proper solution to distills asynchronous semantic of queueing systems into the idiomatic native Golang code. The library adapts Go channels for various systems and interface. 
 
+
 api | examples 
 --- | --- 
 **AWS EventBridge** | ![serverless](https://img.shields.io/badge/serverless-e999b8?style=platic)
