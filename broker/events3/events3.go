@@ -9,6 +9,7 @@
 package events3
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/aws/aws-lambda-go/lambda"
@@ -56,9 +57,8 @@ func (s spawner) Spawn(k *kernel.Kernel) error {
 			bag := make([]swarm.Bag, len(events.Records))
 			for i, obj := range events.Records {
 				bag[i] = swarm.Bag{
-					Category: Category,
-					Object:   obj,
-					Digest:   swarm.Digest{Brief: guid.G(guid.Clock).String()},
+					Ctx:    swarm.NewContext(context.Background(), Category, guid.G(guid.Clock).String()),
+					Object: obj,
 				}
 			}
 

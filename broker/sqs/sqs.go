@@ -103,14 +103,14 @@ func (cli *Client) Enq(bag swarm.Bag) error {
 
 	var idMsgGroup *string
 	if cli.isFIFO {
-		idMsgGroup = aws.String(bag.Category)
+		idMsgGroup = aws.String(bag.Ctx.Category)
 	}
 
 	_, err := cli.service.SendMessage(ctx,
 		&sqs.SendMessageInput{
 			MessageAttributes: map[string]types.MessageAttributeValue{
 				"Source":   {StringValue: aws.String(cli.config.Source), DataType: aws.String("String")},
-				"Category": {StringValue: aws.String(bag.Category), DataType: aws.String("String")},
+				"Category": {StringValue: aws.String(bag.Ctx.Category), DataType: aws.String("String")},
 			},
 			MessageGroupId: idMsgGroup,
 			MessageBody:    aws.String(string(bag.Object)),
@@ -166,9 +166,8 @@ func (cli Client) Ask() ([]swarm.Bag, error) {
 
 	return []swarm.Bag{
 		{
-			Category: attr(&head, "Category"),
-			Object:   []byte(*head.Body),
-			Digest:   swarm.Digest{Brief: *head.ReceiptHandle},
+			Ctx:    swarm.NewContext(context.Background(), attr(&head, "Category"), *head.ReceiptHandle),
+			Object: []byte(*head.Body),
 		},
 	}, nil
 }

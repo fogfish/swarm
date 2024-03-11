@@ -8,22 +8,17 @@ on:
       - opened
       - synchronize
 
-  push:
-    branches:
-      - main
-      - /refs/heads/main
-
 jobs:
 
   unit:
     runs-on: ubuntu-latest
     steps:
 
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: "1.21"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.1.1
      
       - name: go build
         run: |

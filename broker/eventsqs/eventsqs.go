@@ -9,6 +9,8 @@
 package eventsqs
 
 import (
+	"context"
+
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/fogfish/swarm"
@@ -56,9 +58,8 @@ func (s spawner) Spawn(k *kernel.Kernel) error {
 			bag := make([]swarm.Bag, len(events.Records))
 			for i, evt := range events.Records {
 				bag[i] = swarm.Bag{
-					Category: attr(&evt, "Category"),
-					Object:   []byte(evt.Body),
-					Digest:   swarm.Digest{Brief: evt.ReceiptHandle},
+					Ctx:    swarm.NewContext(context.Background(), attr(&evt, "Category"), evt.ReceiptHandle),
+					Object: []byte(evt.Body),
 				}
 			}
 

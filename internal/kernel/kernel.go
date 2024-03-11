@@ -9,6 +9,7 @@
 package kernel
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"sync"
@@ -54,12 +55,16 @@ type Kernel struct {
 	ctrlStop chan struct{}
 
 	// Control-plane for ack of batch elements
-	ctrlAcks chan swarm.Digest
+	ctrlAcks chan *swarm.Context
 
 	// event router, binds category with destination channel
 	router map[string]interface{ Route(swarm.Bag) error }
 
+	// The flag indicates if Await loop is started
 	waiting bool
+
+	// In-flight waiting group
+	inflight sync.WaitGroup
 
 	// On the wire protocol emitter (writer) and cathode (receiver)
 	Emitter Emitter
@@ -95,7 +100,7 @@ func (k *Kernel) receive() {
 			bag := seq[i]
 
 			k.RWMutex.RLock()
-			r, has := k.router[bag.Category]
+			r, has := k.router[bag.Ctx.Category]
 			k.RWMutex.RUnlock()
 
 			if has {
@@ -159,15 +164,15 @@ func (k *Kernel) Await() {
 // Dispatches batch of messages
 func (k *Kernel) Dispatch(seq []swarm.Bag, timeout time.Duration) error {
 	k.WaitGroup.Add(1)
-	k.ctrlAcks = make(chan swarm.Digest, len(seq))
+	k.ctrlAcks = make(chan *swarm.Context, len(seq))
 
 	wnd := map[string]struct{}{}
 	for i := 0; i < len(seq); i++ {
 		bag := seq[i]
-		wnd[bag.Digest.Brief] = struct{}{}
+		wnd[bag.Ctx.Digest] = struct{}{}
 
 		k.RWMutex.RLock()
-		r, has := k.router[bag.Category]
+		r, has := k.router[bag.Ctx.Category]
 		k.RWMutex.RUnlock()
 
 		if has {
@@ -197,7 +202,7 @@ exit:
 				err = ack.Error
 			}
 
-			delete(wnd, ack.Brief)
+			delete(wnd, ack.Digest)
 			if len(wnd) == 0 {
 				break exit
 			}
@@ -209,7 +214,8 @@ exit:
 
 	close(k.ctrlAcks)
 	k.ctrlAcks = nil
-	k.WaitGroup.Done()
+
+	k.inflight.Wait()
 
 	return err
 }
@@ -230,7 +236,9 @@ func Enqueue[T any](k *Kernel, cat string, codec Codec[T]) ( /*snd*/ chan<- T /*
 			return
 		}
 
-		bag := swarm.Bag{Category: cat, Object: msg}
+		ctx := swarm.NewContext(context.Background(), cat, "")
+		bag := swarm.Bag{Ctx: ctx, Object: msg}
+
 		if err := k.Emitter.Enq(bag); err != nil {
 			dlq <- obj
 			if k.Config.StdErr != nil {
@@ -262,7 +270,9 @@ func Enqueue[T any](k *Kernel, cat string, codec Codec[T]) ( /*snd*/ chan<- T /*
 			case <-k.ctrlStop:
 				break exit
 			case obj := <-snd:
+				k.inflight.Add(1)
 				emit(obj)
+				k.inflight.Done()
 			}
 		}
 
@@ -293,7 +303,8 @@ func (a router[T]) Route(bag swarm.Bag) error {
 	if err != nil {
 		return err
 	}
-	msg := swarm.Msg[T]{Object: obj, Digest: bag.Digest}
+
+	msg := swarm.Msg[T]{Ctx: bag.Ctx, Object: obj}
 	a.ch <- msg
 	return nil
 }
@@ -309,8 +320,8 @@ func Dequeue[T any](k *Kernel, cat string, codec Codec[T]) ( /*rcv*/ <-chan swar
 
 	// emitter routine
 	acks := func(msg swarm.Msg[T]) {
-		if msg.Digest.Error == nil {
-			err := k.Cathode.Ack(msg.Digest.Brief)
+		if msg.Ctx.Error == nil {
+			err := k.Cathode.Ack(msg.Ctx.Digest)
 			if k.Config.StdErr != nil && err != nil {
 				k.Config.StdErr <- err
 			}
@@ -319,7 +330,7 @@ func Dequeue[T any](k *Kernel, cat string, codec Codec[T]) ( /*rcv*/ <-chan swar
 		}
 
 		if k.ctrlAcks != nil {
-			k.ctrlAcks <- msg.Digest
+			k.ctrlAcks <- msg.Ctx
 		}
 	}
 

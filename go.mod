@@ -7,6 +7,7 @@ require (
 	github.com/aws/aws-lambda-go v1.46.0
 	github.com/aws/aws-sdk-go-v2 v1.25.3
 	github.com/aws/aws-sdk-go-v2/config v1.27.7
+	github.com/aws/aws-sdk-go-v2/service/apigatewaymanagementapi v1.19.2
 	github.com/aws/aws-sdk-go-v2/service/eventbridge v1.30.2
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.31.2
 	github.com/aws/constructs-go/constructs/v10 v10.3.0
@@ -18,7 +19,7 @@ require (
 	github.com/fogfish/guid/v2 v2.0.4
 	github.com/fogfish/it v1.0.0
 	github.com/fogfish/it/v2 v2.0.1
-	github.com/fogfish/scud v0.6.0
+	github.com/fogfish/scud v0.6.1
 )
 
 require (

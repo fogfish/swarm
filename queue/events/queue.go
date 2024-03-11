@@ -9,14 +9,16 @@
 package events
 
 import (
+	"context"
 	"log/slog"
 
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/internal/kernel"
 )
 
-type Queue[T any, E swarm.EventKind[T]] interface {
-	Enqueue(*E) error
+type Enqueuer[T any, E swarm.EventKind[T]] interface {
+	Put(*E) error
+	Enq(string, *E) error
 }
 
 type queue[T any, E swarm.EventKind[T]] struct {
@@ -25,26 +27,27 @@ type queue[T any, E swarm.EventKind[T]] struct {
 	emit  kernel.Emitter
 }
 
-func (q queue[T, E]) Sync()  {}
-func (q queue[T, E]) Close() {}
+func (q queue[T, E]) Put(object *E) error { return q.Enq(q.cat, object) }
 
-func (q queue[T, E]) Enqueue(object *E) error {
+func (q queue[T, E]) Enq(cat string, object *E) error {
 	msg, err := q.codec.Encode(object)
 	if err != nil {
 		return err
 	}
 
-	bag := swarm.Bag{Category: q.cat, Object: msg}
+	ctx := swarm.NewContext(context.Background(), cat, "")
+	bag := swarm.Bag{Ctx: ctx, Object: msg}
+
 	err = q.emit.Enq(bag)
 	if err != nil {
 		return err
 	}
 
-	slog.Debug("Enqueued event", "category", bag.Category, "object", object)
+	slog.Debug("Enqueued event", "category", bag.Ctx.Category, "object", object)
 	return nil
 }
 
-func New[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) Queue[T, E] {
+func New[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) Enqueuer[T, E] {
 	k := q.(*kernel.Kernel)
 
 	catE := categoryOf[E]()

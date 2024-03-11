@@ -9,14 +9,18 @@
 package queue
 
 import (
+	"context"
 	"log/slog"
 
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/internal/kernel"
 )
 
-type Queue[T any] interface {
-	Enqueue(T) error
+// Enqueue message to the broker synchronously, blocking the routine until
+// message is accepted by the broker.
+type Enqueuer[T any] interface {
+	Put(T) error
+	Enq(string, T) error
 }
 
 type queue[T any] struct {
@@ -25,26 +29,27 @@ type queue[T any] struct {
 	emit  kernel.Emitter
 }
 
-func (q queue[T]) Sync()  {}
-func (q queue[T]) Close() {}
+func (q queue[T]) Put(object T) error { return q.Enq(q.cat, object) }
 
-func (q queue[T]) Enqueue(object T) error {
+func (q queue[T]) Enq(cat string, object T) error {
 	msg, err := q.codec.Encode(object)
 	if err != nil {
 		return err
 	}
 
-	bag := swarm.Bag{Category: q.cat, Object: msg}
+	ctx := swarm.NewContext(context.Background(), cat, "")
+	bag := swarm.Bag{Ctx: ctx, Object: msg}
+
 	err = q.emit.Enq(bag)
 	if err != nil {
 		return err
 	}
 
-	slog.Debug("Enqueued message", "category", bag.Category, "object", object)
+	slog.Debug("Enqueued message", "category", bag.Ctx.Category, "object", object)
 	return nil
 }
 
-func New[T any](q swarm.Broker, category ...string) Queue[T] {
+func New[T any](q swarm.Broker, category ...string) Enqueuer[T] {
 	k := q.(*kernel.Kernel)
 
 	cat := categoryOf[T]()
