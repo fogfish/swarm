@@ -70,6 +70,8 @@ api | examples
 **AWS Redis** | ![help needed](https://img.shields.io/badge/help%20needed-035392?style=platic)
 **MQTT API** | ![help needed](https://img.shields.io/badge/help%20needed-035392?style=platic)
 
+Please let us know via [GitHub issues](https://github.com/fogfish/swarm/issue) your needs about queuing technologies.
+
 
 ## Inspiration
 
@@ -419,11 +421,6 @@ stack.NewSink(
   },
 )
 ```
-
-### Supported queuing system and event brokers 
-
-
-Please let us know via [GitHub issues](https://github.com/fogfish/swarm/issue) your needs about queuing technologies.
 
 
 ## How To Contribute

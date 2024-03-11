@@ -32,26 +32,16 @@ func NewContext(ctx context.Context, cat, digest string) *Context {
 	}
 }
 
-// type Digest struct {
-// 	// Unique brief summary of the message
-// 	Brief string
-
-// 	// Error on the message processing
-// 	Error error
-// }
-
 // Msg is a generic envelop type for incoming messages.
 // It contains both decoded object and its digest used to acknowledge message.
 type Msg[T any] struct {
 	Ctx    *Context
 	Object T
-	// Digest Digest
 }
 
 // Fail message with error
 func (msg Msg[T]) Fail(err error) Msg[T] {
 	msg.Ctx.Error = err
-	//msg.Digest.Error = err
 	return msg
 }
 
@@ -60,6 +50,4 @@ func (msg Msg[T]) Fail(err error) Msg[T] {
 type Bag struct {
 	Ctx    *Context
 	Object []byte
-	// Digest   Digest
-	// Category string
 }
