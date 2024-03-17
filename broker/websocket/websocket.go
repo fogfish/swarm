@@ -11,6 +11,7 @@ package websocket
 import (
 	"context"
 	"log/slog"
+	"net/http"
 	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -150,10 +151,10 @@ func (s spawner) Spawn(k *kernel.Kernel) error {
 			bag := []swarm.Bag{{Ctx: ctx, Object: []byte(evt.Body)}}
 
 			if err := k.Dispatch(bag, s.c.TimeToFlight); err != nil {
-				return events.APIGatewayProxyResponse{StatusCode: 500}, err
+				return events.APIGatewayProxyResponse{StatusCode: http.StatusRequestTimeout}, err
 			}
 
-			return events.APIGatewayProxyResponse{StatusCode: 200}, nil
+			return events.APIGatewayProxyResponse{StatusCode: http.StatusOK}, nil
 		},
 	)
 

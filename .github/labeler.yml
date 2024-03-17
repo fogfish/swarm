@@ -25,3 +25,6 @@
 
 "[#] eventbridge":
  - 'broker/eventbridge/*'
+
+"[#] websocket":
+ - 'broker/websocket/*'
