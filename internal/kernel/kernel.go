@@ -63,9 +63,6 @@ type Kernel struct {
 	// The flag indicates if Await loop is started
 	waiting bool
 
-	// In-flight waiting group
-	inflight sync.WaitGroup
-
 	// On the wire protocol emitter (writer) and cathode (receiver)
 	Emitter Emitter
 	Cathode Cathode
@@ -78,7 +75,8 @@ func New(emitter Emitter, cathode Cathode, config swarm.Config) *Kernel {
 		mainStop: make(chan struct{}, 1), // MUST BE buffered
 		ctrlStop: make(chan struct{}),
 
-		router:  map[string]interface{ Route(swarm.Bag) error }{},
+		router: map[string]interface{ Route(swarm.Bag) error }{},
+
 		Emitter: emitter,
 		Cathode: cathode,
 	}
@@ -215,8 +213,6 @@ exit:
 	close(k.ctrlAcks)
 	k.ctrlAcks = nil
 
-	k.inflight.Wait()
-
 	return err
 }
 
@@ -270,9 +266,7 @@ func Enqueue[T any](k *Kernel, cat string, codec Codec[T]) ( /*snd*/ chan<- T /*
 			case <-k.ctrlStop:
 				break exit
 			case obj := <-snd:
-				k.inflight.Add(1)
 				emit(obj)
-				k.inflight.Done()
 			}
 		}
 
