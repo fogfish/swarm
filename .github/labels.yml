@@ -150,3 +150,7 @@
   aliases: []
   description: AWS EventBridge adapters
 
+- name: "[#] websocket"
+  color: "3978e1"
+  aliases: []
+  description: AWS WebSocket Gateway
