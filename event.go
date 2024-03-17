@@ -34,12 +34,12 @@ type Event[T any] struct {
 	//
 	// Unique identity for event
 	// It is automatically defined by the library upon the transmission
-	ID string `json:"@id,omitempty"`
+	ID string `json:"id,omitempty"`
 
 	//
 	// Canonical IRI that defines a type of action.
 	// It is automatically defined by the library upon the transmission
-	Type curie.IRI `json:"@type,omitempty"`
+	Type curie.IRI `json:"type,omitempty"`
 
 	//
 	// Direct performer of the event, a software service that emits action to the stream.
