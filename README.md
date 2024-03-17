@@ -105,9 +105,8 @@ go get -u github.com/fogfish/swarm
   - [Generic events](#generic-events)
   - [Error handling](#error-handling)
   - [Fail Fast](#fail-fast)
-  - [Internal channel architecture](#internal-channel-architecture)
   - [Serverless](#serverless)
-  - [Supported queuing system and event brokers](#supported-queuing-system-and-event-brokers)
+  - [Race condition in Serverless](#race-condition-in-serverless)
 
 ### Produce (enqueue) messages
 
@@ -422,6 +421,28 @@ stack.NewSink(
 )
 ```
 
+
+### Race condition in Serverless
+
+In serverless environment doing dequeue and enqueue might cause a raise condition. The dequeue loop might finish earlier than other messages emitted. 
+
+```go
+rcv, ack := queue.Dequeue[/* .. */](broker1)
+snd, dlq := queue.Enqueue[/* .. */](broker2)
+
+for msg := range rcv {
+  snd <- // ...
+
+  // The ack would cause sleep of function in serverless.
+  // snd channel might not be flushed before function sleep.
+  // The library does not provide yet ultimate solution.  
+  ack <- msg   
+}
+```
+
+Use one of the following techniques to overcome the issue
+1. Add sleep before ack
+2. Use sync version of sender
 
 ## How To Contribute
 
