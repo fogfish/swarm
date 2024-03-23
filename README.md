@@ -390,9 +390,9 @@ func main() {
  )
 
   broker := eventbridge.NewBroker(stack, jsii.String("Broker"), nil)
-  stack.NewEventBus(nil)
+  broker.NewEventBus(nil)
 
-  stack.NewSink(
+  broker.NewSink(
     &eventbridge.SinkProps{
       Source: []string{"swarm-example-eventbridge"},
       Lambda: &scud.FunctionGoProps{
