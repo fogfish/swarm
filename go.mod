@@ -20,6 +20,7 @@ require (
 	github.com/fogfish/guid/v2 v2.0.4
 	github.com/fogfish/it v1.0.0
 	github.com/fogfish/it/v2 v2.0.1
+	github.com/fogfish/logger/v3 v3.1.0
 	github.com/fogfish/scud v0.6.1
 )
 
