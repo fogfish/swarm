@@ -9,7 +9,6 @@
 package eventsqs
 
 import (
-	"os"
 	"strconv"
 
 	"github.com/aws/aws-cdk-go/awscdk/v2"
@@ -57,120 +56,60 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 //
 //------------------------------------------------------------------------------
 
-type ServerlessStackProps struct {
-	*awscdk.StackProps
-	Version string
-	System  string
+type BrokerProps struct {
+	System string
 }
 
-type ServerlessStack struct {
-	awscdk.Stack
-	acc   int
+type Broker struct {
+	constructs.Construct
 	Queue awssqs.IQueue
+	acc   int
 }
 
-func NewServerlessStack(app awscdk.App, id *string, props *ServerlessStackProps) *ServerlessStack {
-	sid := *id
-	if props.Version != "" {
-		sid = sid + "-" + props.Version
-	}
+func NewBroker(scope constructs.Construct, id *string, props *BrokerProps) *Broker {
+	broker := &Broker{Construct: constructs.NewConstruct(scope, id)}
 
-	stack := &ServerlessStack{
-		Stack: awscdk.NewStack(app, jsii.String(sid), props.StackProps),
-	}
-
-	return stack
+	return broker
 }
 
-func (stack *ServerlessStack) NewQueue(queueName ...string) awssqs.IQueue {
-	name := awscdk.Aws_STACK_NAME()
-	if len(queueName) > 0 {
-		name = &queueName[0]
+func (broker *Broker) NewQueue(props *awssqs.QueueProps) awssqs.IQueue {
+	if props == nil {
+		props = &awssqs.QueueProps{}
 	}
 
-	stack.Queue = awssqs.NewQueue(stack.Stack, jsii.String("Queue"),
-		&awssqs.QueueProps{
-			QueueName:         name,
-			VisibilityTimeout: awscdk.Duration_Minutes(jsii.Number(15.0)),
-		},
-	)
+	if props.QueueName == nil {
+		props.QueueName = awscdk.Aws_STACK_NAME()
+	}
 
-	return stack.Queue
+	if props.VisibilityTimeout == nil {
+		props.VisibilityTimeout = awscdk.Duration_Minutes(jsii.Number(15.0))
+	}
+
+	broker.Queue = awssqs.NewQueue(broker.Construct, jsii.String("Queue"), props)
+
+	return broker.Queue
 }
 
-func (stack *ServerlessStack) AddQueue(queueName string) awssqs.IQueue {
-	stack.Queue = awssqs.Queue_FromQueueAttributes(stack.Stack, jsii.String("Bus"),
+func (broker *Broker) AddQueue(queueName string) awssqs.IQueue {
+	broker.Queue = awssqs.Queue_FromQueueAttributes(broker.Construct, jsii.String("Bus"),
 		&awssqs.QueueAttributes{
 			QueueName: jsii.String(queueName),
 		},
 	)
 
-	return stack.Queue
+	return broker.Queue
 }
 
-func (stack *ServerlessStack) NewSink(props *SinkProps) *Sink {
-	if stack.Queue == nil {
+func (broker *Broker) NewSink(props *SinkProps) *Sink {
+	if broker.Queue == nil {
 		panic("Queue is not defined.")
 	}
 
-	props.Queue = stack.Queue
+	props.Queue = broker.Queue
 
-	stack.acc++
-	name := "Sink" + strconv.Itoa(stack.acc)
-	sink := NewSink(stack.Stack, jsii.String(name), props)
+	broker.acc++
+	name := "Sink" + strconv.Itoa(broker.acc)
+	sink := NewSink(broker.Construct, jsii.String(name), props)
 
 	return sink
-}
-
-//------------------------------------------------------------------------------
-//
-// AWS CDK App Construct
-//
-//------------------------------------------------------------------------------
-
-type ServerlessApp struct {
-	awscdk.App
-}
-
-func NewServerlessApp() *ServerlessApp {
-	app := awscdk.NewApp(nil)
-	return &ServerlessApp{App: app}
-}
-
-func (app *ServerlessApp) NewStack(name string, props ...*awscdk.StackProps) *ServerlessStack {
-	config := &awscdk.StackProps{
-		Env: &awscdk.Environment{
-			Account: jsii.String(os.Getenv("CDK_DEFAULT_ACCOUNT")),
-			Region:  jsii.String(os.Getenv("CDK_DEFAULT_REGION")),
-		},
-	}
-
-	if len(props) == 1 {
-		config = props[0]
-	}
-
-	return NewServerlessStack(app.App, jsii.String(name), &ServerlessStackProps{
-		StackProps: config,
-		Version:    FromContextVsn(app),
-		System:     name,
-	})
-}
-
-func FromContext(app awscdk.App, key string) string {
-	val := app.Node().TryGetContext(jsii.String(key))
-	switch v := val.(type) {
-	case string:
-		return v
-	default:
-		return ""
-	}
-}
-
-func FromContextVsn(app awscdk.App) string {
-	vsn := FromContext(app, "vsn")
-	if vsn == "" {
-		return "latest"
-	}
-
-	return vsn
 }

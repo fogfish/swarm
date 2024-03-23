@@ -9,7 +9,6 @@
 package events3
 
 import (
-	"os"
 	"strconv"
 
 	"github.com/aws/aws-cdk-go/awscdk/v2"
@@ -67,109 +66,46 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 //
 //------------------------------------------------------------------------------
 
-type ServerlessStackProps struct {
-	*awscdk.StackProps
-	Version string
-	System  string
+type BrokerProps struct {
+	System string
 }
 
-type ServerlessStack struct {
-	awscdk.Stack
-	acc    int
+type Broker struct {
+	constructs.Construct
 	Bucket awss3.Bucket
+	acc    int
 }
 
-func NewServerlessStack(app awscdk.App, id *string, props *ServerlessStackProps) *ServerlessStack {
-	sid := *id
-	if props.Version != "" {
-		sid = sid + "-" + props.Version
-	}
+func NewBroker(scope constructs.Construct, id *string, props *BrokerProps) *Broker {
+	broker := &Broker{Construct: constructs.NewConstruct(scope, id)}
 
-	stack := &ServerlessStack{
-		Stack: awscdk.NewStack(app, jsii.String(sid), props.StackProps),
-	}
-
-	return stack
+	return broker
 }
 
-func (stack *ServerlessStack) NewBucket(bucketName ...string) awss3.Bucket {
-	name := awscdk.Aws_STACK_NAME()
-	if len(bucketName) > 0 {
-		name = &bucketName[0]
+func (broker *Broker) NewBucket(props *awss3.BucketProps) awss3.Bucket {
+	if props == nil {
+		props = &awss3.BucketProps{}
 	}
 
-	stack.Bucket = awss3.NewBucket(stack.Stack, jsii.String("Bucket"),
-		&awss3.BucketProps{
-			BucketName: name,
-		},
-	)
+	if props.BucketName == nil {
+		props.BucketName = awscdk.Aws_STACK_NAME()
+	}
 
-	return stack.Bucket
+	broker.Bucket = awss3.NewBucket(broker.Construct, jsii.String("Bucket"), props)
+
+	return broker.Bucket
 }
 
-func (stack *ServerlessStack) NewSink(props *SinkProps) *Sink {
-	if stack.Bucket == nil {
+func (broker *Broker) NewSink(props *SinkProps) *Sink {
+	if broker.Bucket == nil {
 		panic("Bucket is not defined.")
 	}
 
-	props.Bucket = stack.Bucket
+	props.Bucket = broker.Bucket
 
-	stack.acc++
-	name := "Sink" + strconv.Itoa(stack.acc)
-	sink := NewSink(stack.Stack, jsii.String(name), props)
+	broker.acc++
+	name := "Sink" + strconv.Itoa(broker.acc)
+	sink := NewSink(broker.Construct, jsii.String(name), props)
 
 	return sink
-}
-
-//------------------------------------------------------------------------------
-//
-// AWS CDK App Construct
-//
-//------------------------------------------------------------------------------
-
-type ServerlessApp struct {
-	awscdk.App
-}
-
-func NewServerlessApp() *ServerlessApp {
-	app := awscdk.NewApp(nil)
-	return &ServerlessApp{App: app}
-}
-
-func (app *ServerlessApp) NewStack(name string, props ...*awscdk.StackProps) *ServerlessStack {
-	config := &awscdk.StackProps{
-		Env: &awscdk.Environment{
-			Account: jsii.String(os.Getenv("CDK_DEFAULT_ACCOUNT")),
-			Region:  jsii.String(os.Getenv("CDK_DEFAULT_REGION")),
-		},
-	}
-
-	if len(props) == 1 {
-		config = props[0]
-	}
-
-	return NewServerlessStack(app.App, jsii.String(name), &ServerlessStackProps{
-		StackProps: config,
-		Version:    FromContextVsn(app),
-		System:     name,
-	})
-}
-
-func FromContext(app awscdk.App, key string) string {
-	val := app.Node().TryGetContext(jsii.String(key))
-	switch v := val.(type) {
-	case string:
-		return v
-	default:
-		return ""
-	}
-}
-
-func FromContextVsn(app awscdk.App) string {
-	vsn := FromContext(app, "vsn")
-	if vsn == "" {
-		return "latest"
-	}
-
-	return vsn
 }

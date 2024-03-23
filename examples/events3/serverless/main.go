@@ -9,6 +9,8 @@
 package main
 
 import (
+	"os"
+
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awss3"
 	"github.com/aws/jsii-runtime-go"
@@ -17,17 +19,25 @@ import (
 )
 
 func main() {
-	app := events3.NewServerlessApp()
+	app := awscdk.NewApp(nil)
+	stack := awscdk.NewStack(app, jsii.String("swarm-example-events3"),
+		&awscdk.StackProps{
+			Env: &awscdk.Environment{
+				Account: jsii.String(os.Getenv("CDK_DEFAULT_ACCOUNT")),
+				Region:  jsii.String(os.Getenv("CDK_DEFAULT_REGION")),
+			},
+		},
+	)
 
-	stack := app.NewStack("swarm-example-s3")
-	bucket := stack.NewBucket()
+	broker := events3.NewBroker(stack, jsii.String("Broker"), nil)
+	bucket := broker.NewBucket(nil)
 	bucket.AddLifecycleRule(&awss3.LifecycleRule{
 		Id:         jsii.String("Garbage collector"),
 		Enabled:    jsii.Bool(true),
 		Expiration: awscdk.Duration_Days(jsii.Number(1.0)),
 	})
 
-	stack.NewSink(
+	broker.NewSink(
 		&events3.SinkProps{
 			// Note: the default property of EventSource captures OBJECT_CREATED and OBJECT_REMOVED events
 			Lambda: &scud.FunctionGoProps{

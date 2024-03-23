@@ -11,6 +11,7 @@ package eventbridge_test
 import (
 	"testing"
 
+	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/assertions"
 	"github.com/aws/jsii-runtime-go"
 	"github.com/fogfish/scud"
@@ -18,11 +19,13 @@ import (
 )
 
 func TestEventBridgeCDK(t *testing.T) {
-	app := eventbridge.NewServerlessApp()
-	stack := app.NewStack("swarm-example-eventbridge", nil)
-	stack.NewEventBus()
+	app := awscdk.NewApp(nil)
+	stack := awscdk.NewStack(app, jsii.String("text"), &awscdk.StackProps{})
 
-	stack.NewSink(
+	broker := eventbridge.NewBroker(stack, jsii.String("Test"), nil)
+	broker.NewEventBus(nil)
+
+	broker.NewSink(
 		&eventbridge.SinkProps{
 			Source: []string{"swarm-example-eventbridge"},
 			Lambda: &scud.FunctionGoProps{
@@ -40,7 +43,7 @@ func TestEventBridgeCDK(t *testing.T) {
 		jsii.String("Custom::LogRetention"):  jsii.Number(1),
 	}
 
-	template := assertions.Template_FromStack(stack.Stack, nil)
+	template := assertions.Template_FromStack(stack, nil)
 	for key, val := range require {
 		template.ResourceCountIs(key, val)
 	}

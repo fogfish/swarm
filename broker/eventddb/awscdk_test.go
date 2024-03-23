@@ -11,6 +11,7 @@ package eventddb_test
 import (
 	"testing"
 
+	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/assertions"
 	"github.com/aws/jsii-runtime-go"
 	"github.com/fogfish/scud"
@@ -18,11 +19,13 @@ import (
 )
 
 func TestEventDdbCDK(t *testing.T) {
-	app := eventddb.NewServerlessApp()
-	stack := app.NewStack("swarm-example-eventddb", nil)
-	stack.NewGlobalTable()
+	app := awscdk.NewApp(nil)
+	stack := awscdk.NewStack(app, jsii.String("text"), &awscdk.StackProps{})
 
-	stack.NewSink(
+	broker := eventddb.NewBroker(stack, jsii.String("Test"), nil)
+	broker.NewTable(nil)
+
+	broker.NewSink(
 		&eventddb.SinkProps{
 			Lambda: &scud.FunctionGoProps{
 				SourceCodePackage: "github.com/fogfish/swarm",
@@ -39,7 +42,7 @@ func TestEventDdbCDK(t *testing.T) {
 		jsii.String("Custom::LogRetention"):            jsii.Number(1),
 	}
 
-	template := assertions.Template_FromStack(stack.Stack, nil)
+	template := assertions.Template_FromStack(stack, nil)
 	for key, val := range require {
 		template.ResourceCountIs(key, val)
 	}

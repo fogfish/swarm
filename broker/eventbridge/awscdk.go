@@ -9,7 +9,6 @@
 package eventbridge
 
 import (
-	"os"
 	"strconv"
 
 	"github.com/aws/aws-cdk-go/awscdk/v2"
@@ -94,64 +93,56 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 
 //------------------------------------------------------------------------------
 //
-// AWS CDK Stack Construct
+// AWS CDK Broker Construct
 //
 //------------------------------------------------------------------------------
 
-type ServerlessStackProps struct {
-	*awscdk.StackProps
-	Version string
-	System  string
+type BrokerProps struct {
+	System string
 }
 
-type ServerlessStack struct {
-	awscdk.Stack
-	acc int
+type Broker struct {
+	constructs.Construct
 	Bus awsevents.IEventBus
+	acc int
 }
 
-func NewServerlessStack(app awscdk.App, id *string, props *ServerlessStackProps) *ServerlessStack {
-	sid := *id
-	if props.Version != "" {
-		sid = sid + "-" + props.Version
+func NewBroker(scope constructs.Construct, id *string, props *BrokerProps) *Broker {
+	broker := &Broker{Construct: constructs.NewConstruct(scope, id)}
+
+	return broker
+}
+
+func (broker *Broker) NewEventBus(props *awsevents.EventBusProps) awsevents.IEventBus {
+	if props == nil {
+		props = &awsevents.EventBusProps{}
 	}
 
-	stack := &ServerlessStack{
-		Stack: awscdk.NewStack(app, jsii.String(sid), props.StackProps),
+	if props.EventBusName == nil {
+		props.EventBusName = awscdk.Aws_STACK_NAME()
 	}
 
-	return stack
+	broker.Bus = awsevents.NewEventBus(broker.Construct, jsii.String("Bus"), props)
+
+	return broker.Bus
 }
 
-func (stack *ServerlessStack) NewEventBus(eventBusName ...string) awsevents.IEventBus {
-	name := awscdk.Aws_STACK_NAME()
-	if len(eventBusName) > 0 {
-		name = &eventBusName[0]
-	}
+func (broker *Broker) AddEventBus(eventBusName string) awsevents.IEventBus {
+	broker.Bus = awsevents.EventBus_FromEventBusName(broker.Construct, jsii.String("Bus"), jsii.String(eventBusName))
 
-	stack.Bus = awsevents.NewEventBus(stack.Stack, jsii.String("Bus"),
-		&awsevents.EventBusProps{EventBusName: name},
-	)
-
-	return stack.Bus
+	return broker.Bus
 }
 
-func (stack *ServerlessStack) AddEventBus(eventBusName string) awsevents.IEventBus {
-	stack.Bus = awsevents.EventBus_FromEventBusName(stack.Stack, jsii.String("Bus"), jsii.String(eventBusName))
-
-	return stack.Bus
-}
-
-func (stack *ServerlessStack) NewSink(props *SinkProps) *Sink {
-	if stack.Bus == nil {
+func (broker *Broker) NewSink(props *SinkProps) *Sink {
+	if broker.Bus == nil {
 		panic("EventBus is not defined.")
 	}
 
-	props.System = stack.Bus
+	props.System = broker.Bus
 
-	stack.acc++
-	name := "Sink" + strconv.Itoa(stack.acc)
-	sink := NewSink(stack.Stack, jsii.String(name), props)
+	broker.acc++
+	name := "Sink" + strconv.Itoa(broker.acc)
+	sink := NewSink(broker.Construct, jsii.String(name), props)
 
 	return sink
 }
@@ -162,49 +153,49 @@ func (stack *ServerlessStack) NewSink(props *SinkProps) *Sink {
 //
 //------------------------------------------------------------------------------
 
-type ServerlessApp struct {
-	awscdk.App
-}
+// type ServerlessApp struct {
+// 	awscdk.App
+// }
 
-func NewServerlessApp() *ServerlessApp {
-	app := awscdk.NewApp(nil)
-	return &ServerlessApp{App: app}
-}
+// func NewServerlessApp() *ServerlessApp {
+// 	app := awscdk.NewApp(nil)
+// 	return &ServerlessApp{App: app}
+// }
 
-func (app *ServerlessApp) NewStack(name string, props ...*awscdk.StackProps) *ServerlessStack {
-	config := &awscdk.StackProps{
-		Env: &awscdk.Environment{
-			Account: jsii.String(os.Getenv("CDK_DEFAULT_ACCOUNT")),
-			Region:  jsii.String(os.Getenv("CDK_DEFAULT_REGION")),
-		},
-	}
+// func (app *ServerlessApp) NewStack(name string, props ...*awscdk.StackProps) *ServerlessStack {
+// 	config := &awscdk.StackProps{
+// 		Env: &awscdk.Environment{
+// 			Account: jsii.String(os.Getenv("CDK_DEFAULT_ACCOUNT")),
+// 			Region:  jsii.String(os.Getenv("CDK_DEFAULT_REGION")),
+// 		},
+// 	}
 
-	if len(props) == 1 {
-		config = props[0]
-	}
+// 	if len(props) == 1 {
+// 		config = props[0]
+// 	}
 
-	return NewServerlessStack(app.App, jsii.String(name), &ServerlessStackProps{
-		StackProps: config,
-		Version:    FromContextVsn(app),
-		System:     name,
-	})
-}
+// 	return NewServerlessStack(app.App, jsii.String(name), &ServerlessStackProps{
+// 		StackProps: config,
+// 		Version:    FromContextVsn(app),
+// 		System:     name,
+// 	})
+// }
 
-func FromContext(app awscdk.App, key string) string {
-	val := app.Node().TryGetContext(jsii.String(key))
-	switch v := val.(type) {
-	case string:
-		return v
-	default:
-		return ""
-	}
-}
+// func FromContext(app awscdk.App, key string) string {
+// 	val := app.Node().TryGetContext(jsii.String(key))
+// 	switch v := val.(type) {
+// 	case string:
+// 		return v
+// 	default:
+// 		return ""
+// 	}
+// }
 
-func FromContextVsn(app awscdk.App) string {
-	vsn := FromContext(app, "vsn")
-	if vsn == "" {
-		return "latest"
-	}
+// func FromContextVsn(app awscdk.App) string {
+// 	vsn := FromContext(app, "vsn")
+// 	if vsn == "" {
+// 		return "latest"
+// 	}
 
-	return vsn
-}
+// 	return vsn
+// }

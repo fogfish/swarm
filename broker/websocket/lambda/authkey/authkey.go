@@ -30,39 +30,28 @@ var (
 func main() {
 	lambda.Start(
 		func(evt events.APIGatewayV2CustomAuthorizerV1Request) (events.APIGatewayCustomAuthorizerResponse, error) {
-			h, has := evt.Headers["Authorization"]
+			key, has := evt.QueryStringParameters["apikey"]
 			if !has {
 				return none, errForbidden
 			}
 
-			switch strings.ToLower(os.Getenv("CONFIG_SWARM_WS_AUTHORIZER")) {
-			case "basic":
-				if principal, context, err := basic(h); err == nil {
-					return accessPolicy(principal, evt.MethodArn, context), nil
-				}
+			if principal, context, err := validate(key); err == nil {
+				return accessPolicy(principal, evt.MethodArn, context), nil
 			}
-
 			return none, errForbidden
+
 		},
 	)
 }
 
-func basic(auth string) (string, map[string]any, error) {
-	const prefix = "Basic "
-	if len(auth) < len(prefix) || !strings.HasPrefix(auth, prefix) {
-		// slog.Error("Invalid HTTP Basic authentication")
-		return "", nil, errForbidden
-	}
-
-	c, err := base64.StdEncoding.DecodeString(auth[len(prefix):])
+func validate(apikey string) (string, map[string]any, error) {
+	c, err := base64.RawStdEncoding.DecodeString(apikey)
 	if err != nil {
-		// slog.Error("Invalid base64 encoding", "err", err)
 		return "", nil, errForbidden
 	}
 
 	access, secret, ok := strings.Cut(string(c), ":")
 	if !ok {
-		// slog.Error("Invalid credentials")
 		return "", nil, errForbidden
 	}
 

@@ -9,8 +9,8 @@
 package websocket
 
 import (
-	"os"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsapigatewayv2"
@@ -39,7 +39,7 @@ type Sink struct {
 type SinkProps struct {
 	Route   string
 	Lambda  *scud.FunctionGoProps
-	gateway awsapigatewayv2.WebSocketApi
+	Gateway awsapigatewayv2.WebSocketApi
 }
 
 func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
@@ -58,7 +58,7 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	}
 
 	if _, has := (*props.Lambda.FunctionProps.Environment)["CONFIG_SWARM_WS_URL"]; !has {
-		url := aws.ToString(props.gateway.ApiEndpoint()) + "/" + stage
+		url := aws.ToString(props.Gateway.ApiEndpoint()) + "/" + stage
 		(*props.Lambda.FunctionProps.Environment)["CONFIG_SWARM_WS_URL"] = aws.String(url)
 	}
 
@@ -66,13 +66,13 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 
 	it := integrations.NewWebSocketLambdaIntegration(jsii.String(props.Route), sink.Handler)
 
-	props.gateway.AddRoute(jsii.String(props.Route),
+	props.Gateway.AddRoute(jsii.String(props.Route),
 		&awsapigatewayv2.WebSocketRouteOptions{
 			Integration: it,
 		},
 	)
 
-	props.gateway.GrantManageConnections(sink.Handler)
+	props.Gateway.GrantManageConnections(sink.Handler)
 
 	return sink
 }
@@ -83,40 +83,95 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 //
 //------------------------------------------------------------------------------
 
-type ServerlessStackProps struct {
-	*awscdk.StackProps
-	Version string
-	System  string
+type BrokerProps struct {
+	System string
 }
 
-type ServerlessStack struct {
-	awscdk.Stack
-	acc     int
-	Gateway awsapigatewayv2.WebSocketApi
+type Broker struct {
+	constructs.Construct
+	Gateway    awsapigatewayv2.WebSocketApi
+	Authorizer awsapigatewayv2.IWebSocketRouteAuthorizer
+	acc        int
 }
 
-func NewServerlessStack(app awscdk.App, id *string, props *ServerlessStackProps) *ServerlessStack {
-	sid := *id
-	if props.Version != "" {
-		sid = sid + "-" + props.Version
+func NewBroker(scope constructs.Construct, id *string, props *BrokerProps) *Broker {
+	broker := &Broker{Construct: constructs.NewConstruct(scope, id)}
+
+	return broker
+}
+
+func (broker *Broker) NewAuthorizerApiKey(access, secret string) awsapigatewayv2.IWebSocketRouteAuthorizer {
+	if broker.Gateway != nil {
+		panic("Authorizer MUST be defined before the gateway is instantiated.")
 	}
 
-	stack := &ServerlessStack{
-		Stack: awscdk.NewStack(app, jsii.String(sid), props.StackProps),
+	handler := scud.NewFunctionGo(broker.Construct, jsii.String("Authorizer"),
+		&scud.FunctionGoProps{
+			SourceCodePackage: "github.com/fogfish/swarm",
+			SourceCodeLambda:  "broker/websocket/lambda/authkey",
+			FunctionProps: &awslambda.FunctionProps{
+				Environment: &map[string]*string{
+					"CONFIG_SWARM_WS_AUTHORIZER_ACCESS": jsii.String(secret),
+					"CONFIG_SWARM_WS_AUTHORIZER_SECRET": jsii.String(secret),
+				},
+			},
+		},
+	)
+
+	broker.Authorizer = authorizers.NewWebSocketLambdaAuthorizer(
+		jsii.String("default"),
+		handler,
+		&authorizers.WebSocketLambdaAuthorizerProps{
+			IdentitySource: jsii.Strings("route.request.querystring.apikey"),
+		},
+	)
+
+	return broker.Authorizer
+}
+
+func (broker *Broker) NewAuthorizerJWT(issuer, audience string) awsapigatewayv2.IWebSocketRouteAuthorizer {
+	if broker.Gateway != nil {
+		panic("Authorizer MUST be defined before the gateway is instantiated.")
 	}
 
-	return stack
+	if !strings.HasPrefix(issuer, "https://") {
+		panic("Issuer URL MUST start with https://")
+	}
+
+	if !strings.HasSuffix(issuer, "/") {
+		issuer += "/"
+	}
+
+	handler := scud.NewFunctionGo(broker.Construct, jsii.String("Authorizer"),
+		&scud.FunctionGoProps{
+			SourceCodePackage: "github.com/fogfish/swarm",
+			SourceCodeLambda:  "broker/websocket/lambda/authjwt",
+			FunctionProps: &awslambda.FunctionProps{
+				Environment: &map[string]*string{
+					"CONFIG_SWARM_WS_AUTHORIZER_ISS": jsii.String(issuer),
+					"CONFIG_SWARM_WS_AUTHORIZER_AUD": jsii.String(audience),
+				},
+			},
+		},
+	)
+
+	broker.Authorizer = authorizers.NewWebSocketLambdaAuthorizer(
+		jsii.String("default"),
+		handler,
+		&authorizers.WebSocketLambdaAuthorizerProps{
+			IdentitySource: jsii.Strings("route.request.querystring.token"),
+		},
+	)
+
+	return broker.Authorizer
 }
 
 type WebSocketApiProps struct {
 	*awsapigatewayv2.WebSocketApiProps
-	Throttle   *awsapigatewayv2.ThrottleSettings
-	Authorizer string
-	Access     string
-	Secret     string
+	Throttle *awsapigatewayv2.ThrottleSettings
 }
 
-func (stack *ServerlessStack) NewGateway(props *WebSocketApiProps) awsapigatewayv2.WebSocketApi {
+func (broker *Broker) NewGateway(props *WebSocketApiProps) awsapigatewayv2.WebSocketApi {
 	if props.WebSocketApiProps == nil {
 		props.WebSocketApiProps = &awsapigatewayv2.WebSocketApiProps{}
 	}
@@ -125,22 +180,8 @@ func (stack *ServerlessStack) NewGateway(props *WebSocketApiProps) awsapigateway
 		props.ApiName = awscdk.Aws_STACK_NAME()
 	}
 
-	if props.WebSocketApiProps.ConnectRouteOptions == nil && props.Authorizer != "" {
-		authorizer := scud.NewFunctionGo(stack.Stack, jsii.String("Authorizer"),
-			&scud.FunctionGoProps{
-				SourceCodePackage: "github.com/fogfish/swarm",
-				SourceCodeLambda:  "broker/websocket/lambda/authorizer",
-				FunctionProps: &awslambda.FunctionProps{
-					Environment: &map[string]*string{
-						"CONFIG_SWARM_WS_AUTHORIZER":        jsii.String(props.Authorizer),
-						"CONFIG_SWARM_WS_AUTHORIZER_ACCESS": jsii.String(props.Access),
-						"CONFIG_SWARM_WS_AUTHORIZER_SECRET": jsii.String(props.Secret),
-					},
-				},
-			},
-		)
-
-		connector := scud.NewFunctionGo(stack.Stack, jsii.String("Connector"),
+	if props.WebSocketApiProps.ConnectRouteOptions == nil && broker.Authorizer != nil {
+		connector := scud.NewFunctionGo(broker.Construct, jsii.String("Connector"),
 			&scud.FunctionGoProps{
 				SourceCodePackage: "github.com/fogfish/swarm",
 				SourceCodeLambda:  "broker/websocket/lambda/connector",
@@ -148,42 +189,35 @@ func (stack *ServerlessStack) NewGateway(props *WebSocketApiProps) awsapigateway
 		)
 
 		props.WebSocketApiProps.ConnectRouteOptions = &awsapigatewayv2.WebSocketRouteOptions{
-			Integration: integrations.NewWebSocketLambdaIntegration(
-				jsii.String("defaultConnector"),
-				connector,
-			),
-			Authorizer: authorizers.NewWebSocketLambdaAuthorizer(
-				jsii.String("default"),
-				authorizer,
-				&authorizers.WebSocketLambdaAuthorizerProps{},
-			),
+			Integration: integrations.NewWebSocketLambdaIntegration(jsii.String("defcon"), connector),
+			Authorizer:  broker.Authorizer,
 		}
 	}
 
-	stack.Gateway = awsapigatewayv2.NewWebSocketApi(stack.Stack, jsii.String("Gateway"), props.WebSocketApiProps)
+	broker.Gateway = awsapigatewayv2.NewWebSocketApi(broker.Construct, jsii.String("Gateway"), props.WebSocketApiProps)
 
-	awsapigatewayv2.NewWebSocketStage(stack.Stack, jsii.String("Stage"),
+	awsapigatewayv2.NewWebSocketStage(broker.Construct, jsii.String("Stage"),
 		&awsapigatewayv2.WebSocketStageProps{
 			AutoDeploy:   jsii.Bool(true),
 			StageName:    jsii.String(stage),
 			Throttle:     props.Throttle,
-			WebSocketApi: stack.Gateway,
+			WebSocketApi: broker.Gateway,
 		},
 	)
 
-	return stack.Gateway
+	return broker.Gateway
 }
 
-func (stack *ServerlessStack) NewSink(props *SinkProps) *Sink {
-	if stack.Gateway == nil {
+func (broker *Broker) NewSink(props *SinkProps) *Sink {
+	if broker.Gateway == nil {
 		panic("Gatewaye is not defined.")
 	}
 
-	props.gateway = stack.Gateway
+	props.Gateway = broker.Gateway
 
-	stack.acc++
-	name := "Sink" + strconv.Itoa(stack.acc)
-	sink := NewSink(stack.Stack, jsii.String(name), props)
+	broker.acc++
+	name := "Sink" + strconv.Itoa(broker.acc)
+	sink := NewSink(broker.Construct, jsii.String(name), props)
 
 	return sink
 }
@@ -194,49 +228,49 @@ func (stack *ServerlessStack) NewSink(props *SinkProps) *Sink {
 //
 //------------------------------------------------------------------------------
 
-type ServerlessApp struct {
-	awscdk.App
-}
+// type ServerlessApp struct {
+// 	awscdk.App
+// }
 
-func NewServerlessApp() *ServerlessApp {
-	app := awscdk.NewApp(nil)
-	return &ServerlessApp{App: app}
-}
+// func NewServerlessApp() *ServerlessApp {
+// 	app := awscdk.NewApp(nil)
+// 	return &ServerlessApp{App: app}
+// }
 
-func (app *ServerlessApp) NewStack(name string, props ...*awscdk.StackProps) *ServerlessStack {
-	config := &awscdk.StackProps{
-		Env: &awscdk.Environment{
-			Account: jsii.String(os.Getenv("CDK_DEFAULT_ACCOUNT")),
-			Region:  jsii.String(os.Getenv("CDK_DEFAULT_REGION")),
-		},
-	}
+// func (app *ServerlessApp) NewStack(name string, props ...*awscdk.StackProps) *ServerlessStack {
+// 	config := &awscdk.StackProps{
+// 		Env: &awscdk.Environment{
+// 			Account: jsii.String(os.Getenv("CDK_DEFAULT_ACCOUNT")),
+// 			Region:  jsii.String(os.Getenv("CDK_DEFAULT_REGION")),
+// 		},
+// 	}
 
-	if len(props) == 1 {
-		config = props[0]
-	}
+// 	if len(props) == 1 {
+// 		config = props[0]
+// 	}
 
-	return NewServerlessStack(app.App, jsii.String(name), &ServerlessStackProps{
-		StackProps: config,
-		Version:    FromContextVsn(app),
-		System:     name,
-	})
-}
+// 	return NewServerlessStack(app.App, jsii.String(name), &ServerlessStackProps{
+// 		StackProps: config,
+// 		Version:    FromContextVsn(app),
+// 		System:     name,
+// 	})
+// }
 
-func FromContext(app awscdk.App, key string) string {
-	val := app.Node().TryGetContext(jsii.String(key))
-	switch v := val.(type) {
-	case string:
-		return v
-	default:
-		return ""
-	}
-}
+// func FromContext(app awscdk.App, key string) string {
+// 	val := app.Node().TryGetContext(jsii.String(key))
+// 	switch v := val.(type) {
+// 	case string:
+// 		return v
+// 	default:
+// 		return ""
+// 	}
+// }
 
-func FromContextVsn(app awscdk.App) string {
-	vsn := FromContext(app, "vsn")
-	if vsn == "" {
-		return "latest"
-	}
+// func FromContextVsn(app awscdk.App) string {
+// 	vsn := FromContext(app, "vsn")
+// 	if vsn == "" {
+// 		return "latest"
+// 	}
 
-	return vsn
-}
+// 	return vsn
+// }

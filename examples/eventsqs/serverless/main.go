@@ -9,17 +9,29 @@
 package main
 
 import (
+	"os"
+
+	"github.com/aws/aws-cdk-go/awscdk/v2"
+	"github.com/aws/jsii-runtime-go"
 	"github.com/fogfish/scud"
 	"github.com/fogfish/swarm/broker/eventsqs"
 )
 
 func main() {
-	app := eventsqs.NewServerlessApp()
+	app := awscdk.NewApp(nil)
+	stack := awscdk.NewStack(app, jsii.String("swarm-example-eventsqs"),
+		&awscdk.StackProps{
+			Env: &awscdk.Environment{
+				Account: jsii.String(os.Getenv("CDK_DEFAULT_ACCOUNT")),
+				Region:  jsii.String(os.Getenv("CDK_DEFAULT_REGION")),
+			},
+		},
+	)
 
-	stack := app.NewStack("swarm-example-sqs")
-	stack.NewQueue()
+	broker := eventsqs.NewBroker(stack, jsii.String("Broker"), nil)
+	broker.NewQueue(nil)
 
-	stack.NewSink(
+	broker.NewSink(
 		&eventsqs.SinkProps{
 			Lambda: &scud.FunctionGoProps{
 				SourceCodePackage: "github.com/fogfish/swarm",

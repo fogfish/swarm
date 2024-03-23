@@ -9,17 +9,29 @@
 package main
 
 import (
+	"os"
+
+	"github.com/aws/aws-cdk-go/awscdk/v2"
+	"github.com/aws/jsii-runtime-go"
 	"github.com/fogfish/scud"
 	"github.com/fogfish/swarm/broker/eventbridge"
 )
 
 func main() {
-	app := eventbridge.NewServerlessApp()
+	app := awscdk.NewApp(nil)
+	stack := awscdk.NewStack(app, jsii.String("swarm-example-eventbridge"),
+		&awscdk.StackProps{
+			Env: &awscdk.Environment{
+				Account: jsii.String(os.Getenv("CDK_DEFAULT_ACCOUNT")),
+				Region:  jsii.String(os.Getenv("CDK_DEFAULT_REGION")),
+			},
+		},
+	)
 
-	stack := app.NewStack("swarm-example-eventbridge")
-	stack.NewEventBus()
+	broker := eventbridge.NewBroker(stack, jsii.String("Broker"), nil)
+	broker.NewEventBus(nil)
 
-	stack.NewSink(
+	broker.NewSink(
 		&eventbridge.SinkProps{
 			Source: []string{"swarm-example-eventbridge"},
 			Lambda: &scud.FunctionGoProps{
