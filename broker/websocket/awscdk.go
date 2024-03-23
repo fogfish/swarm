@@ -100,19 +100,28 @@ func NewBroker(scope constructs.Construct, id *string, props *BrokerProps) *Brok
 	return broker
 }
 
-func (broker *Broker) NewAuthorizerApiKey(access, secret string) awsapigatewayv2.IWebSocketRouteAuthorizer {
+type AuthorizerApiKeyProps struct {
+	Access string
+	Secret string
+}
+
+func (broker *Broker) NewAuthorizerApiKey(props *AuthorizerApiKeyProps) awsapigatewayv2.IWebSocketRouteAuthorizer {
 	if broker.Gateway != nil {
 		panic("Authorizer MUST be defined before the gateway is instantiated.")
+	}
+
+	if props.Access == "" || props.Secret == "" {
+		panic("Authorizer MUST define access and secret api keys")
 	}
 
 	handler := scud.NewFunctionGo(broker.Construct, jsii.String("Authorizer"),
 		&scud.FunctionGoProps{
 			SourceCodePackage: "github.com/fogfish/swarm",
-			SourceCodeLambda:  "broker/websocket/lambda/authkey",
+			SourceCodeLambda:  "broker/websocket/lambda/auth",
 			FunctionProps: &awslambda.FunctionProps{
 				Environment: &map[string]*string{
-					"CONFIG_SWARM_WS_AUTHORIZER_ACCESS": jsii.String(secret),
-					"CONFIG_SWARM_WS_AUTHORIZER_SECRET": jsii.String(secret),
+					"CONFIG_SWARM_WS_AUTHORIZER_ACCESS": jsii.String(props.Access),
+					"CONFIG_SWARM_WS_AUTHORIZER_SECRET": jsii.String(props.Secret),
 				},
 			},
 		},
@@ -129,27 +138,32 @@ func (broker *Broker) NewAuthorizerApiKey(access, secret string) awsapigatewayv2
 	return broker.Authorizer
 }
 
-func (broker *Broker) NewAuthorizerJWT(issuer, audience string) awsapigatewayv2.IWebSocketRouteAuthorizer {
+type AuthorizerJwtProps struct {
+	Issuer   string
+	Audience string
+}
+
+func (broker *Broker) NewAuthorizerJwt(props *AuthorizerJwtProps) awsapigatewayv2.IWebSocketRouteAuthorizer {
 	if broker.Gateway != nil {
 		panic("Authorizer MUST be defined before the gateway is instantiated.")
 	}
 
-	if !strings.HasPrefix(issuer, "https://") {
+	if !strings.HasPrefix(props.Issuer, "https://") {
 		panic("Issuer URL MUST start with https://")
 	}
 
-	if !strings.HasSuffix(issuer, "/") {
-		issuer += "/"
+	if !strings.HasSuffix(props.Issuer, "/") {
+		props.Issuer += "/"
 	}
 
 	handler := scud.NewFunctionGo(broker.Construct, jsii.String("Authorizer"),
 		&scud.FunctionGoProps{
 			SourceCodePackage: "github.com/fogfish/swarm",
-			SourceCodeLambda:  "broker/websocket/lambda/authjwt",
+			SourceCodeLambda:  "broker/websocket/lambda/auth",
 			FunctionProps: &awslambda.FunctionProps{
 				Environment: &map[string]*string{
-					"CONFIG_SWARM_WS_AUTHORIZER_ISS": jsii.String(issuer),
-					"CONFIG_SWARM_WS_AUTHORIZER_AUD": jsii.String(audience),
+					"CONFIG_SWARM_WS_AUTHORIZER_ISS": jsii.String(props.Issuer),
+					"CONFIG_SWARM_WS_AUTHORIZER_AUD": jsii.String(props.Audience),
 				},
 			},
 		},
@@ -160,6 +174,61 @@ func (broker *Broker) NewAuthorizerJWT(issuer, audience string) awsapigatewayv2.
 		handler,
 		&authorizers.WebSocketLambdaAuthorizerProps{
 			IdentitySource: jsii.Strings("route.request.querystring.token"),
+		},
+	)
+
+	return broker.Authorizer
+}
+
+type AuthorizerUniversalProps struct {
+	AuthorizerApiKey *AuthorizerApiKeyProps
+	AuthorizerJwt    *AuthorizerJwtProps
+}
+
+func (broker *Broker) NewAuthorizerUniversal(props *AuthorizerUniversalProps) awsapigatewayv2.IWebSocketRouteAuthorizer {
+	if broker.Gateway != nil {
+		panic("Authorizer MUST be defined before the gateway is instantiated.")
+	}
+
+	if props.AuthorizerApiKey == nil || props.AuthorizerJwt == nil {
+		panic("Universal Authorizer requires definition of all members")
+	}
+
+	if props.AuthorizerApiKey.Access == "" || props.AuthorizerApiKey.Secret == "" {
+		panic("Authorizer MUST define access and secret api keys")
+	}
+
+	if !strings.HasPrefix(props.AuthorizerJwt.Issuer, "https://") {
+		panic("Issuer URL MUST start with https://")
+	}
+
+	if !strings.HasSuffix(props.AuthorizerJwt.Issuer, "/") {
+		props.AuthorizerJwt.Issuer += "/"
+	}
+
+	handler := scud.NewFunctionGo(broker.Construct, jsii.String("Authorizer"),
+		&scud.FunctionGoProps{
+			SourceCodePackage: "github.com/fogfish/swarm",
+			SourceCodeLambda:  "broker/websocket/lambda/auth",
+			FunctionProps: &awslambda.FunctionProps{
+				Environment: &map[string]*string{
+					"CONFIG_SWARM_WS_AUTHORIZER_ACCESS": jsii.String(props.AuthorizerApiKey.Access),
+					"CONFIG_SWARM_WS_AUTHORIZER_SECRET": jsii.String(props.AuthorizerApiKey.Secret),
+					"CONFIG_SWARM_WS_AUTHORIZER_ISS":    jsii.String(props.AuthorizerJwt.Issuer),
+					"CONFIG_SWARM_WS_AUTHORIZER_AUD":    jsii.String(props.AuthorizerJwt.Audience),
+				},
+			},
+		},
+	)
+
+	broker.Authorizer = authorizers.NewWebSocketLambdaAuthorizer(
+		jsii.String("default"),
+		handler,
+		&authorizers.WebSocketLambdaAuthorizerProps{
+			IdentitySource: jsii.Strings(
+				"route.request.querystring.token",
+				"route.request.querystring.apikey",
+			),
 		},
 	)
 

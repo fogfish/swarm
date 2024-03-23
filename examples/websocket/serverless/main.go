@@ -30,7 +30,12 @@ func main() {
 	)
 
 	broker := websocket.NewBroker(stack, jsii.String("Broker"), nil)
-	broker.NewAuthorizerApiKey("test", "test")
+	broker.NewAuthorizerApiKey(
+		&websocket.AuthorizerApiKeyProps{
+			Access: "test",
+			Secret: "test",
+		},
+	)
 
 	broker.NewGateway(&websocket.WebSocketApiProps{
 		Throttle: &awsapigatewayv2.ThrottleSettings{
