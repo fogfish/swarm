@@ -24,12 +24,12 @@ import (
 )
 
 // WebSocket declares the subset of interface from AWS SDK used by the lib.
-type WebSocket interface {
+type Gateway interface {
 	PostToConnection(ctx context.Context, params *apigatewaymanagementapi.PostToConnectionInput, optFns ...func(*apigatewaymanagementapi.Options)) (*apigatewaymanagementapi.PostToConnectionOutput, error)
 }
 
 type Client struct {
-	service WebSocket
+	service Gateway
 	config  swarm.Config
 }
 
@@ -76,9 +76,9 @@ func NewWebSocket(endpoint string, opts ...swarm.Option) (*Client, error) {
 	}, nil
 }
 
-func newService(endpoint string, conf *swarm.Config) (WebSocket, error) {
+func newService(endpoint string, conf *swarm.Config) (Gateway, error) {
 	if conf.Service != nil {
-		service, ok := conf.Service.(WebSocket)
+		service, ok := conf.Service.(Gateway)
 		if ok {
 			return service, nil
 		}

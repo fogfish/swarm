@@ -3,6 +3,7 @@ module github.com/fogfish/swarm
 go 1.21
 
 require (
+	github.com/auth0/go-jwt-middleware/v2 v2.2.1
 	github.com/aws/aws-cdk-go/awscdk/v2 v2.132.0
 	github.com/aws/aws-lambda-go v1.46.0
 	github.com/aws/aws-sdk-go-v2 v1.25.3
@@ -44,8 +45,11 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/yuin/goldmark v1.5.3 // indirect
+	golang.org/x/crypto v0.17.0 // indirect
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
 	golang.org/x/mod v0.14.0 // indirect
-	golang.org/x/sys v0.14.0 // indirect
+	golang.org/x/sync v0.6.0 // indirect
+	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/tools v0.17.0 // indirect
+	gopkg.in/go-jose/go-jose.v2 v2.6.2 // indirect
 )

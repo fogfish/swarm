@@ -9,6 +9,9 @@
 package main
 
 import (
+	"os"
+
+	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsapigatewayv2"
 	"github.com/aws/jsii-runtime-go"
 	"github.com/fogfish/scud"
@@ -16,20 +19,27 @@ import (
 )
 
 func main() {
-	app := websocket.NewServerlessApp()
+	app := awscdk.NewApp(nil)
+	stack := awscdk.NewStack(app, jsii.String("swarm-example-websocket"),
+		&awscdk.StackProps{
+			Env: &awscdk.Environment{
+				Account: jsii.String(os.Getenv("CDK_DEFAULT_ACCOUNT")),
+				Region:  jsii.String(os.Getenv("CDK_DEFAULT_REGION")),
+			},
+		},
+	)
 
-	stack := app.NewStack("swarm-example-websocket")
-	stack.NewGateway(&websocket.WebSocketApiProps{
+	broker := websocket.NewBroker(stack, jsii.String("Broker"), nil)
+	broker.NewAuthorizerApiKey("test", "test")
+
+	broker.NewGateway(&websocket.WebSocketApiProps{
 		Throttle: &awsapigatewayv2.ThrottleSettings{
 			BurstLimit: jsii.Number(1.0),
 			RateLimit:  jsii.Number(1.0),
 		},
-		Authorizer: "Basic",
-		Access:     "test",
-		Secret:     "test",
 	})
 
-	stack.NewSink(
+	broker.NewSink(
 		&websocket.SinkProps{
 			Route: "User",
 			Lambda: &scud.FunctionGoProps{

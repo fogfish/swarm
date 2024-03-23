@@ -9,9 +9,7 @@
 package eventddb
 
 import (
-	"os"
 	"strconv"
-	"strings"
 
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsdynamodb"
@@ -60,172 +58,120 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 
 //------------------------------------------------------------------------------
 //
-// AWS CDK Stack Construct
+// AWS CDK Broker Construct
 //
 //------------------------------------------------------------------------------
 
-type ServerlessStackProps struct {
-	*awscdk.StackProps
-	Version string
-	System  string
+type BrokerProps struct {
+	System string
 }
 
-type ServerlessStack struct {
-	awscdk.Stack
-	acc           int
-	removalPolicy awscdk.RemovalPolicy
-	Table         awsdynamodb.ITable
+type Broker struct {
+	constructs.Construct
+	Table awsdynamodb.ITable
+	acc   int
 }
 
-func NewServerlessStack(app awscdk.App, id *string, props *ServerlessStackProps) *ServerlessStack {
-	sid := *id
-	if props.Version != "" {
-		sid = sid + "-" + props.Version
-	}
+func NewBroker(scope constructs.Construct, id *string, props *BrokerProps) *Broker {
+	broker := &Broker{Construct: constructs.NewConstruct(scope, id)}
 
-	stack := &ServerlessStack{
-		Stack:         awscdk.NewStack(app, jsii.String(sid), props.StackProps),
-		removalPolicy: awscdk.RemovalPolicy_RETAIN,
-	}
-
-	if strings.HasPrefix(props.Version, "pr") {
-		stack.removalPolicy = awscdk.RemovalPolicy_DESTROY
-	}
-
-	return stack
+	return broker
 }
 
-func (stack *ServerlessStack) NewTable(tableName ...string) awsdynamodb.ITable {
-	name := awscdk.Aws_STACK_NAME()
-	if len(tableName) > 0 {
-		name = &tableName[0]
+// func (broker *Broker) NewTable(props *awsdynamodb.TableProps) awsdynamodb.ITable {
+// 	if props == nil {
+// 		props = &awsdynamodb.TableProps{}
+// 	}
+
+// 	if props.TableName == nil {
+// 		props.TableName = awscdk.Aws_STACK_NAME()
+// 	}
+
+// 	if props.PartitionKey == nil && props.SortKey == nil {
+// 		props.PartitionKey = &awsdynamodb.Attribute{
+// 			Type: awsdynamodb.AttributeType_STRING,
+// 			Name: jsii.String("prefix"),
+// 		}
+
+// 		props.SortKey = &awsdynamodb.Attribute{
+// 			Type: awsdynamodb.AttributeType_STRING,
+// 			Name: jsii.String("suffix"),
+// 		}
+// 	}
+
+// 	if props.BillingMode == "" {
+// 		props.BillingMode = awsdynamodb.BillingMode_PAY_PER_REQUEST
+// 	}
+
+// 	if props.Stream == "" {
+// 		props.Stream = awsdynamodb.StreamViewType_NEW_IMAGE
+// 	}
+
+// 	broker.Table = awsdynamodb.NewTable(broker.Construct, jsii.String("Table"), props)
+
+// 	return broker.Table
+// }
+
+// func (broker *Broker) AddTable(tableName string) awsdynamodb.ITable {
+// 	broker.Table = awsdynamodb.Table_FromTableName(broker.Construct, jsii.String("Table"),
+// 		jsii.String(tableName),
+// 	)
+
+// 	return broker.Table
+// }
+
+func (broker *Broker) NewTable(props *awsdynamodb.TablePropsV2) awsdynamodb.ITable {
+	if props == nil {
+		props = &awsdynamodb.TablePropsV2{}
 	}
 
-	stack.Table = awsdynamodb.NewTable(stack.Stack, jsii.String("Table"),
-		&awsdynamodb.TableProps{
-			TableName: name,
-			PartitionKey: &awsdynamodb.Attribute{
-				Type: awsdynamodb.AttributeType_STRING,
-				Name: jsii.String("prefix"),
-			},
-			SortKey: &awsdynamodb.Attribute{
-				Type: awsdynamodb.AttributeType_STRING,
-				Name: jsii.String("suffix"),
-			},
-			BillingMode:   awsdynamodb.BillingMode_PAY_PER_REQUEST,
-			RemovalPolicy: stack.removalPolicy,
-			Stream:        awsdynamodb.StreamViewType_NEW_IMAGE,
-		},
-	)
+	if props.TableName == nil {
+		props.TableName = awscdk.Aws_STACK_NAME()
+	}
 
-	return stack.Table
+	if props.PartitionKey == nil && props.SortKey == nil {
+		props.PartitionKey = &awsdynamodb.Attribute{
+			Type: awsdynamodb.AttributeType_STRING,
+			Name: jsii.String("prefix"),
+		}
+
+		props.SortKey = &awsdynamodb.Attribute{
+			Type: awsdynamodb.AttributeType_STRING,
+			Name: jsii.String("suffix"),
+		}
+	}
+
+	if props.Billing == nil {
+		props.Billing = awsdynamodb.Billing_OnDemand()
+	}
+
+	if props.DynamoStream == "" {
+		props.DynamoStream = awsdynamodb.StreamViewType_NEW_IMAGE
+	}
+
+	broker.Table = awsdynamodb.NewTableV2(broker.Construct, jsii.String("Table"), props)
+
+	return broker.Table
 }
 
-func (stack *ServerlessStack) AddTable(tableName string) awsdynamodb.ITable {
-	stack.Table = awsdynamodb.Table_FromTableName(stack.Stack, jsii.String("Table"),
+func (broker *Broker) AddTable(tableName string) awsdynamodb.ITable {
+	broker.Table = awsdynamodb.TableV2_FromTableName(broker.Construct, jsii.String("Table"),
 		jsii.String(tableName),
 	)
 
-	return stack.Table
+	return broker.Table
 }
 
-func (stack *ServerlessStack) NewGlobalTable(tableName ...string) awsdynamodb.ITable {
-	name := awscdk.Aws_STACK_NAME()
-	if len(tableName) > 0 {
-		name = &tableName[0]
-	}
-
-	stack.Table = awsdynamodb.NewTableV2(stack.Stack, jsii.String("Table"),
-		&awsdynamodb.TablePropsV2{
-			TableName: name,
-			PartitionKey: &awsdynamodb.Attribute{
-				Type: awsdynamodb.AttributeType_STRING,
-				Name: jsii.String("prefix"),
-			},
-			SortKey: &awsdynamodb.Attribute{
-				Type: awsdynamodb.AttributeType_STRING,
-				Name: jsii.String("suffix"),
-			},
-			Billing:       awsdynamodb.Billing_OnDemand(),
-			RemovalPolicy: stack.removalPolicy,
-			DynamoStream:  awsdynamodb.StreamViewType_NEW_IMAGE,
-		},
-	)
-
-	return stack.Table
-}
-
-func (stack *ServerlessStack) AddGlobalTable(tableName string) awsdynamodb.ITable {
-	stack.Table = awsdynamodb.TableV2_FromTableName(stack.Stack, jsii.String("Table"),
-		jsii.String(tableName),
-	)
-
-	return stack.Table
-}
-
-func (stack *ServerlessStack) NewSink(props *SinkProps) *Sink {
-	if stack.Table == nil {
+func (broker *Broker) NewSink(props *SinkProps) *Sink {
+	if broker.Table == nil {
 		panic("Table is not defined.")
 	}
 
-	props.Table = stack.Table
+	props.Table = broker.Table
 
-	stack.acc++
-	name := "Sink" + strconv.Itoa(stack.acc)
-	sink := NewSink(stack.Stack, jsii.String(name), props)
+	broker.acc++
+	name := "Sink" + strconv.Itoa(broker.acc)
+	sink := NewSink(broker.Construct, jsii.String(name), props)
 
 	return sink
-}
-
-//------------------------------------------------------------------------------
-//
-// AWS CDK App Construct
-//
-//------------------------------------------------------------------------------
-
-type ServerlessApp struct {
-	awscdk.App
-}
-
-func NewServerlessApp() *ServerlessApp {
-	app := awscdk.NewApp(nil)
-	return &ServerlessApp{App: app}
-}
-
-func (app *ServerlessApp) NewStack(name string, props ...*awscdk.StackProps) *ServerlessStack {
-	config := &awscdk.StackProps{
-		Env: &awscdk.Environment{
-			Account: jsii.String(os.Getenv("CDK_DEFAULT_ACCOUNT")),
-			Region:  jsii.String(os.Getenv("CDK_DEFAULT_REGION")),
-		},
-	}
-
-	if len(props) == 1 {
-		config = props[0]
-	}
-
-	return NewServerlessStack(app.App, jsii.String(name), &ServerlessStackProps{
-		StackProps: config,
-		Version:    FromContextVsn(app),
-		System:     name,
-	})
-}
-
-func FromContext(app awscdk.App, key string) string {
-	val := app.Node().TryGetContext(jsii.String(key))
-	switch v := val.(type) {
-	case string:
-		return v
-	default:
-		return ""
-	}
-}
-
-func FromContextVsn(app awscdk.App) string {
-	vsn := FromContext(app, "vsn")
-	if vsn == "" {
-		return "latest"
-	}
-
-	return vsn
 }
