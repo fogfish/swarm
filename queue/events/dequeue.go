@@ -15,7 +15,7 @@ import (
 
 // Dequeue event
 func Dequeue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (<-chan swarm.Msg[*E], chan<- swarm.Msg[*E]) {
-	catE := categoryOf[E]()
+	catE := TypeOf[E]()
 	if len(category) > 0 {
 		catE = category[0]
 	}

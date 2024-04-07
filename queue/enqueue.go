@@ -18,7 +18,7 @@ import (
 
 // Create egress and dead-letter queue channels for the category
 func Enqueue[T any](q swarm.Broker, category ...string) (chan<- T, <-chan T) {
-	cat := categoryOf[T]()
+	cat := TypeOf[T]()
 	if len(category) > 0 {
 		cat = category[0]
 	}
@@ -29,7 +29,7 @@ func Enqueue[T any](q swarm.Broker, category ...string) (chan<- T, <-chan T) {
 }
 
 // normalized type name
-func categoryOf[T any]() string {
+func TypeOf[T any]() string {
 	typ := reflect.TypeOf(new(T)).Elem()
 	cat := typ.Name()
 	if typ.Kind() == reflect.Ptr {
