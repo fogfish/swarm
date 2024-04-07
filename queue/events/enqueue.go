@@ -20,7 +20,7 @@ import (
 // - to send messages
 // - failed messages (dead-letter queue)
 func Enqueue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (chan<- *E, <-chan *E) {
-	catE := categoryOf[E]()
+	catE := TypeOf[E]()
 	if len(category) > 0 {
 		catE = category[0]
 	}
@@ -32,7 +32,7 @@ func Enqueue[T any, E swarm.EventKind[T]](q swarm.Broker, category ...string) (c
 }
 
 // normalized type name
-func categoryOf[T any]() string {
+func TypeOf[T any]() string {
 	typ := reflect.TypeOf(new(T)).Elem()
 	cat := typ.String()
 	if typ.Kind() == reflect.Ptr {

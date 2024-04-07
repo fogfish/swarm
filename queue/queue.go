@@ -52,7 +52,7 @@ func (q queue[T]) Enq(cat string, object T) error {
 func New[T any](q swarm.Broker, category ...string) Enqueuer[T] {
 	k := q.(*kernel.Kernel)
 
-	cat := categoryOf[T]()
+	cat := TypeOf[T]()
 	if len(category) > 0 {
 		cat = category[0]
 	}

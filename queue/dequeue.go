@@ -15,7 +15,7 @@ import (
 
 // Dequeue message
 func Dequeue[T any](q swarm.Broker, category ...string) (<-chan swarm.Msg[T], chan<- swarm.Msg[T]) {
-	cat := categoryOf[T]()
+	cat := TypeOf[T]()
 	if len(category) > 0 {
 		cat = category[0]
 	}

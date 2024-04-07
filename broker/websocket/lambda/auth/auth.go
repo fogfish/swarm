@@ -34,10 +34,12 @@ func main() {
 
 	lambda.Start(
 		func(evt events.APIGatewayV2CustomAuthorizerV1Request) (events.APIGatewayCustomAuthorizerResponse, error) {
-			tkn, hastkn := evt.QueryStringParameters["token"]
-			key, haskey := evt.QueryStringParameters["apikey"]
+			tkn, has := evt.QueryStringParameters["token"]
+			if !has || len(tkn) == 0 {
+				return None, ErrForbidden
+			}
 
-			if jwt != nil && hastkn {
+			if jwt != nil && strings.HasPrefix(tkn, "ey") {
 				principal, context, err := jwt.Validate(tkn)
 				if err != nil {
 					return None, ErrForbidden
@@ -46,8 +48,8 @@ func main() {
 				return AccessPolicy(principal, evt.MethodArn, context), nil
 			}
 
-			if basic != nil && haskey {
-				principal, context, err := basic.Validate(key)
+			if basic != nil {
+				principal, context, err := basic.Validate(tkn)
 				if err != nil {
 					return None, ErrForbidden
 				}
@@ -98,7 +100,10 @@ func NewAuthBasic() (*AuthBasic, error) {
 		return nil, errors.New("basic auth is not configured")
 	}
 
-	return &AuthBasic{}, nil
+	return &AuthBasic{
+		access: access,
+		secret: secret,
+	}, nil
 }
 
 func (auth *AuthBasic) Validate(apikey string) (string, map[string]any, error) {
