@@ -28,6 +28,7 @@ import (
 
 type Sink struct {
 	constructs.Construct
+	Rule    awsevents.Rule
 	Handler awslambda.IFunction
 }
 
@@ -42,9 +43,6 @@ type SinkProps struct {
 
 func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	sink := &Sink{Construct: constructs.NewConstruct(scope, id)}
-
-	//
-	sink.Handler = scud.NewFunctionGo(sink.Construct, jsii.String("Func"), props.Lambda)
 
 	//
 	pattern := &awsevents.EventPattern{}
@@ -73,20 +71,25 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	}
 
 	//
-	rule := awsevents.NewRule(sink.Construct, jsii.String("Rule"),
+	sink.Rule = awsevents.NewRule(sink.Construct, jsii.String("Rule"),
 		&awsevents.RuleProps{
 			EventBus:     props.System,
 			EventPattern: pattern,
 		},
 	)
-	rule.AddTarget(awseventstargets.NewLambdaFunction(
-		sink.Handler,
-		&awseventstargets.LambdaFunctionProps{
-			// TODO:
-			// MaxEventAge: ,
-			// RetryAttempts: ,
-		},
-	))
+
+	if props.Lambda != nil {
+		sink.Handler = scud.NewFunctionGo(sink.Construct, jsii.String("Func"), props.Lambda)
+
+		sink.Rule.AddTarget(awseventstargets.NewLambdaFunction(
+			sink.Handler,
+			&awseventstargets.LambdaFunctionProps{
+				// TODO:
+				// MaxEventAge: ,
+				// RetryAttempts: ,
+			},
+		))
+	}
 
 	return sink
 }

@@ -39,7 +39,7 @@ func (EventNote) HKT2(*Note)           {}
 func main() {
 	qtest.NewLogger()
 
-	q := queue.Must(eventbridge.New("swarm-example-eventbridge-latest",
+	q := queue.Must(eventbridge.New("swarm-example-eventbridge",
 		swarm.WithSource("swarm-example-eventbridge"),
 		swarm.WithLogStdErr(),
 	))
