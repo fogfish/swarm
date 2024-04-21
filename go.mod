@@ -2,8 +2,6 @@ module github.com/fogfish/swarm
 
 go 1.21
 
-//replace github.com/fogfish/scud => ../scud
-
 require (
 	github.com/auth0/go-jwt-middleware/v2 v2.2.1
 	github.com/aws/aws-cdk-go/awscdk/v2 v2.138.0
