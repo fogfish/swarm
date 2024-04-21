@@ -67,7 +67,9 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 
 	sink.Handler = scud.NewFunctionGo(sink.Construct, jsii.String("Func"), props.Lambda)
 
-	it := integrations.NewWebSocketLambdaIntegration(jsii.String(props.Route), sink.Handler)
+	it := integrations.NewWebSocketLambdaIntegration(jsii.String(props.Route), sink.Handler,
+		&integrations.WebSocketLambdaIntegrationProps{},
+	)
 
 	props.Gateway.AddRoute(jsii.String(props.Route),
 		&awsapigatewayv2.WebSocketRouteOptions{
@@ -262,8 +264,10 @@ func (broker *Broker) NewGateway(props *WebSocketApiProps) awsapigatewayv2.WebSo
 		)
 
 		props.WebSocketApiProps.ConnectRouteOptions = &awsapigatewayv2.WebSocketRouteOptions{
-			Integration: integrations.NewWebSocketLambdaIntegration(jsii.String("defcon"), connector),
-			Authorizer:  broker.Authorizer,
+			Integration: integrations.NewWebSocketLambdaIntegration(jsii.String("defcon"), connector,
+				&integrations.WebSocketLambdaIntegrationProps{},
+			),
+			Authorizer: broker.Authorizer,
 		}
 	}
 
