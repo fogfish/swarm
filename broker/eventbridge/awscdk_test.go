@@ -28,9 +28,9 @@ func TestEventBridgeCDK(t *testing.T) {
 	broker.NewSink(
 		&eventbridge.SinkProps{
 			Source: []string{"swarm-example-eventbridge"},
-			Lambda: &scud.FunctionGoProps{
-				SourceCodePackage: "github.com/fogfish/swarm",
-				SourceCodeLambda:  "examples/eventbridge/dequeue",
+			Function: &scud.FunctionGoProps{
+				SourceCodeModule: "github.com/fogfish/swarm",
+				SourceCodeLambda: "examples/eventbridge/dequeue",
 			},
 		},
 	)

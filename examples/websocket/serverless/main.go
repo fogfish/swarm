@@ -47,9 +47,9 @@ func main() {
 	broker.NewSink(
 		&websocket.SinkProps{
 			Route: "User",
-			Lambda: &scud.FunctionGoProps{
-				SourceCodePackage: "github.com/fogfish/swarm",
-				SourceCodeLambda:  "examples/websocket/dequeue",
+			Function: &scud.FunctionGoProps{
+				SourceCodeModule: "github.com/fogfish/swarm",
+				SourceCodeLambda: "examples/websocket/dequeue",
 			},
 		},
 	)

@@ -38,7 +38,7 @@ type SinkProps struct {
 	Source     []string
 	Categories []string
 	Pattern    map[string]interface{}
-	Lambda     *scud.FunctionGoProps
+	Function   scud.FunctionProps
 }
 
 func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
@@ -46,7 +46,7 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 
 	//
 	pattern := &awsevents.EventPattern{}
-	if props.Categories != nil && len(props.Categories) > 0 {
+	if len(props.Categories) > 0 {
 		seq := make([]*string, len(props.Categories))
 		for i, category := range props.Categories {
 			seq[i] = jsii.String(category)
@@ -54,7 +54,7 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 		pattern.DetailType = &seq
 	}
 
-	if props.Source != nil && len(props.Source) > 0 {
+	if len(props.Source) > 0 {
 		seq := make([]*string, len(props.Source))
 		for i, agent := range props.Source {
 			seq[i] = jsii.String(agent)
@@ -78,8 +78,8 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 		},
 	)
 
-	if props.Lambda != nil {
-		sink.Handler = scud.NewFunctionGo(sink.Construct, jsii.String("Func"), props.Lambda)
+	if props.Function != nil {
+		sink.Handler = scud.NewFunction(sink.Construct, jsii.String("Func"), props.Function)
 
 		sink.Rule.AddTarget(awseventstargets.NewLambdaFunction(
 			sink.Handler,

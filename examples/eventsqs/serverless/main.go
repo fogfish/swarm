@@ -33,9 +33,9 @@ func main() {
 
 	broker.NewSink(
 		&eventsqs.SinkProps{
-			Lambda: &scud.FunctionGoProps{
-				SourceCodePackage: "github.com/fogfish/swarm",
-				SourceCodeLambda:  "examples/eventsqs/dequeue",
+			Function: &scud.FunctionGoProps{
+				SourceCodeModule: "github.com/fogfish/swarm",
+				SourceCodeLambda: "examples/eventsqs/dequeue",
 			},
 		},
 	)

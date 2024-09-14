@@ -33,14 +33,14 @@ type Sink struct {
 
 type SinkProps struct {
 	Table       awsdynamodb.ITable
-	Lambda      *scud.FunctionGoProps
+	Function    scud.FunctionProps
 	EventSource *awslambdaeventsources.DynamoEventSourceProps
 }
 
 func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	sink := &Sink{Construct: constructs.NewConstruct(scope, id)}
 
-	sink.Handler = scud.NewFunctionGo(sink.Construct, jsii.String("Func"), props.Lambda)
+	sink.Handler = scud.NewFunction(sink.Construct, jsii.String("Func"), props.Function)
 
 	eventsource := &awslambdaeventsources.DynamoEventSourceProps{
 		StartingPosition: awslambda.StartingPosition_LATEST,
@@ -142,7 +142,9 @@ func (broker *Broker) NewTable(props *awsdynamodb.TablePropsV2) awsdynamodb.ITab
 	}
 
 	if props.Billing == nil {
-		props.Billing = awsdynamodb.Billing_OnDemand()
+		props.Billing = awsdynamodb.Billing_OnDemand(
+			&awsdynamodb.MaxThroughputProps{},
+		)
 	}
 
 	if props.DynamoStream == "" {

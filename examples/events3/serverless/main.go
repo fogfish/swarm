@@ -40,9 +40,9 @@ func main() {
 	broker.NewSink(
 		&events3.SinkProps{
 			// Note: the default property of EventSource captures OBJECT_CREATED and OBJECT_REMOVED events
-			Lambda: &scud.FunctionGoProps{
-				SourceCodePackage: "github.com/fogfish/swarm",
-				SourceCodeLambda:  "examples/events3/dequeue",
+			Function: &scud.FunctionGoProps{
+				SourceCodeModule: "github.com/fogfish/swarm",
+				SourceCodeLambda: "examples/events3/dequeue",
 			},
 		},
 	)

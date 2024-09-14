@@ -27,9 +27,9 @@ func TestEventS3CDK(t *testing.T) {
 
 	broker.NewSink(
 		&events3.SinkProps{
-			Lambda: &scud.FunctionGoProps{
-				SourceCodePackage: "github.com/fogfish/swarm",
-				SourceCodeLambda:  "examples/events3/dequeue",
+			Function: &scud.FunctionGoProps{
+				SourceCodeModule: "github.com/fogfish/swarm",
+				SourceCodeLambda: "examples/events3/dequeue",
 			},
 		},
 	)

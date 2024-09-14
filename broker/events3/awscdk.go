@@ -35,13 +35,13 @@ type Sink struct {
 type SinkProps struct {
 	Bucket      awss3.Bucket
 	EventSource *awslambdaeventsources.S3EventSourceProps
-	Lambda      *scud.FunctionGoProps
+	Function    scud.FunctionProps
 }
 
 func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	sink := &Sink{Construct: constructs.NewConstruct(scope, id)}
 
-	sink.Handler = scud.NewFunctionGo(sink.Construct, jsii.String("Func"), props.Lambda)
+	sink.Handler = scud.NewFunction(sink.Construct, jsii.String("Func"), props.Function)
 
 	eventsource := &awslambdaeventsources.S3EventSourceProps{
 		Events: &[]awss3.EventType{
