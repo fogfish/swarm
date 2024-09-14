@@ -23,6 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/constructs-go/constructs/v10"
 	"github.com/aws/jsii-runtime-go"
+	"github.com/fogfish/golem/optics"
 	"github.com/fogfish/scud"
 )
 
@@ -40,32 +41,16 @@ type Sink struct {
 }
 
 type SinkProps struct {
-	Route   string
-	Lambda  *scud.FunctionGoProps
-	Gateway awsapigatewayv2.WebSocketApi
+	Route    string
+	Function scud.FunctionProps
+	Gateway  awsapigatewayv2.WebSocketApi
 }
 
 func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	sink := &Sink{Construct: constructs.NewConstruct(scope, id)}
 
-	if props.Lambda.FunctionProps == nil {
-		props.Lambda.FunctionProps = &awslambda.FunctionProps{}
-	}
-
-	if props.Lambda.FunctionProps.Environment == nil {
-		props.Lambda.FunctionProps.Environment = &map[string]*string{}
-	}
-
-	if _, has := (*props.Lambda.FunctionProps.Environment)["CONFIG_SWARM_WS_EVENT_TYPE"]; !has {
-		(*props.Lambda.FunctionProps.Environment)["CONFIG_SWARM_WS_EVENT_TYPE"] = jsii.String(props.Route)
-	}
-
-	if _, has := (*props.Lambda.FunctionProps.Environment)["CONFIG_SWARM_WS_URL"]; !has {
-		url := aws.ToString(props.Gateway.ApiEndpoint()) + "/" + stage
-		(*props.Lambda.FunctionProps.Environment)["CONFIG_SWARM_WS_URL"] = aws.String(url)
-	}
-
-	sink.Handler = scud.NewFunctionGo(sink.Construct, jsii.String("Func"), props.Lambda)
+	defaultEnvironment(props)
+	sink.Handler = scud.NewFunction(sink.Construct, jsii.String("Func"), props.Function)
 
 	it := integrations.NewWebSocketLambdaIntegration(jsii.String(props.Route), sink.Handler,
 		&integrations.WebSocketLambdaIntegrationProps{},
@@ -80,6 +65,46 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	props.Gateway.GrantManageConnections(sink.Handler)
 
 	return sink
+}
+
+var (
+	lensFunction  = optics.ForProduct1[scud.FunctionGoProps, *map[string]*string]("Environment")
+	lensContainer = optics.ForProduct1[scud.ContainerGoProps, *map[string]*string]("Environment")
+)
+
+func defineLambdaEnvironment[T any](lens optics.Lens[T, *map[string]*string], props *SinkProps, fprops *T) {
+	env := lens.Get(fprops)
+
+	if env == nil {
+		env = &map[string]*string{}
+	}
+
+	if _, has := (*env)["CONFIG_SWARM_WS_EVENT_TYPE"]; !has {
+		(*env)["CONFIG_SWARM_WS_EVENT_TYPE"] = jsii.String(props.Route)
+	}
+
+	if _, has := (*env)["CONFIG_SWARM_WS_URL"]; !has {
+		url := aws.ToString(props.Gateway.ApiEndpoint()) + "/" + stage
+		(*env)["CONFIG_SWARM_WS_URL"] = aws.String(url)
+	}
+
+	lens.Put(fprops, env)
+}
+
+func defaultEnvironment(props *SinkProps) {
+	switch fprops := props.Function.(type) {
+	case *scud.FunctionGoProps:
+		if fprops.FunctionProps == nil {
+			fprops.FunctionProps = &awslambda.FunctionProps{}
+		}
+
+		defineLambdaEnvironment(lensFunction, props, fprops)
+	case *scud.ContainerGoProps:
+		if fprops.DockerImageFunctionProps == nil {
+			fprops.DockerImageFunctionProps = &awslambda.DockerImageFunctionProps{}
+		}
+		defineLambdaEnvironment(lensContainer, props, fprops)
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -123,8 +148,8 @@ func (broker *Broker) NewAuthorizerApiKey(props *AuthorizerApiKeyProps) awsapiga
 
 	handler := scud.NewFunctionGo(broker.Construct, jsii.String("Authorizer"),
 		&scud.FunctionGoProps{
-			SourceCodePackage: "github.com/fogfish/swarm",
-			SourceCodeLambda:  "broker/websocket/lambda/auth",
+			SourceCodeModule: "github.com/fogfish/swarm",
+			SourceCodeLambda: "broker/websocket/lambda/auth",
 			FunctionProps: &awslambda.FunctionProps{
 				Environment: &map[string]*string{
 					"CONFIG_SWARM_WS_AUTHORIZER_ACCESS": jsii.String(props.Access),
@@ -165,8 +190,8 @@ func (broker *Broker) NewAuthorizerJwt(props *AuthorizerJwtProps) awsapigatewayv
 
 	handler := scud.NewFunctionGo(broker.Construct, jsii.String("Authorizer"),
 		&scud.FunctionGoProps{
-			SourceCodePackage: "github.com/fogfish/swarm",
-			SourceCodeLambda:  "broker/websocket/lambda/auth",
+			SourceCodeModule: "github.com/fogfish/swarm",
+			SourceCodeLambda: "broker/websocket/lambda/auth",
 			FunctionProps: &awslambda.FunctionProps{
 				Environment: &map[string]*string{
 					"CONFIG_SWARM_WS_AUTHORIZER_ISS": jsii.String(props.Issuer),
@@ -215,8 +240,8 @@ func (broker *Broker) NewAuthorizerUniversal(props *AuthorizerUniversalProps) aw
 
 	handler := scud.NewFunctionGo(broker.Construct, jsii.String("Authorizer"),
 		&scud.FunctionGoProps{
-			SourceCodePackage: "github.com/fogfish/swarm",
-			SourceCodeLambda:  "broker/websocket/lambda/auth",
+			SourceCodeModule: "github.com/fogfish/swarm",
+			SourceCodeLambda: "broker/websocket/lambda/auth",
 			FunctionProps: &awslambda.FunctionProps{
 				Environment: &map[string]*string{
 					"CONFIG_SWARM_WS_AUTHORIZER_ACCESS": jsii.String(props.AuthorizerApiKey.Access),
@@ -258,8 +283,8 @@ func (broker *Broker) NewGateway(props *WebSocketApiProps) awsapigatewayv2.WebSo
 	if props.WebSocketApiProps.ConnectRouteOptions == nil && broker.Authorizer != nil {
 		connector := scud.NewFunctionGo(broker.Construct, jsii.String("Connector"),
 			&scud.FunctionGoProps{
-				SourceCodePackage: "github.com/fogfish/swarm",
-				SourceCodeLambda:  "broker/websocket/lambda/connector",
+				SourceCodeModule: "github.com/fogfish/swarm",
+				SourceCodeLambda: "broker/websocket/lambda/connector",
 			},
 		)
 

@@ -32,19 +32,27 @@ type EventKind[A any] pure.HKT[EventType, A]
 // changed together with  using unique identifier.
 type Event[T any] struct {
 	//
-	// Unique identity for event
-	// It is automatically defined by the library upon the transmission
+	// Unique identity for event.
+	// It is automatically defined by the library upon the transmission unless
+	// defined by sender. Preserving ID across sequence of messages allows
+	// building request/response semantic.
 	ID string `json:"id,omitempty"`
 
 	//
 	// Canonical IRI that defines a type of action.
-	// It is automatically defined by the library upon the transmission
+	// It is automatically defined by the library upon the transmission unless
+	// defined by sender.
 	Type curie.IRI `json:"type,omitempty"`
 
 	//
-	// Direct performer of the event, a software service that emits action to the stream.
-	// It is automatically defined by the library upon the transmission
+	// Direct performer of the event, a software service that emits action to
+	// the stream. It is automatically defined by the library upon the transmission
+	// unless defined by sender.
 	Agent curie.IRI `json:"agent,omitempty"`
+
+	//
+	// Indicates target performer of the event, a software service that is able to
+	Target curie.IRI `json:"target,omitempty"`
 
 	//
 	// Indirect participants, a user who initiated an event.
@@ -58,6 +66,11 @@ type Event[T any] struct {
 	//
 	// The object upon which the event is carried out.
 	Object T `json:"object,omitempty"`
+
+	// Status (Pending | Success | Failure)
+	// Deadline before after | nbf NotBefore
+	// Target
+
 }
 
 func (Event[T]) HKT1(EventType) {}

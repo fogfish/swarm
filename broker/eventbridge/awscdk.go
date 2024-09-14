@@ -38,7 +38,7 @@ type SinkProps struct {
 	Source     []string
 	Categories []string
 	Pattern    map[string]interface{}
-	Lambda     *scud.FunctionGoProps
+	Function   scud.FunctionProps
 }
 
 func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
@@ -78,8 +78,8 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 		},
 	)
 
-	if props.Lambda != nil {
-		sink.Handler = scud.NewFunctionGo(sink.Construct, jsii.String("Func"), props.Lambda)
+	if props.Function != nil {
+		sink.Handler = scud.NewFunction(sink.Construct, jsii.String("Func"), props.Function)
 
 		sink.Rule.AddTarget(awseventstargets.NewLambdaFunction(
 			sink.Handler,
