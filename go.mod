@@ -4,8 +4,6 @@ go 1.22
 
 toolchain go1.23.0
 
-replace github.com/fogfish/scud => ../../fogfish/scud
-
 require (
 	github.com/auth0/go-jwt-middleware/v2 v2.2.2
 	github.com/aws/aws-cdk-go/awscdk/v2 v2.158.0
