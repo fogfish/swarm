@@ -142,7 +142,9 @@ func (broker *Broker) NewTable(props *awsdynamodb.TablePropsV2) awsdynamodb.ITab
 	}
 
 	if props.Billing == nil {
-		props.Billing = awsdynamodb.Billing_OnDemand()
+		props.Billing = awsdynamodb.Billing_OnDemand(
+			&awsdynamodb.MaxThroughputProps{},
+		)
 	}
 
 	if props.DynamoStream == "" {
