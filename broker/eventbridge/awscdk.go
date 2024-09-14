@@ -46,7 +46,7 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 
 	//
 	pattern := &awsevents.EventPattern{}
-	if props.Categories != nil && len(props.Categories) > 0 {
+	if len(props.Categories) > 0 {
 		seq := make([]*string, len(props.Categories))
 		for i, category := range props.Categories {
 			seq[i] = jsii.String(category)
@@ -54,7 +54,7 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 		pattern.DetailType = &seq
 	}
 
-	if props.Source != nil && len(props.Source) > 0 {
+	if len(props.Source) > 0 {
 		seq := make([]*string, len(props.Source))
 		for i, agent := range props.Source {
 			seq[i] = jsii.String(agent)
