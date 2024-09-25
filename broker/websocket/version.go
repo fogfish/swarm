@@ -8,4 +8,4 @@
 
 package websocket
 
-const Version = "broker/websocket/v0.16.0"
+const Version = "broker/websocket/v0.16.1"
