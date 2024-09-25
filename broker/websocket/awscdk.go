@@ -23,7 +23,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/constructs-go/constructs/v10"
 	"github.com/aws/jsii-runtime-go"
-	"github.com/fogfish/golem/optics"
 	"github.com/fogfish/scud"
 )
 
@@ -67,43 +66,26 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	return sink
 }
 
-var (
-	lensFunction  = optics.ForProduct1[scud.FunctionGoProps, *map[string]*string]("Environment")
-	lensContainer = optics.ForProduct1[scud.ContainerGoProps, *map[string]*string]("Environment")
-)
-
-func defineLambdaEnvironment[T any](lens optics.Lens[T, *map[string]*string], props *SinkProps, fprops *T) {
-	env := lens.Get(fprops)
-
-	if env == nil {
-		env = &map[string]*string{}
-	}
-
-	if _, has := (*env)["CONFIG_SWARM_WS_EVENT_TYPE"]; !has {
-		(*env)["CONFIG_SWARM_WS_EVENT_TYPE"] = jsii.String(props.Route)
-	}
-
-	if _, has := (*env)["CONFIG_SWARM_WS_URL"]; !has {
-		url := aws.ToString(props.Gateway.ApiEndpoint()) + "/" + stage
-		(*env)["CONFIG_SWARM_WS_URL"] = aws.String(url)
-	}
-
-	lens.Put(fprops, env)
-}
-
 func defaultEnvironment(props *SinkProps) {
-	switch fprops := props.Function.(type) {
+	switch f := props.Function.(type) {
 	case *scud.FunctionGoProps:
-		if fprops.FunctionProps == nil {
-			fprops.FunctionProps = &awslambda.FunctionProps{}
+		if f.FunctionProps == nil {
+			f.FunctionProps = &awslambda.FunctionProps{}
 		}
-
-		defineLambdaEnvironment(lensFunction, props, fprops)
+		if f.FunctionProps.Environment == nil {
+			f.FunctionProps.Environment = &map[string]*string{}
+		}
+		(*f.FunctionProps.Environment)["CONFIG_SWARM_WS_EVENT_TYPE"] = jsii.String(props.Route)
+		(*f.FunctionProps.Environment)["CONFIG_SWARM_WS_URL"] = jsii.String(aws.ToString(props.Gateway.ApiEndpoint()) + "/" + stage)
 	case *scud.ContainerGoProps:
-		if fprops.DockerImageFunctionProps == nil {
-			fprops.DockerImageFunctionProps = &awslambda.DockerImageFunctionProps{}
+		if f.DockerImageFunctionProps == nil {
+			f.DockerImageFunctionProps = &awslambda.DockerImageFunctionProps{}
 		}
-		defineLambdaEnvironment(lensContainer, props, fprops)
+		if f.DockerImageFunctionProps.Environment == nil {
+			f.DockerImageFunctionProps.Environment = &map[string]*string{}
+		}
+		(*f.DockerImageFunctionProps.Environment)["CONFIG_SWARM_WS_EVENT_TYPE"] = jsii.String(props.Route)
+		(*f.DockerImageFunctionProps.Environment)["CONFIG_SWARM_WS_URL"] = jsii.String(aws.ToString(props.Gateway.ApiEndpoint()) + "/" + stage)
 	}
 }
 

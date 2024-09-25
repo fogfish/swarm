@@ -44,7 +44,7 @@ type Kernel struct {
 	sync.WaitGroup
 	sync.RWMutex
 
-	// Kernel configuartion
+	// Kernel configuration
 	Config swarm.Config
 
 	// Control-plane stop channel. It is used to notify the kernel to terminate.
