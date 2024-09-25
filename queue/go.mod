@@ -2,9 +2,7 @@ module github.com/fogfish/swarm/queue
 
 go 1.22
 
-replace github.com/fogfish/swarm => ../
-
-require github.com/fogfish/swarm v0.0.0-00010101000000-000000000000
+require github.com/fogfish/swarm v0.16.0
 
 require (
 	github.com/fogfish/curie v1.8.2 // indirect

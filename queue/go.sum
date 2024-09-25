@@ -14,3 +14,5 @@ github.com/fogfish/it v1.0.0 h1:kiwFHZcrkRLUydZoIoY0gTuMfj38trwvLo0YRyIkeG8=
 github.com/fogfish/it v1.0.0/go.mod h1:NQJG4Ygvek85y7zGj0Gny8+6ygAnHjfBORhI7TdQhp4=
 github.com/fogfish/it/v2 v2.0.2 h1:UR6yVemf8zD3WVs6Bq0zE6LJwapZ8urv9zvU5VB5E6o=
 github.com/fogfish/it/v2 v2.0.2/go.mod h1:HHwufnTaZTvlRVnSesPl49HzzlMrQtweKbf+8Co/ll4=
+github.com/fogfish/swarm v0.16.0 h1:6AviPpPbrSraLcjH2GwW0oVUb7tb6IZMqdT+FdXOCHU=
+github.com/fogfish/swarm v0.16.0/go.mod h1:u5uJmXu3xHz1OTzyxhu9viI6eq+GmkJJkDqdrf8IlJw=
