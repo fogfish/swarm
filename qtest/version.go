@@ -8,4 +8,4 @@
 
 package qtest
 
-const Version = "qtest/v0.16.0"
+const Version = "qtest/v0.16.1"

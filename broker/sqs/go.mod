@@ -14,7 +14,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.35.1
 	github.com/fogfish/swarm v0.16.0
 	github.com/fogfish/swarm/qtest v0.0.0-00010101000000-000000000000
-	github.com/fogfish/swarm/queue v0.0.0-00010101000000-000000000000
+	github.com/fogfish/swarm/queue v0.16.1
 )
 
 require (
