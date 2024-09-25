@@ -2,8 +2,6 @@ module github.com/fogfish/swarm/broker/eventsqs
 
 go 1.22
 
-replace github.com/fogfish/swarm/broker/sqs => ../sqs
-
 require (
 	github.com/aws/aws-cdk-go/awscdk/v2 v2.160.0
 	github.com/aws/aws-lambda-go v1.47.0
@@ -13,7 +11,7 @@ require (
 	github.com/aws/jsii-runtime-go v1.103.1
 	github.com/fogfish/scud v0.10.1
 	github.com/fogfish/swarm v0.16.0
-	github.com/fogfish/swarm/broker/sqs v0.0.0-00010101000000-000000000000
+	github.com/fogfish/swarm/broker/sqs v0.16.1
 	github.com/fogfish/swarm/qtest v0.16.1
 	github.com/fogfish/swarm/queue v0.16.1
 )
