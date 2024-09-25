@@ -2,18 +2,12 @@ module github.com/fogfish/swarm/broker/sqs
 
 go 1.22
 
-replace github.com/fogfish/swarm => ../../
-
-replace github.com/fogfish/swarm/queue => ../../queue
-
-replace github.com/fogfish/swarm/qtest => ../../qtest
-
 require (
 	github.com/aws/aws-sdk-go-v2 v1.31.0
 	github.com/aws/aws-sdk-go-v2/config v1.27.37
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.35.1
 	github.com/fogfish/swarm v0.16.0
-	github.com/fogfish/swarm/qtest v0.0.0-00010101000000-000000000000
+	github.com/fogfish/swarm/qtest v0.16.1
 	github.com/fogfish/swarm/queue v0.16.1
 )
 
