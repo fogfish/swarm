@@ -8,4 +8,4 @@
 
 package queue
 
-const Version = "queue/v0.16.0"
+const Version = "queue/v0.16.1"
