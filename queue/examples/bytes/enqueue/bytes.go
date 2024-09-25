@@ -11,14 +11,11 @@ package main
 import (
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/sqs"
-	"github.com/fogfish/swarm/internal/qtest"
 	"github.com/fogfish/swarm/queue"
 	"github.com/fogfish/swarm/queue/bytes"
 )
 
 func main() {
-	qtest.NewLogger()
-
 	q := queue.Must(sqs.New("swarm-test", swarm.WithLogStdErr()))
 
 	user := swarm.LogDeadLetters(bytes.Enqueue(q, "User"))

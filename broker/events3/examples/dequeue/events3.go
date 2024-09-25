@@ -15,13 +15,10 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/events3"
-	"github.com/fogfish/swarm/internal/qtest"
 	"github.com/fogfish/swarm/queue"
 )
 
 func main() {
-	qtest.NewLogger()
-
 	q := queue.Must(events3.New("swarm-test", swarm.WithLogStdErr()))
 
 	go common(events3.Dequeue(q))

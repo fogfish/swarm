@@ -15,7 +15,6 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/websocket"
-	"github.com/fogfish/swarm/internal/qtest"
 	"github.com/fogfish/swarm/queue"
 )
 
@@ -26,8 +25,6 @@ type User struct {
 }
 
 func main() {
-	qtest.NewLogger()
-
 	q := queue.Must(websocket.New(os.Getenv("CONFIG_SWARM_WS_URL"), swarm.WithLogStdErr()))
 
 	a := &actor{emit: queue.New[User](q)}

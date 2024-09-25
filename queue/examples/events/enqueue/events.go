@@ -11,7 +11,6 @@ package main
 import (
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/sqs"
-	"github.com/fogfish/swarm/internal/qtest"
 	"github.com/fogfish/swarm/queue"
 	"github.com/fogfish/swarm/queue/events"
 )
@@ -48,8 +47,6 @@ func (EventNote) HKT1(swarm.EventType) {}
 func (EventNote) HKT2(*Note)           {}
 
 func main() {
-	qtest.NewLogger()
-
 	q := queue.Must(sqs.New("swarm-test", swarm.WithLogStdErr()))
 
 	userCreated := swarm.LogDeadLetters(events.Enqueue[*User, EventCreateUser](q))

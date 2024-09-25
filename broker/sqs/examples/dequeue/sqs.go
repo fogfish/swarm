@@ -13,7 +13,6 @@ import (
 
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/sqs"
-	"github.com/fogfish/swarm/internal/qtest"
 	"github.com/fogfish/swarm/queue"
 )
 
@@ -33,8 +32,6 @@ type Like struct {
 }
 
 func main() {
-	qtest.NewLogger()
-
 	q := queue.Must(sqs.New("swarm-test", swarm.WithLogStdErr()))
 
 	go actor[User]("user").handle(queue.Dequeue[User](q))
