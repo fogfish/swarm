@@ -10,7 +10,7 @@ package bytes
 
 import (
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/internal/kernel"
+	"github.com/fogfish/swarm/kernel"
 )
 
 // Dequeue bytes

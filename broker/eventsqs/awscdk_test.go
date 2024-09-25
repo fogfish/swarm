@@ -28,8 +28,8 @@ func TestEventBridgeCDK(t *testing.T) {
 	broker.NewSink(
 		&eventsqs.SinkProps{
 			Function: &scud.FunctionGoProps{
-				SourceCodeModule: "github.com/fogfish/swarm",
-				SourceCodeLambda: "examples/eventsqs/dequeue",
+				SourceCodeModule: "github.com/fogfish/swarm/broker/eventsqs",
+				SourceCodeLambda: "examples/dequeue",
 			},
 		},
 	)

@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/fogfish/swarm/internal/backoff"
+	"github.com/fogfish/swarm/kernel/backoff"
 )
 
 // Grade of Service Policy

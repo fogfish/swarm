@@ -12,21 +12,26 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
-    steps:
+    strategy:
+      matrix:
+        module: [".", "queue", "qtest", "broker/eventbridge", "broker/eventddb", "broker/events3", "broker/eventsqs", "broker/sqs", "broker/websocket"]
 
+    steps:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.22"
 
       - uses: actions/checkout@v4
-     
+
       - name: go build
+        working-directory: ${{ matrix.module }}
         run: |
           go build ./...
     
       - name: go test
+        working-directory: ${{ matrix.module }}
         run: |
-          go test -v -coverprofile=profile.cov $(go list ./... | grep -v /examples/)
+          go test -coverprofile=profile.cov $(go list ./... | grep -v /examples/)
         env:
           ## GOPATH required to build serverless app inside unittest 
           GOPATH: /home/runner/work/${{ github.event.repository.name }}/go
@@ -34,18 +39,25 @@ jobs:
       - uses: shogo82148/actions-goveralls@v1
         continue-on-error: true
         with:
+          working-directory: ${{ matrix.module }}
           path-to-profile: profile.cov
+          flag-name: ${{ matrix.module }}
+          parallel: true
 
-      - uses: reecetech/version-increment@2023.10.2
-        id: version
-        with:
-          scheme: semver
-          increment: patch
-
-      - name: publish
+      - name: release
+        working-directory: ${{ matrix.module }}
         run: |
           git config user.name "GitHub Actions"
           git config user.email "github-actions@users.noreply.github.com"
-          git tag ${{ steps.version.outputs.v-version }}
-          git push origin -u ${{ steps.version.outputs.v-version }}
-
+          for mod in `grep -roh "const Version = \".*" * | grep -Eoh "([[:alnum:]]*/*){1,}v[0-9]*\.[0-9]*\.[0-9]*"`
+          do
+            git tag $mod 2> /dev/null && git push origin -u $mod 2> /dev/null && echo "[+] $mod" || echo "[ ] $mod"
+          done
+ 
+  finish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: shogo82148/actions-goveralls@v1
+        with:
+          parallel-finished: true

@@ -1,0 +1,59 @@
+##
+## Unit Tests & Coverage
+##
+name: check
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+
+jobs:
+
+  unit:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        module: [".", "queue", "qtest", "broker/eventbridge", "broker/eventddb", "broker/events3", "broker/eventsqs", "broker/sqs", "broker/websocket"]
+
+
+    steps:
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - uses: actions/checkout@v4
+
+      - name: go build
+        working-directory: ${{ matrix.module }}
+        run: |
+          go build ./...
+    
+      - name: go test
+        working-directory: ${{ matrix.module }}
+        run: |
+          go test -coverprofile=profile.cov $(go list ./... | grep -v /examples/)
+        env:
+          ## GOPATH required to build serverless app inside unittest 
+          GOPATH: /home/runner/work/${{ github.event.repository.name }}/go
+
+      - uses: shogo82148/actions-goveralls@v1
+        continue-on-error: true
+        with:
+          working-directory: ${{ matrix.module }}
+          path-to-profile: profile.cov
+          flag-name: ${{ matrix.module }}
+          parallel: true
+
+      - uses: dominikh/staticcheck-action@v1.3.1
+        with:
+          install-go: false
+          working-directory: ${{ matrix.module }}
+
+  finish:
+      needs: unit
+      runs-on: ubuntu-latest
+      steps:
+        - uses: shogo82148/actions-goveralls@v1
+          with:
+            parallel-finished: true

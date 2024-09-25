@@ -20,7 +20,7 @@ import (
 	"github.com/fogfish/swarm"
 	sut "github.com/fogfish/swarm/broker/eventsqs"
 	sutsqs "github.com/fogfish/swarm/broker/sqs"
-	"github.com/fogfish/swarm/internal/qtest"
+	"github.com/fogfish/swarm/qtest"
 	"github.com/fogfish/swarm/queue"
 )
 

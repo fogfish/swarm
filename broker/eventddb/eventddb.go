@@ -15,7 +15,7 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/fogfish/guid/v2"
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/internal/kernel"
+	"github.com/fogfish/swarm/kernel"
 )
 
 // New creates broker for AWS EventBridge
