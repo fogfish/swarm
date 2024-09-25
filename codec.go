@@ -45,6 +45,27 @@ func NewCodecByte() CodecByte { return CodecByte{} }
 
 //------------------------------------------------------------------------------
 
+// Encode Bytes as "JSON packet"
+type CodecPacket struct{}
+
+type packet struct {
+	Octets []byte `json:"p,omitempty"`
+}
+
+func (CodecPacket) Encode(x []byte) ([]byte, error) {
+	b, err := json.Marshal(packet{Octets: x})
+	return b, err
+}
+func (CodecPacket) Decode(x []byte) ([]byte, error) {
+	var pckt packet
+	err := json.Unmarshal(x, &pckt)
+	return pckt.Octets, err
+}
+
+func NewCodecPacket() CodecPacket { return CodecPacket{} }
+
+//------------------------------------------------------------------------------
+
 // Event codec for I/O kernel
 type CodecEvent[T any, E EventKind[T]] struct {
 	source string

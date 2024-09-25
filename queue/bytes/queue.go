@@ -30,10 +30,15 @@ type queue struct {
 func (q queue) Put(object []byte) error { return q.Enq(q.cat, object) }
 
 func (q queue) Enq(cat string, object []byte) error {
-	ctx := swarm.NewContext(context.Background(), cat, "")
-	bag := swarm.Bag{Ctx: ctx, Object: object}
+	obj, err := q.codec.Encode(object)
+	if err != nil {
+		return err
+	}
 
-	err := q.emit.Enq(bag)
+	ctx := swarm.NewContext(context.Background(), cat, "")
+	bag := swarm.Bag{Ctx: ctx, Object: obj}
+
+	err = q.emit.Enq(bag)
 	if err != nil {
 		return err
 	}

@@ -115,7 +115,10 @@ func (cli *Client) Enq(bag swarm.Bag) error {
 	}
 
 	if ret.FailedEntryCount > 0 {
-		return fmt.Errorf("%v: %v", ret.Entries[0].ErrorCode, ret.Entries[0].ErrorMessage)
+		return fmt.Errorf("%s: %s",
+			aws.ToString(ret.Entries[0].ErrorCode),
+			aws.ToString(ret.Entries[0].ErrorMessage),
+		)
 	}
 
 	return nil
