@@ -29,8 +29,8 @@ func TestEventBridgeCDK(t *testing.T) {
 		&eventbridge.SinkProps{
 			Source: []string{"swarm-example-eventbridge"},
 			Function: &scud.FunctionGoProps{
-				SourceCodeModule: "github.com/fogfish/swarm",
-				SourceCodeLambda: "examples/eventbridge/dequeue",
+				SourceCodeModule: "github.com/fogfish/swarm/broker/eventbridge",
+				SourceCodeLambda: "examples/dequeue",
 			},
 		},
 	)
