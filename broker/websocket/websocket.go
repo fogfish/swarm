@@ -20,7 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/apigatewaymanagementapi"
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/internal/kernel"
+	"github.com/fogfish/swarm/kernel"
 )
 
 // WebSocket declares the subset of interface from AWS SDK used by the lib.

@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/internal/kernel"
+	"github.com/fogfish/swarm/kernel"
 )
 
 // Create egress and dead-letter queue channels for the category

@@ -13,7 +13,7 @@ import (
 	"log/slog"
 
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/internal/kernel"
+	"github.com/fogfish/swarm/kernel"
 )
 
 type Enqueuer[T any, E swarm.EventKind[T]] interface {

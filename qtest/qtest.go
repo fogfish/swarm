@@ -15,7 +15,7 @@ import (
 
 	"github.com/fogfish/it/v2"
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/internal/backoff"
+	"github.com/fogfish/swarm/kernel/backoff"
 	"github.com/fogfish/swarm/queue"
 	"github.com/fogfish/swarm/queue/bytes"
 	"github.com/fogfish/swarm/queue/events"

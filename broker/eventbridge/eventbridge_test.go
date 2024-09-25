@@ -21,7 +21,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/eventbridge"
 	"github.com/fogfish/swarm"
 	sut "github.com/fogfish/swarm/broker/eventbridge"
-	"github.com/fogfish/swarm/internal/qtest"
+	"github.com/fogfish/swarm/qtest"
 	"github.com/fogfish/swarm/queue"
 )
 
@@ -37,9 +37,7 @@ func TestDequeueEventBridge(t *testing.T) {
 	qtest.TestDequeueEvent(t, newMockDequeue)
 }
 
-//
 // Mock AWS EventBridge Enqueue
-//
 type mockEnqueue struct {
 	sut.EventBridge
 	expectCategory string
@@ -72,9 +70,7 @@ func (m *mockEnqueue) PutEvents(ctx context.Context, req *eventbridge.PutEventsI
 	}, nil
 }
 
-//
 // Mock AWS EventBridge Dequeue
-//
 func newMockDequeue(
 	loopback chan string,
 	queueName string,
