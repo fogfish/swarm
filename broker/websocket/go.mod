@@ -19,7 +19,7 @@ require (
 	github.com/aws/jsii-runtime-go v1.103.1
 	github.com/fogfish/logger/v3 v3.1.1
 	github.com/fogfish/scud v0.10.1
-	github.com/fogfish/swarm v0.0.0-00010101000000-000000000000
+	github.com/fogfish/swarm v0.16.0
 	github.com/fogfish/swarm/queue v0.0.0-00010101000000-000000000000
 )
 

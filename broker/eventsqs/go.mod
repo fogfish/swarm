@@ -18,7 +18,7 @@ require (
 	github.com/aws/constructs-go/constructs/v10 v10.3.0
 	github.com/aws/jsii-runtime-go v1.103.1
 	github.com/fogfish/scud v0.10.1
-	github.com/fogfish/swarm v0.0.0-00010101000000-000000000000
+	github.com/fogfish/swarm v0.16.0
 	github.com/fogfish/swarm/broker/sqs v0.0.0-00010101000000-000000000000
 	github.com/fogfish/swarm/qtest v0.0.0-00010101000000-000000000000
 	github.com/fogfish/swarm/queue v0.0.0-00010101000000-000000000000

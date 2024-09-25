@@ -8,7 +8,7 @@ replace github.com/fogfish/swarm/queue => ../queue
 
 require (
 	github.com/fogfish/it/v2 v2.0.2
-	github.com/fogfish/swarm v0.0.0-00010101000000-000000000000
+	github.com/fogfish/swarm v0.16.0
 	github.com/fogfish/swarm/queue v0.0.0-00010101000000-000000000000
 )
 
