@@ -9,6 +9,8 @@ require (
 	github.com/fogfish/golem/pure v0.10.1
 	github.com/fogfish/guid/v2 v2.0.4
 	github.com/fogfish/it v1.0.0
+	github.com/fogfish/it/v2 v2.0.2
+	github.com/fogfish/logger/v3 v3.1.1
 )
 
 require github.com/fogfish/golem/hseq v1.2.0 // indirect
