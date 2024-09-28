@@ -36,9 +36,6 @@ type Codec interface {
 }
 
 type Config struct {
-	// Instance of AWS Service, used to overwrite default client
-	Service any
-
 	// Source is a direct performer of the event.
 	// A software service that emits action to the stream.
 	Source string
@@ -48,7 +45,7 @@ type Config struct {
 
 	// Queue capacity (enhance with individual capacities)
 	CapOut int
-	CapDLQ int
+	CapDlq int
 	CapRcv int
 	CapAck int
 
@@ -76,7 +73,7 @@ func NewConfig() Config {
 		Source:         "github.com/fogfish/swarm",
 		Policy:         PolicyAtLeastOnce,
 		CapOut:         0,
-		CapDLQ:         0,
+		CapDlq:         0,
 		CapRcv:         0,
 		CapAck:         0,
 		Backoff:        backoff.Exp(10*time.Millisecond, 10, 0.5),
@@ -88,13 +85,6 @@ func NewConfig() Config {
 
 // Configuration option for queueing broker
 type Option func(conf *Config)
-
-// Configure AWS Service for broker instance
-func WithService(service any) Option {
-	return func(conf *Config) {
-		conf.Service = service
-	}
-}
 
 // Source is a direct performer of the event.
 // A software service that emits action to the stream.
@@ -217,7 +207,7 @@ func WithPolicyAtMostOnce(n int) Option {
 	return func(conf *Config) {
 		conf.Policy = PolicyAtMostOnce
 		conf.CapOut = n
-		conf.CapDLQ = n
+		conf.CapDlq = n
 		conf.CapRcv = n
 		conf.CapAck = n
 	}
@@ -230,7 +220,7 @@ func WithPolicyAtLeastOnce(n int) Option {
 	return func(conf *Config) {
 		conf.Policy = PolicyAtLeastOnce
 		conf.CapOut = 0
-		conf.CapDLQ = 0
+		conf.CapDlq = 0
 		conf.CapRcv = n
 		conf.CapAck = n
 	}
