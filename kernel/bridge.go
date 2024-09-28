@@ -32,7 +32,14 @@ func NewBridge(timeToFlight time.Duration) *Bridge {
 	}
 }
 
-// Dispatch the batch of messages in the context of Lambda handler
+// Dispatch the batch of messages in the context of Lambda handler.
+//
+//	lambda.Start(
+//		func(evt events.CloudWatchEvent) error {
+//			...
+//			bridge.Dispatch(bag)
+//		}
+//	)
 func (s *Bridge) Dispatch(seq []swarm.Bag) error {
 	s.inflight = map[string]struct{}{}
 	for _, bag := range seq {
@@ -49,6 +56,7 @@ func (s *Bridge) Dispatch(seq []swarm.Bag) error {
 	}
 }
 
+// Ask converts input of Lambda handler to the context of the kernel
 func (s *Bridge) Ask(ctx context.Context) ([]swarm.Bag, error) {
 	select {
 	case <-ctx.Done():
@@ -58,6 +66,7 @@ func (s *Bridge) Ask(ctx context.Context) ([]swarm.Bag, error) {
 	}
 }
 
+// Acknowledge processed message, allowing lambda handler progress
 func (s *Bridge) Ack(ctx context.Context, digest string) error {
 	delete(s.inflight, digest)
 	if len(s.inflight) == 0 {
@@ -67,6 +76,7 @@ func (s *Bridge) Ack(ctx context.Context, digest string) error {
 	return nil
 }
 
+// Acknowledge error, allowing lambda handler progress
 func (s *Bridge) Err(ctx context.Context, digest string, err error) error {
 	delete(s.inflight, digest)
 	s.session <- err

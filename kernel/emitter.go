@@ -15,7 +15,7 @@ import (
 	"github.com/fogfish/swarm"
 )
 
-// Emitter defines on-the-wire protocol for [swarm.Bag]
+// Emitter defines on-the-wire protocol for [swarm.Bag], covering egress.
 type Emitter interface {
 	Enq(context.Context, swarm.Bag) error
 }
@@ -38,6 +38,7 @@ type Enqueuer struct {
 	Emitter Emitter
 }
 
+// Creates instance of broker writer
 func NewEnqueuer(emitter Emitter, config swarm.Config) *Enqueuer {
 	ctx, can := context.WithCancel(context.Background())
 

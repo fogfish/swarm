@@ -17,6 +17,7 @@ import (
 	"github.com/fogfish/swarm"
 )
 
+// Cathode defines on-the-wire protocol for [swarm.Bag], covering the ingress.
 type Cathode interface {
 	Ack(ctx context.Context, digest string) error
 	Err(ctx context.Context, digest string, err error) error
@@ -48,6 +49,7 @@ type Dequeuer struct {
 	Cathode Cathode
 }
 
+// Creates instance of broker reader
 func NewDequeuer(cathode Cathode, config swarm.Config) *Dequeuer {
 	ctx, can := context.WithCancel(context.Background())
 
@@ -60,12 +62,13 @@ func NewDequeuer(cathode Cathode, config swarm.Config) *Dequeuer {
 	}
 }
 
-// Close enqueuer
+// Closes broker reader, gracefully shutdowns all I/O
 func (k *Dequeuer) Close() {
 	k.cancel()
 	k.WaitGroup.Wait()
 }
 
+// Await reader to complete
 func (k *Dequeuer) Await() {
 	if spawner, ok := k.Cathode.(interface{ Run() }); ok {
 		go spawner.Run()
