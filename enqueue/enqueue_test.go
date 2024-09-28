@@ -1,3 +1,11 @@
+//
+// Copyright (C) 2021 - 2024 Dmitry Kolesnikov
+//
+// This file may be modified and distributed under the terms
+// of the Apache License Version 2.0. See the LICENSE file for details.
+// https://github.com/fogfish/swarm
+//
+
 package enqueue_test
 
 import (
@@ -37,6 +45,32 @@ func TestType(t *testing.T) {
 	)
 }
 
+func TestEvent(t *testing.T) {
+	mock := mockEmitter(10)
+	k := kernel.NewEnqueuer(mock, swarm.Config{})
+	go func() {
+		time.Sleep(yield_before_close)
+		k.Close()
+	}()
+
+	snd, _ := enqueue.Event[swarm.Meta, User](k)
+	snd <- swarm.Event[swarm.Meta, User]{
+		Meta: &swarm.Meta{},
+		Data: &User{ID: "id", Text: "user"},
+	}
+
+	k.Await()
+
+	it.Then(t).Should(
+		it.String(mock.val).Contain(`"meta":`),
+		it.String(mock.val).Contain(`"data":`),
+		it.String(mock.val).Contain(`"id":`),
+		it.String(mock.val).Contain(`"type":"[User]"`),
+		it.String(mock.val).Contain(`"created":`),
+		it.String(mock.val).Contain(`{"id":"id","text":"user"}`),
+	)
+}
+
 func TestBytes(t *testing.T) {
 	mock := mockEmitter(10)
 	k := kernel.NewEnqueuer(mock, swarm.Config{})
@@ -53,7 +87,6 @@ func TestBytes(t *testing.T) {
 	it.Then(t).Should(
 		it.Equal(mock.val, `{"id":"id","text":"user"}`),
 	)
-
 }
 
 //------------------------------------------------------------------------------

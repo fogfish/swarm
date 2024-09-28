@@ -1,3 +1,11 @@
+//
+// Copyright (C) 2021 - 2024 Dmitry Kolesnikov
+//
+// This file may be modified and distributed under the terms
+// of the Apache License Version 2.0. See the LICENSE file for details.
+// https://github.com/fogfish/swarm
+//
+
 package enqueue
 
 import (
@@ -55,26 +63,26 @@ func (q *EmitterTyped[T]) Enq(ctx context.Context, object T, cat ...string) erro
 
 // Synchronous emitter of events to the broker.
 // It blocks the routine until the event is accepted by the broker.
-type EmitterEvent[T any, E swarm.EventKind[T]] struct {
+type EmitterEvent[M, T any] struct {
 	cat    string
-	codec  kernel.Encoder[*E]
+	codec  kernel.Encoder[swarm.Event[M, T]]
 	kernel *kernel.Enqueuer
 }
 
 // Creates synchronous event emitter
-func NewEvent[T any, E swarm.EventKind[T]](q *kernel.Enqueuer, category ...string) *EmitterEvent[T, E] {
-	cat := swarm.TypeOf[E](category...)
+func NewEvent[M, T any](q *kernel.Enqueuer, category ...string) *EmitterEvent[M, T] {
+	cat := swarm.TypeOf[T](category...)
 
-	return &EmitterEvent[T, E]{
+	return &EmitterEvent[M, T]{
 		cat:    cat,
-		codec:  encoding.NewCodecEvent[T, E](q.Config.Source, cat),
+		codec:  encoding.NewCodecEvent[M, T](q.Config.Source, cat),
 		kernel: q,
 	}
 }
 
 // Synchronously enqueue event to broker.
 // It guarantees event to be send after return.
-func (q *EmitterEvent[T, E]) Enq(ctx context.Context, object *E, cat ...string) error {
+func (q *EmitterEvent[M, T]) Enq(ctx context.Context, object swarm.Event[M, T], cat ...string) error {
 	msg, err := q.codec.Encode(object)
 	if err != nil {
 		return err

@@ -12,12 +12,7 @@ import (
 	"time"
 
 	"github.com/fogfish/curie"
-	"github.com/fogfish/golem/pure"
 )
-
-type EventType any
-
-type EventKind[A any] pure.HKT[EventType, A]
 
 // Event defines immutable fact(s) placed into the queueing system.
 // Event resembles the concept of Action as it is defined by schema.org.
@@ -29,8 +24,17 @@ type EventKind[A any] pure.HKT[EventType, A]
 // These applications processes logical log of events, each event defines a change
 // to current state of the object, i.e. which attributes were inserted,
 // updated or deleted (a kind of diff). The event identifies the object that was
-// changed together with  using unique identifier.
-type Event[T any] struct {
+// changed together with using unique identifier.
+//
+// In contrast with other solutions, the event does not uses envelop approach.
+// Instead, it side-car meta and data each other, making extendible
+type Event[M, T any] struct {
+	Meta *M `json:"meta,omitempty"`
+	Data *T `json:"data,omitempty"`
+}
+
+// The default metadata associated with event.
+type Meta struct {
 	//
 	// Unique identity for event.
 	// It is automatically defined by the library upon the transmission unless
@@ -51,27 +55,15 @@ type Event[T any] struct {
 	Agent curie.IRI `json:"agent,omitempty"`
 
 	//
+	// ISO8601 timestamps when action has been created
+	// It is automatically defined by the library upon the transmission
+	Created time.Time `json:"created,omitempty"`
+
+	//
 	// Indicates target performer of the event, a software service that is able to
 	Target curie.IRI `json:"target,omitempty"`
 
 	//
 	// Indirect participants, a user who initiated an event.
 	Participant curie.IRI `json:"participant,omitempty"`
-
-	//
-	// ISO8601 timestamps when action has been created
-	// It is automatically defined by the library upon the transmission
-	Created time.Time `json:"created,omitempty"`
-
-	//
-	// The object upon which the event is carried out.
-	Object T `json:"object,omitempty"`
-
-	// Status (Pending | Success | Failure)
-	// Deadline before after | nbf NotBefore
-	// Target
-
 }
-
-func (Event[T]) HKT1(EventType) {}
-func (Event[T]) HKT2(T)         {}
