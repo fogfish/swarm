@@ -89,7 +89,7 @@ type spawner struct {
 
 func mockSpawner(seq []swarm.Bag) *spawner {
 	return &spawner{
-		Bridge: NewBridge(100 * time.Millisecond),
+		Bridge: NewBridge(1 * time.Millisecond),
 		seq:    seq,
 	}
 }
