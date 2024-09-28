@@ -27,75 +27,63 @@ type EventBridge interface {
 	PutEvents(context.Context, *eventbridge.PutEventsInput, ...func(*eventbridge.Options)) (*eventbridge.PutEventsOutput, error)
 }
 
+// EventBridge client
 type Client struct {
 	service EventBridge
 	bus     string
 	config  swarm.Config
 }
 
-func New(queue string, opts ...swarm.Option) (swarm.Broker, error) {
-	cli, err := NewEventBridge(queue, opts...)
+// Create writer to AWS EventBridge
+func NewWriter(queue string, opts ...Option) (*kernel.Enqueuer, error) {
+	cli, err := newEventBridge(queue, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	config := swarm.NewConfig()
-	for _, opt := range opts {
-		opt(&config)
-	}
-
-	starter := lambda.Start
-
-	type Mock interface{ Start(interface{}) }
-	if config.Service != nil {
-		service, ok := config.Service.(Mock)
-		if ok {
-			starter = service.Start
-		}
-	}
-
-	sls := spawner{f: starter, c: config}
-
-	return kernel.New(cli, sls, config), err
+	return kernel.NewEnqueuer(cli, cli.config), nil
 }
 
-func NewEventBridge(bus string, opts ...swarm.Option) (*Client, error) {
-	config := swarm.NewConfig()
+// Create reader from AWS EventBridge
+func NewReader(queue string, opts ...Option) (*kernel.Dequeuer, error) {
+	c := &Client{bus: queue}
+
+	for _, opt := range defs {
+		opt(c)
+	}
 	for _, opt := range opts {
-		opt(&config)
+		opt(c)
 	}
 
-	api, err := newService(&config)
-	if err != nil {
-		return nil, err
-	}
+	bridge := &bridge{kernel.NewBridge(c.config.TimeToFlight)}
 
-	return &Client{
-		service: api,
-		bus:     bus,
-		config:  config,
-	}, nil
+	return kernel.NewDequeuer(bridge, c.config), nil
 }
 
-func newService(conf *swarm.Config) (EventBridge, error) {
-	if conf.Service != nil {
-		service, ok := conf.Service.(EventBridge)
-		if ok {
-			return service, nil
+func newEventBridge(queue string, opts ...Option) (*Client, error) {
+	c := &Client{bus: queue}
+
+	for _, opt := range defs {
+		opt(c)
+	}
+	for _, opt := range opts {
+		opt(c)
+	}
+
+	if c.service == nil {
+		aws, err := config.LoadDefaultConfig(context.Background())
+		if err != nil {
+			return nil, swarm.ErrServiceIO.New(err)
 		}
+		c.service = eventbridge.NewFromConfig(aws)
 	}
 
-	aws, err := config.LoadDefaultConfig(context.Background())
-	if err != nil {
-		return nil, swarm.ErrServiceIO.New(err)
-	}
-
-	return eventbridge.NewFromConfig(aws), nil
+	return c, nil
 }
 
 // Enq enqueues message to broker
-func (cli *Client) Enq(bag swarm.Bag) error {
-	ctx, cancel := context.WithTimeout(context.Background(), cli.config.NetworkTimeout)
+func (cli *Client) Enq(ctx context.Context, bag swarm.Bag) error {
+	ctx, cancel := context.WithTimeout(ctx, cli.config.NetworkTimeout)
 	defer cancel()
 
 	ret, err := cli.service.PutEvents(ctx,
@@ -104,7 +92,7 @@ func (cli *Client) Enq(bag swarm.Bag) error {
 				{
 					EventBusName: aws.String(cli.bus),
 					Source:       aws.String(cli.config.Source),
-					DetailType:   aws.String(bag.Ctx.Category),
+					DetailType:   aws.String(bag.Category),
 					Detail:       aws.String(string(bag.Object)),
 				},
 			},
@@ -126,26 +114,17 @@ func (cli *Client) Enq(bag swarm.Bag) error {
 
 //------------------------------------------------------------------------------
 
-type spawner struct {
-	c swarm.Config
-	f func(any)
+type bridge struct{ *kernel.Bridge }
+
+func (s bridge) Run() { lambda.Start(s.run) }
+
+func (s bridge) run(evt events.CloudWatchEvent) error {
+	bag := make([]swarm.Bag, 1)
+	bag[0] = swarm.Bag{
+		Category: evt.DetailType,
+		Digest:   evt.ID,
+		Object:   evt.Detail,
+	}
+
+	return s.Bridge.Dispatch(bag)
 }
-
-func (s spawner) Spawn(k *kernel.Kernel) error {
-	s.f(
-		func(evt events.CloudWatchEvent) error {
-			bag := make([]swarm.Bag, 1)
-			bag[0] = swarm.Bag{
-				Ctx:    swarm.NewContext(context.Background(), evt.DetailType, evt.ID),
-				Object: evt.Detail,
-			}
-
-			return k.Dispatch(bag, s.c.TimeToFlight)
-		},
-	)
-
-	return nil
-}
-
-func (s spawner) Ack(digest string) error   { return nil }
-func (s spawner) Ask() ([]swarm.Bag, error) { return nil, nil }

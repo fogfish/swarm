@@ -6,7 +6,24 @@
 // https://github.com/fogfish/swarm
 //
 
-package eventbridge_test
+package eventbridge
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"testing"
+	"time"
+
+	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-sdk-go-v2/service/eventbridge"
+	"github.com/aws/aws-sdk-go-v2/service/eventbridge/types"
+	"github.com/fogfish/it/v2"
+	"github.com/fogfish/swarm"
+	"github.com/fogfish/swarm/kernel"
+)
+
+/*
 
 import (
 	"context"
@@ -24,6 +41,7 @@ import (
 	"github.com/fogfish/swarm/qtest"
 	"github.com/fogfish/swarm/queue"
 )
+
 
 func TestEnqueueEventBridge(t *testing.T) {
 	qtest.TestEnqueueTyped(t, newMockEnqueue)
@@ -113,4 +131,93 @@ func (mock *mockLambda) Start(handler interface{}) {
 	}
 
 	mock.loopback <- mock.returnReceipt
+}
+
+*/
+
+func TestReader(t *testing.T) {
+	var bag []swarm.Bag
+	bridge := &bridge{kernel.NewBridge(100 * time.Millisecond)}
+
+	t.Run("Success", func(t *testing.T) {
+		go func() {
+			bag, _ = bridge.Ask(context.Background())
+			for _, m := range bag {
+				bridge.Ack(context.Background(), m.Digest)
+			}
+		}()
+
+		err := bridge.run(
+			events.CloudWatchEvent{
+				ID:         "abc-def",
+				DetailType: "category",
+				Detail:     json.RawMessage(`{"sut":"test"}`),
+			},
+		)
+
+		it.Then(t).Should(
+			it.Nil(err),
+			it.Equal(len(bag), 1),
+			it.Equal(bag[0].Category, "category"),
+			it.Equiv(bag[0].Object, []byte(`{"sut":"test"}`)),
+		)
+	})
+
+	t.Run("Timeout", func(t *testing.T) {
+		go func() {
+			bag, _ = bridge.Ask(context.Background())
+		}()
+
+		err := bridge.run(
+			events.CloudWatchEvent{
+				ID:         "abc-def",
+				DetailType: "category",
+				Detail:     json.RawMessage(`{"sut":"test"}`),
+			},
+		)
+
+		it.Then(t).ShouldNot(
+			it.Nil(err),
+		)
+	})
+}
+
+func TestWriter(t *testing.T) {
+	mock := &mockEventBridge{}
+
+	q, err := NewWriter("test", WithService(mock))
+	it.Then(t).Should(it.Nil(err))
+
+	err = q.Emitter.Enq(context.Background(),
+		swarm.Bag{
+			Category: "cat",
+			Object:   []byte(`value`),
+		},
+	)
+	it.Then(t).Should(
+		it.Nil(err),
+		it.Equal(*mock.val.DetailType, "cat"),
+		it.Equal(*mock.val.Detail, "value"),
+	)
+
+	q.Close()
+}
+
+//------------------------------------------------------------------------------
+
+type mockEventBridge struct {
+	EventBridge
+	val types.PutEventsRequestEntry
+}
+
+func (m *mockEventBridge) PutEvents(ctx context.Context, req *eventbridge.PutEventsInput, opts ...func(*eventbridge.Options)) (*eventbridge.PutEventsOutput, error) {
+	if len(req.Entries) != 1 {
+		return nil, fmt.Errorf("Bad request")
+	}
+
+	m.val = req.Entries[0]
+
+	return &eventbridge.PutEventsOutput{
+		FailedEntryCount: 0,
+	}, nil
 }
