@@ -35,6 +35,24 @@ func TestType(t *testing.T) {
 	it.Then(t).Should(
 		it.Equal(mock.val, `{"id":"id","text":"user"}`),
 	)
+}
+
+func TestBytes(t *testing.T) {
+	mock := mockEmitter(10)
+	k := kernel.NewEnqueuer(mock, swarm.Config{})
+	go func() {
+		time.Sleep(yield_before_close)
+		k.Close()
+	}()
+
+	snd, _ := enqueue.Bytes(k, "User")
+	snd <- []byte(`{"id":"id","text":"user"}`)
+
+	k.Await()
+
+	it.Then(t).Should(
+		it.Equal(mock.val, `{"id":"id","text":"user"}`),
+	)
 
 }
 
