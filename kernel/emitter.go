@@ -65,7 +65,7 @@ func (k *Enqueuer) Await() {
 // Enqueue creates pair of channels within kernel to enqueue messages
 func Enqueue[T any](k *Enqueuer, cat string, codec Encoder[T]) ( /*snd*/ chan<- T /*dlq*/, <-chan T) {
 	snd := make(chan T, k.Config.CapOut)
-	dlq := make(chan T, k.Config.CapDLQ)
+	dlq := make(chan T, k.Config.CapDlq)
 
 	// emitter routine
 	emit := func(obj T) {

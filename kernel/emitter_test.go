@@ -155,7 +155,7 @@ func TestEnqueuer(t *testing.T) {
 
 	t.Run("Enqueue.N.Error", func(t *testing.T) {
 		err := make(chan error)
-		k := NewEnqueuer(looser{}, swarm.Config{CapOut: 4, CapDLQ: 4, StdErr: err})
+		k := NewEnqueuer(looser{}, swarm.Config{CapOut: 4, CapDlq: 4, StdErr: err})
 		snd, dlq := Enqueue(k, "test", codec)
 
 		snd <- "1"
