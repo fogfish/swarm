@@ -30,6 +30,11 @@ type Retry interface {
 	Retry(f func() error) error
 }
 
+type Codec interface {
+	Encode([]byte) ([]byte, error)
+	Decode([]byte) ([]byte, error)
+}
+
 type Config struct {
 	// Instance of AWS Service, used to overwrite default client
 	Service any
@@ -61,6 +66,9 @@ type Config struct {
 
 	// Timeout for any network operations
 	NetworkTimeout time.Duration
+
+	// Codec for binary packets
+	Codec Codec
 }
 
 func NewConfig() Config {
