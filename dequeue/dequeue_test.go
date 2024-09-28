@@ -30,7 +30,7 @@ func TestDequeueType(t *testing.T) {
 	}()
 
 	var msg swarm.Msg[User]
-	rcv, ack := dequeue.Type[User](k)
+	rcv, ack := dequeue.Typed[User](k)
 
 	go func() {
 		msg = <-rcv

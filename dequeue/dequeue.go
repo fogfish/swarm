@@ -15,7 +15,7 @@ import (
 )
 
 // Creates pair of channels to receive and acknowledge messages of type T
-func Type[T any](q *kernel.Dequeuer, category ...string) (rcv <-chan swarm.Msg[T], ack chan<- swarm.Msg[T]) {
+func Typed[T any](q *kernel.Dequeuer, category ...string) (rcv <-chan swarm.Msg[T], ack chan<- swarm.Msg[T]) {
 	return kernel.Dequeue(q,
 		swarm.TypeOf[T](category...),
 		encoding.NewCodecJson[T](),
