@@ -12,12 +12,6 @@ import (
 	"log/slog"
 )
 
-// Message broker
-type Broker interface {
-	Close()
-	Await()
-}
-
 // Consumes dead letter messages
 //
 // swarm.LogDeadLetters(queue.Enqueue(...))

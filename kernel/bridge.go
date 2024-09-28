@@ -43,7 +43,7 @@ func NewBridge(timeToFlight time.Duration) *Bridge {
 func (s *Bridge) Dispatch(seq []swarm.Bag) error {
 	s.inflight = map[string]struct{}{}
 	for _, bag := range seq {
-		s.inflight[bag.Ctx.Digest] = struct{}{}
+		s.inflight[bag.Digest] = struct{}{}
 	}
 
 	s.ch <- seq

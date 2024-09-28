@@ -27,11 +27,11 @@ func (a router[T]) Route(ctx context.Context, bag swarm.Bag) error {
 		return err
 	}
 
-	msg := swarm.Msg[T]{Ctx: bag.Ctx, Object: obj}
+	msg := swarm.ToMsg(bag, obj)
 
 	select {
 	case <-ctx.Done():
-		return fmt.Errorf("routing cancelled: category %s", bag.Ctx.Category)
+		return fmt.Errorf("routing cancelled: category %s", bag.Category)
 	case a.ch <- msg:
 		return nil
 	}

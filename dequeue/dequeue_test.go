@@ -39,8 +39,8 @@ func TestDequeueType(t *testing.T) {
 	k.Await()
 
 	it.Then(t).Should(
-		it.Equal(msg.Ctx.Category, "User"),
-		it.Equal(msg.Ctx.Digest, "1"),
+		it.Equal(msg.Category, "User"),
+		it.Equal(msg.Digest, "1"),
 		it.Equal(msg.Object.ID, "id"),
 		it.Equal(msg.Object.Text, "user"),
 	)
@@ -65,8 +65,8 @@ func TestDequeueBytes(t *testing.T) {
 	k.Await()
 
 	it.Then(t).Should(
-		it.Equal(msg.Ctx.Category, "User"),
-		it.Equal(msg.Ctx.Digest, "1"),
+		it.Equal(msg.Category, "User"),
+		it.Equal(msg.Digest, "1"),
 		it.Equal(string(msg.Object), `{"id":"id","text":"user"}`),
 	)
 }
@@ -99,6 +99,6 @@ func (c cathode) Ask(context.Context) ([]swarm.Bag, error) {
 		return nil, err
 	}
 
-	bag := []swarm.Bag{{Ctx: &swarm.Context{Category: c.cat, Digest: "1"}, Object: data}}
+	bag := []swarm.Bag{{Category: c.cat, Digest: "1", Object: data}}
 	return bag, nil
 }

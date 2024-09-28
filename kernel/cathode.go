@@ -93,7 +93,7 @@ func (k *Dequeuer) receive() {
 			bag := seq[i]
 
 			k.RWMutex.RLock()
-			r, has := k.router[bag.Ctx.Category]
+			r, has := k.router[bag.Category]
 			k.RWMutex.RUnlock()
 
 			if has {
@@ -142,13 +142,13 @@ func Dequeue[T any](k *Dequeuer, cat string, codec Decoder[T]) ( /*rcv*/ <-chan 
 
 	// emitter routine
 	acks := func(msg swarm.Msg[T]) {
-		if msg.Ctx.Error == nil {
-			err := k.Cathode.Ack(k.context, msg.Ctx.Digest)
+		if msg.Error == nil {
+			err := k.Cathode.Ack(k.context, msg.Digest)
 			if k.Config.StdErr != nil && err != nil {
 				k.Config.StdErr <- err
 			}
 		} else {
-			err := k.Cathode.Err(k.context, msg.Ctx.Digest, msg.Ctx.Error)
+			err := k.Cathode.Err(k.context, msg.Digest, msg.Error)
 			if k.Config.StdErr != nil && err != nil {
 				k.Config.StdErr <- err
 			}

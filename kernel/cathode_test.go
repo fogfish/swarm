@@ -22,7 +22,7 @@ func TestDequeuer(t *testing.T) {
 	codec := encoding.NewCodecJson[string]()
 	none := mockCathode(nil, nil)
 	pass := mockCathode(make(chan string),
-		[]swarm.Bag{{Ctx: &swarm.Context{Category: "test", Digest: "1"}, Object: []byte(`"1"`)}},
+		[]swarm.Bag{{Category: "test", Digest: "1", Object: []byte(`"1"`)}},
 	)
 
 	t.Run("Kernel", func(t *testing.T) {

@@ -78,8 +78,7 @@ func Enqueue[T any](k *Enqueuer, cat string, codec Encoder[T]) ( /*snd*/ chan<- 
 			return
 		}
 
-		ctx := swarm.NewContext(context.Background(), cat, "")
-		bag := swarm.Bag{Ctx: ctx, Object: msg}
+		bag := swarm.Bag{Category: cat, Object: msg}
 
 		if err := k.Emitter.Enq(context.Background(), bag); err != nil {
 			dlq <- obj

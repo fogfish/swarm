@@ -46,8 +46,9 @@ func TestBridge(t *testing.T) {
 			val := strconv.Itoa(i + 1)
 			seq = append(seq,
 				swarm.Bag{
-					Ctx:    &swarm.Context{Category: "test", Digest: val},
-					Object: []byte(fmt.Sprintf(`"%s"`, val)), // JSON is expected
+					Category: "test",
+					Digest:   val,
+					Object:   []byte(fmt.Sprintf(`"%s"`, val)), // JSON is expected
 				},
 			)
 		}

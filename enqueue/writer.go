@@ -39,8 +39,8 @@ func (q *EmitterTyped[T]) Enq(ctx context.Context, object T, cat ...string) erro
 	}
 
 	bag := swarm.Bag{
-		Ctx:    swarm.NewContext(context.Background(), category, ""),
-		Object: msg,
+		Category: category,
+		Object:   msg,
 	}
 
 	err = q.kernel.Emitter.Enq(ctx, bag)
@@ -86,8 +86,8 @@ func (q *EmitterEvent[T, E]) Enq(ctx context.Context, object *E, cat ...string) 
 	}
 
 	bag := swarm.Bag{
-		Ctx:    swarm.NewContext(context.Background(), category, ""),
-		Object: msg,
+		Category: category,
+		Object:   msg,
 	}
 
 	err = q.kernel.Emitter.Enq(ctx, bag)
@@ -138,8 +138,8 @@ func (q *EmitterBytes) Enq(ctx context.Context, object []byte, cat ...string) er
 	}
 
 	bag := swarm.Bag{
-		Ctx:    swarm.NewContext(context.Background(), category, ""),
-		Object: msg,
+		Category: category,
+		Object:   msg,
 	}
 
 	err = q.kernel.Emitter.Enq(ctx, bag)
