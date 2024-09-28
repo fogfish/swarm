@@ -15,7 +15,7 @@ import (
 )
 
 // Creates pair of channels to emit messages of type T
-func Type[T any](q *kernel.Enqueuer, category ...string) (snd chan<- T, dlq <-chan T) {
+func Typed[T any](q *kernel.Enqueuer, category ...string) (snd chan<- T, dlq <-chan T) {
 	return kernel.Enqueue(q,
 		swarm.TypeOf[T](category...),
 		encoding.NewCodecJson[T](),
@@ -23,7 +23,7 @@ func Type[T any](q *kernel.Enqueuer, category ...string) (snd chan<- T, dlq <-ch
 }
 
 // Creates pair of channels to emit events of type T
-func Enqueue[T any, E swarm.EventKind[T]](q *kernel.Enqueuer, category ...string) (snd chan<- *E, dlq <-chan *E) {
+func Event[T any, E swarm.EventKind[T]](q *kernel.Enqueuer, category ...string) (snd chan<- *E, dlq <-chan *E) {
 	cat := swarm.TypeOf[E](category...)
 
 	return kernel.Enqueue(q, cat,

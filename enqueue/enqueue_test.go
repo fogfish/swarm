@@ -27,7 +27,7 @@ func TestType(t *testing.T) {
 		k.Close()
 	}()
 
-	snd, _ := enqueue.Type[User](k)
+	snd, _ := enqueue.Typed[User](k)
 	snd <- User{ID: "id", Text: "user"}
 
 	k.Await()
