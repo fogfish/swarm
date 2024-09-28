@@ -32,7 +32,7 @@ func init() {
 }
 
 // controls yield time before kernel is closed
-const yield_before_close = 1 * time.Millisecond
+const yield_before_close = 5 * time.Millisecond
 
 func TestBridge(t *testing.T) {
 	config := swarm.Config{PollFrequency: 0 * time.Millisecond}
