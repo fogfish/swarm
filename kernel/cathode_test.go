@@ -23,6 +23,15 @@ func TestDequeuer(t *testing.T) {
 		[]swarm.Bag{{Ctx: &swarm.Context{Category: "test", Digest: "1"}, Object: []byte(`"1"`)}},
 	)
 
+	t.Run("Kernel", func(t *testing.T) {
+		k := New(nil, NewDequeuer(mockCathode(nil, nil), swarm.Config{}))
+		go func() {
+			time.Sleep(yield_before_close)
+			k.Close()
+		}()
+		k.Await()
+	})
+
 	t.Run("None", func(t *testing.T) {
 		k := NewDequeuer(none, swarm.Config{PollFrequency: 1 * time.Second})
 		go k.Await()

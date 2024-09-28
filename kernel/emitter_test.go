@@ -19,9 +19,6 @@ import (
 )
 
 func TestEnqueuer(t *testing.T) {
-	// none := mockEmitter(0, nil)
-	// pass := mockEmitter(10, make(chan []byte))
-
 	mockit := func(config swarm.Config) (*Enqueuer, *emitter) {
 		mock := mockEmitter(10)
 		k := NewEnqueuer(mock, config)
@@ -33,6 +30,15 @@ func TestEnqueuer(t *testing.T) {
 
 		return k, mock
 	}
+
+	t.Run("Kernel", func(t *testing.T) {
+		k := New(NewEnqueuer(mockEmitter(10), swarm.Config{}), nil)
+		go func() {
+			time.Sleep(yield_before_close)
+			k.Close()
+		}()
+		k.Await()
+	})
 
 	t.Run("None", func(t *testing.T) {
 		k, _ := mockit(swarm.Config{})

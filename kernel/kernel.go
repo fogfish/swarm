@@ -21,11 +21,21 @@ func New(enqueuer *Enqueuer, dequeuer *Dequeuer) *Kernel {
 }
 
 func (k *Kernel) Close() {
-	k.Dequeuer.Close()
-	k.Enqueuer.Close()
+	if k.Dequeuer != nil {
+		k.Dequeuer.Close()
+	}
+
+	if k.Enqueuer != nil {
+		k.Enqueuer.Close()
+	}
 }
 
 func (k *Kernel) Await() {
-	k.Dequeuer.Await()
-	k.Enqueuer.Await()
+	if k.Dequeuer != nil {
+		k.Dequeuer.Await()
+	}
+
+	if k.Enqueuer != nil {
+		k.Enqueuer.Await()
+	}
 }
