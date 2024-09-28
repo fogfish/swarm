@@ -8,7 +8,12 @@
 
 package kernel
 
-import "github.com/fogfish/swarm"
+import (
+	"context"
+	"fmt"
+
+	"github.com/fogfish/swarm"
+)
 
 // Router is typed pair of message channel and codec
 type router[T any] struct {
@@ -16,13 +21,18 @@ type router[T any] struct {
 	codec Decoder[T]
 }
 
-func (a router[T]) Route(bag swarm.Bag) error {
+func (a router[T]) Route(ctx context.Context, bag swarm.Bag) error {
 	obj, err := a.codec.Decode(bag.Object)
 	if err != nil {
 		return err
 	}
 
 	msg := swarm.Msg[T]{Ctx: bag.Ctx, Object: obj}
-	a.ch <- msg
-	return nil
+
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("routing cancelled: category %s", bag.Ctx.Category)
+	case a.ch <- msg:
+		return nil
+	}
 }

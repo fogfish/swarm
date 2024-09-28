@@ -26,6 +26,10 @@ type Cathode interface {
 // Decode message from wire format
 type Decoder[T any] interface{ Decode([]byte) (T, error) }
 
+type Router = interface {
+	Route(context.Context, swarm.Bag) error
+}
+
 type Dequeuer struct {
 	sync.WaitGroup
 	sync.RWMutex
@@ -38,7 +42,7 @@ type Dequeuer struct {
 	Config swarm.Config
 
 	// event router, binds category with destination channel
-	router map[string]interface{ Route(swarm.Bag) error }
+	router map[string]Router
 
 	// Cathode is the reader port on message broker
 	Cathode Cathode
@@ -51,7 +55,7 @@ func NewDequeuer(cathode Cathode, config swarm.Config) *Dequeuer {
 		Config:  config,
 		context: ctx,
 		cancel:  can,
-		router:  map[string]interface{ Route(swarm.Bag) error }{},
+		router:  make(map[string]Router),
 		Cathode: cathode,
 	}
 }
@@ -90,7 +94,7 @@ func (k *Dequeuer) receive() {
 			k.RWMutex.RUnlock()
 
 			if has {
-				err := r.Route(bag)
+				err := r.Route(k.context, bag)
 				if k.Config.StdErr != nil && err != nil {
 					k.Config.StdErr <- err
 					return
@@ -101,7 +105,7 @@ func (k *Dequeuer) receive() {
 
 	k.WaitGroup.Add(1)
 	go func() {
-		slog.Debug("kernel dequeue loop started")
+		slog.Debug("kernel receive loop started")
 
 	exit:
 		for {
@@ -120,7 +124,7 @@ func (k *Dequeuer) receive() {
 		}
 
 		k.WaitGroup.Done()
-		slog.Debug("kernel dequeue loop stopped")
+		slog.Debug("kernel receive loop stopped")
 	}()
 }
 

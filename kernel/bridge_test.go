@@ -10,7 +10,9 @@ package kernel
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"strconv"
 	"testing"
 	"time"
 
@@ -29,72 +31,223 @@ func init() {
 	)
 }
 
-func TestBridge(t *testing.T) {
+// controls yield time before kernel is closed
+const yield_before_close = 1 * time.Millisecond
 
-	seq := []swarm.Bag{
-		{Ctx: &swarm.Context{Category: "test", Digest: "1"}, Object: []byte(`"1"`)},
-		{Ctx: &swarm.Context{Category: "test", Digest: "2"}, Object: []byte(`"2"`)},
+func TestBridge(t *testing.T) {
+	// Use-case
+	// 1. Recv - Ack
+	// 2. Recv - Timeout
+	// 3. Recv - Error
+	// 4. Recv batch
+
+	config := swarm.Config{PollFrequency: 0 * time.Millisecond}
+
+	//
+	mockit := func(n int) (*Dequeuer, *bridge) {
+		seq := []swarm.Bag{}
+		for i := 0; i < n; i++ {
+			val := strconv.Itoa(i + 1)
+			seq = append(seq,
+				swarm.Bag{
+					Ctx:    &swarm.Context{Category: "test", Digest: val},
+					Object: []byte(fmt.Sprintf(`"%s"`, val)), // JSON is expected
+				},
+			)
+		}
+
+		brdg := mockBridge(seq)
+		k := NewDequeuer(brdg, config)
+		go func() {
+			time.Sleep(yield_before_close)
+			k.Close()
+		}()
+
+		return k, brdg
 	}
 
 	t.Run("None", func(t *testing.T) {
-		k := NewDequeuer(mockSpawner(seq), swarm.Config{PollFrequency: 1 * time.Second})
-		go k.Await()
-		k.Close()
+		k, _ := mockit(1)
+		k.Await()
 	})
 
 	t.Run("Dequeue.1", func(t *testing.T) {
-		mock := mockSpawner(seq)
-		k := NewDequeuer(mock, swarm.Config{PollFrequency: 10 * time.Millisecond})
+		k, brdg := mockit(1)
 		rcv, ack := Dequeue(k, "test", swarm.NewCodecJson[string]())
-		go k.Await()
 
-		ack <- <-rcv
-		ack <- <-rcv
-
-		k.Close()
+		// Note: in real apps receive loop is always go function
+		go func() { ack <- <-rcv }()
+		k.Await()
 
 		it.Then(t).Should(
-			it.Seq(mock.ack).Equal(`1`, `2`),
+			it.Seq(brdg.ack).Equal(`1`),
 		)
 	})
 
-	t.Run("Timeout", func(t *testing.T) {
-		mock := mockSpawner(seq)
-		k := NewDequeuer(mock, swarm.Config{PollFrequency: 0 * time.Millisecond})
+	t.Run("Dequeue.N", func(t *testing.T) {
+		k, brdg := mockit(3)
 		rcv, ack := Dequeue(k, "test", swarm.NewCodecJson[string]())
-		go k.Await()
 
-		ack <- <-rcv
-		<-rcv
-		time.Sleep(1 * time.Millisecond)
+		// Note: in real apps receive loop is always go function
+		go func() {
+			ack <- <-rcv
+			ack <- <-rcv
+			ack <- <-rcv
+		}()
+		k.Await()
 
-		k.Close()
-		time.Sleep(1 * time.Millisecond)
-
-		it.Then(t).ShouldNot(
-			it.Nil(mock.err),
+		it.Then(t).Should(
+			it.Seq(brdg.ack).Equal(`1`, `2`, `3`),
 		)
 	})
 
+	t.Run("Error.1", func(t *testing.T) {
+		k, brdg := mockit(1)
+		rcv, ack := Dequeue(k, "test", swarm.NewCodecJson[string]())
+
+		// Note: in real apps receive loop is always go function
+		go func() {
+			x := <-rcv
+			ack <- x.Fail(fmt.Errorf("failed"))
+		}()
+		k.Await()
+
+		it.Then(t).Should(
+			it.Fail(brdg.Status).Contain("failed"),
+		)
+	})
+
+	t.Run("Error.N.1", func(t *testing.T) {
+		k, brdg := mockit(3)
+		rcv, ack := Dequeue(k, "test", swarm.NewCodecJson[string]())
+
+		// Note: in real apps receive loop is always go function
+		go func() {
+			x := <-rcv
+			ack <- x.Fail(fmt.Errorf("failed"))
+		}()
+		k.Await()
+
+		it.Then(t).Should(
+			it.Fail(brdg.Status).Contain("failed"),
+		)
+	})
+
+	t.Run("Error.N.2", func(t *testing.T) {
+		k, brdg := mockit(3)
+		rcv, ack := Dequeue(k, "test", swarm.NewCodecJson[string]())
+
+		// Note: in real apps receive loop is always go function
+		go func() {
+			ack <- <-rcv
+			x := <-rcv
+			ack <- x.Fail(fmt.Errorf("failed"))
+		}()
+		k.Await()
+
+		it.Then(t).Should(
+			it.Fail(brdg.Status).Contain("failed"),
+		)
+	})
+
+	t.Run("Error.N.3", func(t *testing.T) {
+		k, brdg := mockit(3)
+		rcv, ack := Dequeue(k, "test", swarm.NewCodecJson[string]())
+
+		// Note: in real apps receive loop is always go function
+		go func() {
+			ack <- <-rcv
+			ack <- <-rcv
+			x := <-rcv
+			ack <- x.Fail(fmt.Errorf("failed"))
+		}()
+		k.Await()
+
+		it.Then(t).Should(
+			it.Fail(brdg.Status).Contain("failed"),
+		)
+	})
+
+	t.Run("Timeout.1", func(t *testing.T) {
+		k, brdg := mockit(1)
+		rcv, _ := Dequeue(k, "test", swarm.NewCodecJson[string]())
+
+		// Note: in real apps receive loop is always go function
+		go func() { <-rcv }()
+		k.Await()
+
+		it.Then(t).Should(
+			it.Fail(brdg.Status).Contain("timeout"),
+		)
+	})
+
+	t.Run("Timeout.N.1", func(t *testing.T) {
+		k, brdg := mockit(3)
+		rcv, _ := Dequeue(k, "test", swarm.NewCodecJson[string]())
+
+		// Note: in real apps receive loop is always go function
+		go func() {
+			<-rcv
+		}()
+		k.Await()
+
+		it.Then(t).Should(
+			it.Fail(brdg.Status).Contain("timeout"),
+		)
+	})
+
+	t.Run("Timeout.N.2", func(t *testing.T) {
+		k, brdg := mockit(3)
+		rcv, ack := Dequeue(k, "test", swarm.NewCodecJson[string]())
+
+		// Note: in real apps receive loop is always go function
+		go func() {
+			ack <- <-rcv
+			<-rcv
+		}()
+		k.Await()
+
+		it.Then(t).Should(
+			it.Fail(brdg.Status).Contain("timeout"),
+		)
+	})
+
+	t.Run("Timeout.N.3", func(t *testing.T) {
+		k, brdg := mockit(3)
+		rcv, ack := Dequeue(k, "test", swarm.NewCodecJson[string]())
+
+		// Note: in real apps receive loop is always go function
+		go func() {
+			ack <- <-rcv
+			ack <- <-rcv
+			<-rcv
+		}()
+		k.Await()
+
+		it.Then(t).Should(
+			it.Fail(brdg.Status).Contain("timeout"),
+		)
+	})
 }
 
 //------------------------------------------------------------------------------
 
-type spawner struct {
+// bridge mock
+type bridge struct {
 	*Bridge
 	seq []swarm.Bag
 	ack []string
 	err error
 }
 
-func mockSpawner(seq []swarm.Bag) *spawner {
-	return &spawner{
-		Bridge: NewBridge(1 * time.Millisecond),
+func mockBridge(seq []swarm.Bag) *bridge {
+	return &bridge{
+		Bridge: NewBridge(2 * time.Millisecond),
 		seq:    seq,
 	}
 }
 
-func (s *spawner) Ack(ctx context.Context, digest string) error {
+func (s *bridge) Ack(ctx context.Context, digest string) error {
 	if err := s.Bridge.Ack(ctx, digest); err != nil {
 		return err
 	}
@@ -103,6 +256,16 @@ func (s *spawner) Ack(ctx context.Context, digest string) error {
 	return nil
 }
 
-func (s *spawner) Run() {
+func (s *bridge) Run() {
 	s.err = s.Bridge.Dispatch(s.seq)
+}
+
+// Note: simplify assertion
+func (s *bridge) Status() error {
+	// Note: due to faked "handler" there is raise on setting s.err
+	//       in Lambda the Dispatch returns value directly to lambda handler
+	if s.err == nil {
+		time.Sleep(10 * yield_before_close)
+	}
+	return s.err
 }

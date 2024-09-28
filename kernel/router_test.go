@@ -9,6 +9,7 @@
 package kernel
 
 import (
+	"context"
 	"testing"
 
 	"github.com/fogfish/it/v2"
@@ -21,7 +22,7 @@ func TestRoute(t *testing.T) {
 		codec: swarm.NewCodecJson[string](),
 	}
 
-	r.Route(swarm.Bag{Object: []byte(`"1"`)})
+	r.Route(context.Background(), swarm.Bag{Object: []byte(`"1"`)})
 	it.Then(t).Should(
 		it.Equal((<-r.ch).Object, `1`),
 	)
