@@ -8,12 +8,14 @@
 
 package swarm
 
-import "context"
+import (
+	"reflect"
+	"strings"
+)
 
-// Global context for the message
-type Context struct {
-	context.Context
-
+// Msg is a generic envelop type for incoming messages.
+// It contains both decoded object and its digest used to acknowledge message.
+type Msg[T any] struct {
 	// Message category ~ topic
 	Category string
 
@@ -22,32 +24,69 @@ type Context struct {
 
 	// Error on the message processing
 	Error error
-}
 
-func NewContext(ctx context.Context, cat, digest string) *Context {
-	return &Context{
-		Context:  ctx,
-		Category: cat,
-		Digest:   digest,
-	}
-}
-
-// Msg is a generic envelop type for incoming messages.
-// It contains both decoded object and its digest used to acknowledge message.
-type Msg[T any] struct {
-	Ctx    *Context
+	// Message decoded content
 	Object T
 }
 
 // Fail message with error
 func (msg Msg[T]) Fail(err error) Msg[T] {
-	msg.Ctx.Error = err
+	msg.Error = err
 	return msg
 }
 
 // Bag is an abstract container for octet stream.
 // Bag is used by the transport to abstract message on the wire.
 type Bag struct {
-	Ctx    *Context
+	// Message category ~ topic
+	Category string
+
+	// Unique brief summary of the message
+	Digest string
+
+	// Error on the message processing
+	Error error
+
+	// Message raw content
 	Object []byte
+}
+
+func ToMsg[T any](bag Bag, object T) Msg[T] {
+	return Msg[T]{
+		Category: bag.Category,
+		Digest:   bag.Digest,
+		Error:    bag.Error,
+		Object:   object,
+	}
+}
+
+// func ToBag[T any](msg Msg[T], object []byte) Bag {
+// 	return Bag{
+// 		Category: msg.Category,
+// 		Digest:   msg.Digest,
+// 		Error:    msg.Error,
+// 		Object:   object,
+// 	}
+// }
+
+// TypeOf returns normalized name of the type T.
+func TypeOf[T any](category ...string) string {
+	if len(category) > 0 {
+		return category[0]
+	}
+
+	typ := reflect.TypeOf(new(T)).Elem()
+	cat := typ.Name()
+	if typ.Kind() == reflect.Ptr {
+		cat = typ.Elem().Name()
+	}
+
+	seq := strings.Split(strings.Trim(cat, "]"), "[")
+	tkn := make([]string, len(seq))
+	for i, s := range seq {
+		r := strings.Split(s, ".")
+		tkn[i] = r[len(r)-1]
+	}
+
+	return strings.Join(tkn, "[") + strings.Repeat("]", len(tkn)-1)
 }
