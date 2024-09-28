@@ -35,12 +35,6 @@ func init() {
 const yield_before_close = 1 * time.Millisecond
 
 func TestBridge(t *testing.T) {
-	// Use-case
-	// 1. Recv - Ack
-	// 2. Recv - Timeout
-	// 3. Recv - Error
-	// 4. Recv batch
-
 	config := swarm.Config{PollFrequency: 0 * time.Millisecond}
 
 	//
@@ -68,6 +62,7 @@ func TestBridge(t *testing.T) {
 
 	t.Run("None", func(t *testing.T) {
 		k, _ := mockit(1)
+		Dequeue(k, "test", swarm.NewCodecJson[string]())
 		k.Await()
 	})
 
