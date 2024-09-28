@@ -30,7 +30,7 @@ func TestEventBridgeCDK(t *testing.T) {
 			Source: []string{"swarm-example-eventbridge"},
 			Function: &scud.FunctionGoProps{
 				SourceCodeModule: "github.com/fogfish/swarm/broker/eventbridge",
-				SourceCodeLambda: "examples/dequeue",
+				SourceCodeLambda: "examples/dequeue/typed",
 			},
 		},
 	)
