@@ -33,11 +33,11 @@ func WithService(service EventBridge) Option {
 	}
 }
 
-const EnvEventBus = "CONFIG_SWARM_EVENT_BUS"
+const EnvEventBridge = "CONFIG_SWARM_EVENT_BRIDGE"
 
 func WithEnv() Option {
 	return func(c *Client) {
-		if val, has := os.LookupEnv(EnvEventBus); has {
+		if val, has := os.LookupEnv(EnvEventBridge); has {
 			c.bus = val
 		}
 	}
