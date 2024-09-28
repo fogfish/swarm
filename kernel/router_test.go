@@ -14,12 +14,13 @@ import (
 
 	"github.com/fogfish/it/v2"
 	"github.com/fogfish/swarm"
+	"github.com/fogfish/swarm/kernel/encoding"
 )
 
 func TestRoute(t *testing.T) {
 	r := router[string]{
 		ch:    make(chan swarm.Msg[string], 1),
-		codec: swarm.NewCodecJson[string](),
+		codec: encoding.NewCodecJson[string](),
 	}
 
 	r.Route(context.Background(), swarm.Bag{Object: []byte(`"1"`)})

@@ -16,9 +16,11 @@ import (
 
 	"github.com/fogfish/it/v2"
 	"github.com/fogfish/swarm"
+	"github.com/fogfish/swarm/kernel/encoding"
 )
 
 func TestEnqueuer(t *testing.T) {
+	codec := encoding.NewCodecJson[string]()
 	mockit := func(config swarm.Config) (*Enqueuer, *emitter) {
 		mock := mockEmitter(10)
 		k := NewEnqueuer(mock, config)
@@ -42,13 +44,13 @@ func TestEnqueuer(t *testing.T) {
 
 	t.Run("None", func(t *testing.T) {
 		k, _ := mockit(swarm.Config{})
-		Enqueue(k, "test", swarm.NewCodecJson[string]())
+		Enqueue(k, "test", codec)
 		k.Await()
 	})
 
 	t.Run("Enqueue.1", func(t *testing.T) {
 		k, e := mockit(swarm.Config{})
-		snd, _ := Enqueue(k, "test", swarm.NewCodecJson[string]())
+		snd, _ := Enqueue(k, "test", codec)
 
 		snd <- "1"
 		it.Then(t).Should(
@@ -60,7 +62,7 @@ func TestEnqueuer(t *testing.T) {
 
 	t.Run("Enqueue.1.Shut", func(t *testing.T) {
 		k, e := mockit(swarm.Config{})
-		snd, _ := Enqueue(k, "test", swarm.NewCodecJson[string]())
+		snd, _ := Enqueue(k, "test", codec)
 
 		snd <- "1"
 		k.Await()
@@ -73,7 +75,7 @@ func TestEnqueuer(t *testing.T) {
 	t.Run("Enqueue.1.Error", func(t *testing.T) {
 		err := make(chan error)
 		k := NewEnqueuer(looser{}, swarm.Config{StdErr: err})
-		snd, dlq := Enqueue(k, "test", swarm.NewCodecJson[string]())
+		snd, dlq := Enqueue(k, "test", codec)
 
 		snd <- "1"
 		it.Then(t).Should(
@@ -100,7 +102,7 @@ func TestEnqueuer(t *testing.T) {
 
 	t.Run("Enqueue.N", func(t *testing.T) {
 		k, e := mockit(swarm.Config{})
-		snd, _ := Enqueue(k, "test", swarm.NewCodecJson[string]())
+		snd, _ := Enqueue(k, "test", codec)
 
 		snd <- "1"
 		it.Then(t).Should(
@@ -122,7 +124,7 @@ func TestEnqueuer(t *testing.T) {
 
 	t.Run("Enqueue.N.Shut", func(t *testing.T) {
 		k, e := mockit(swarm.Config{})
-		snd, _ := Enqueue(k, "test", swarm.NewCodecJson[string]())
+		snd, _ := Enqueue(k, "test", codec)
 
 		snd <- "1"
 		snd <- "2"
@@ -138,7 +140,7 @@ func TestEnqueuer(t *testing.T) {
 	t.Run("Enqueue.N.Backlog", func(t *testing.T) {
 		e := mockEmitter(10)
 		k := NewEnqueuer(e, swarm.Config{CapOut: 4})
-		snd, _ := Enqueue(k, "test", swarm.NewCodecJson[string]())
+		snd, _ := Enqueue(k, "test", codec)
 
 		snd <- "1"
 		snd <- "2"
@@ -154,7 +156,7 @@ func TestEnqueuer(t *testing.T) {
 	t.Run("Enqueue.N.Error", func(t *testing.T) {
 		err := make(chan error)
 		k := NewEnqueuer(looser{}, swarm.Config{CapOut: 4, CapDLQ: 4, StdErr: err})
-		snd, dlq := Enqueue(k, "test", swarm.NewCodecJson[string]())
+		snd, dlq := Enqueue(k, "test", codec)
 
 		snd <- "1"
 		snd <- "2"

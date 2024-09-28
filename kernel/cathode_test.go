@@ -15,9 +15,11 @@ import (
 
 	"github.com/fogfish/it/v2"
 	"github.com/fogfish/swarm"
+	"github.com/fogfish/swarm/kernel/encoding"
 )
 
 func TestDequeuer(t *testing.T) {
+	codec := encoding.NewCodecJson[string]()
 	none := mockCathode(nil, nil)
 	pass := mockCathode(make(chan string),
 		[]swarm.Bag{{Ctx: &swarm.Context{Category: "test", Digest: "1"}, Object: []byte(`"1"`)}},
@@ -40,14 +42,14 @@ func TestDequeuer(t *testing.T) {
 
 	t.Run("Idle", func(t *testing.T) {
 		k := NewDequeuer(none, swarm.Config{PollFrequency: 1 * time.Second})
-		Dequeue(k, "test", swarm.NewCodecJson[string]())
+		Dequeue(k, "test", codec)
 		go k.Await()
 		k.Close()
 	})
 
 	t.Run("Dequeue.1", func(t *testing.T) {
 		k := NewDequeuer(pass, swarm.Config{PollFrequency: 10 * time.Millisecond})
-		rcv, ack := Dequeue(k, "test", swarm.NewCodecJson[string]())
+		rcv, ack := Dequeue(k, "test", codec)
 		go k.Await()
 
 		ack <- <-rcv
@@ -60,7 +62,7 @@ func TestDequeuer(t *testing.T) {
 
 	t.Run("Backlog", func(t *testing.T) {
 		k := NewDequeuer(pass, swarm.Config{CapAck: 4, PollFrequency: 1 * time.Millisecond})
-		rcv, ack := Dequeue(k, "test", swarm.NewCodecJson[string]())
+		rcv, ack := Dequeue(k, "test", codec)
 		go k.Await()
 
 		ack <- <-rcv

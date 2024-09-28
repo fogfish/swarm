@@ -19,6 +19,7 @@ import (
 	"github.com/fogfish/it/v2"
 	"github.com/fogfish/logger/v3"
 	"github.com/fogfish/swarm"
+	"github.com/fogfish/swarm/kernel/encoding"
 )
 
 func init() {
@@ -35,6 +36,7 @@ func init() {
 const yield_before_close = 5 * time.Millisecond
 
 func TestBridge(t *testing.T) {
+	codec := encoding.NewCodecJson[string]()
 	config := swarm.Config{PollFrequency: 0 * time.Millisecond}
 
 	//
@@ -62,13 +64,13 @@ func TestBridge(t *testing.T) {
 
 	t.Run("None", func(t *testing.T) {
 		k, _ := mockit(1)
-		Dequeue(k, "test", swarm.NewCodecJson[string]())
+		Dequeue(k, "test", codec)
 		k.Await()
 	})
 
 	t.Run("Dequeue.1", func(t *testing.T) {
 		k, brdg := mockit(1)
-		rcv, ack := Dequeue(k, "test", swarm.NewCodecJson[string]())
+		rcv, ack := Dequeue(k, "test", codec)
 
 		// Note: in real apps receive loop is always go function
 		go func() { ack <- <-rcv }()
@@ -81,7 +83,7 @@ func TestBridge(t *testing.T) {
 
 	t.Run("Dequeue.N", func(t *testing.T) {
 		k, brdg := mockit(3)
-		rcv, ack := Dequeue(k, "test", swarm.NewCodecJson[string]())
+		rcv, ack := Dequeue(k, "test", codec)
 
 		// Note: in real apps receive loop is always go function
 		go func() {
@@ -98,7 +100,7 @@ func TestBridge(t *testing.T) {
 
 	t.Run("Error.1", func(t *testing.T) {
 		k, brdg := mockit(1)
-		rcv, ack := Dequeue(k, "test", swarm.NewCodecJson[string]())
+		rcv, ack := Dequeue(k, "test", codec)
 
 		// Note: in real apps receive loop is always go function
 		go func() {
@@ -114,7 +116,7 @@ func TestBridge(t *testing.T) {
 
 	t.Run("Error.N.1", func(t *testing.T) {
 		k, brdg := mockit(3)
-		rcv, ack := Dequeue(k, "test", swarm.NewCodecJson[string]())
+		rcv, ack := Dequeue(k, "test", codec)
 
 		// Note: in real apps receive loop is always go function
 		go func() {
@@ -130,7 +132,7 @@ func TestBridge(t *testing.T) {
 
 	t.Run("Error.N.2", func(t *testing.T) {
 		k, brdg := mockit(3)
-		rcv, ack := Dequeue(k, "test", swarm.NewCodecJson[string]())
+		rcv, ack := Dequeue(k, "test", codec)
 
 		// Note: in real apps receive loop is always go function
 		go func() {
@@ -147,7 +149,7 @@ func TestBridge(t *testing.T) {
 
 	t.Run("Error.N.3", func(t *testing.T) {
 		k, brdg := mockit(3)
-		rcv, ack := Dequeue(k, "test", swarm.NewCodecJson[string]())
+		rcv, ack := Dequeue(k, "test", codec)
 
 		// Note: in real apps receive loop is always go function
 		go func() {
@@ -165,7 +167,7 @@ func TestBridge(t *testing.T) {
 
 	t.Run("Timeout.1", func(t *testing.T) {
 		k, brdg := mockit(1)
-		rcv, _ := Dequeue(k, "test", swarm.NewCodecJson[string]())
+		rcv, _ := Dequeue(k, "test", codec)
 
 		// Note: in real apps receive loop is always go function
 		go func() { <-rcv }()
@@ -178,7 +180,7 @@ func TestBridge(t *testing.T) {
 
 	t.Run("Timeout.N.1", func(t *testing.T) {
 		k, brdg := mockit(3)
-		rcv, _ := Dequeue(k, "test", swarm.NewCodecJson[string]())
+		rcv, _ := Dequeue(k, "test", codec)
 
 		// Note: in real apps receive loop is always go function
 		go func() {
@@ -193,7 +195,7 @@ func TestBridge(t *testing.T) {
 
 	t.Run("Timeout.N.2", func(t *testing.T) {
 		k, brdg := mockit(3)
-		rcv, ack := Dequeue(k, "test", swarm.NewCodecJson[string]())
+		rcv, ack := Dequeue(k, "test", codec)
 
 		// Note: in real apps receive loop is always go function
 		go func() {
@@ -209,7 +211,7 @@ func TestBridge(t *testing.T) {
 
 	t.Run("Timeout.N.3", func(t *testing.T) {
 		k, brdg := mockit(3)
-		rcv, ack := Dequeue(k, "test", swarm.NewCodecJson[string]())
+		rcv, ack := Dequeue(k, "test", codec)
 
 		// Note: in real apps receive loop is always go function
 		go func() {

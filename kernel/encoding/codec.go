@@ -6,7 +6,7 @@
 // https://github.com/fogfish/swarm
 //
 
-package swarm
+package encoding
 
 import (
 	"encoding/json"
@@ -15,6 +15,7 @@ import (
 	"github.com/fogfish/curie"
 	"github.com/fogfish/golem/optics"
 	"github.com/fogfish/guid/v2"
+	"github.com/fogfish/swarm"
 )
 
 //------------------------------------------------------------------------------
@@ -67,7 +68,7 @@ func NewCodecPacket() CodecPacket { return CodecPacket{} }
 //------------------------------------------------------------------------------
 
 // Event codec for I/O kernel
-type CodecEvent[T any, E EventKind[T]] struct {
+type CodecEvent[T any, E swarm.EventKind[T]] struct {
 	source string
 	cat    string
 	shape  optics.Lens4[E, string, curie.IRI, curie.IRI, time.Time]
@@ -95,7 +96,7 @@ func (c CodecEvent[T, E]) Decode(b []byte) (*E, error) {
 	return x, err
 }
 
-func NewCodecEvent[T any, E EventKind[T]](source, cat string) CodecEvent[T, E] {
+func NewCodecEvent[T any, E swarm.EventKind[T]](source, cat string) CodecEvent[T, E] {
 	return CodecEvent[T, E]{
 		source: source,
 		cat:    cat,
