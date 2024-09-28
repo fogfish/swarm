@@ -139,7 +139,13 @@ func TestReader(t *testing.T) {
 	var bag []swarm.Bag
 	bridge := &bridge{kernel.NewBridge(100 * time.Millisecond)}
 
-	t.Run("Success", func(t *testing.T) {
+	t.Run("New", func(t *testing.T) {
+		q, err := NewReader("test")
+		it.Then(t).Should(it.Nil(err))
+		q.Close()
+	})
+
+	t.Run("Dequeue", func(t *testing.T) {
 		go func() {
 			bag, _ = bridge.Ask(context.Background())
 			for _, m := range bag {
@@ -163,7 +169,7 @@ func TestReader(t *testing.T) {
 		)
 	})
 
-	t.Run("Timeout", func(t *testing.T) {
+	t.Run("Dequeue.Timeout", func(t *testing.T) {
 		go func() {
 			bag, _ = bridge.Ask(context.Background())
 		}()
@@ -183,24 +189,32 @@ func TestReader(t *testing.T) {
 }
 
 func TestWriter(t *testing.T) {
-	mock := &mockEventBridge{}
+	t.Run("New", func(t *testing.T) {
+		q, err := NewWriter("test")
+		it.Then(t).Should(it.Nil(err))
+		q.Close()
+	})
 
-	q, err := NewWriter("test", WithService(mock))
-	it.Then(t).Should(it.Nil(err))
+	t.Run("Enqueue", func(t *testing.T) {
+		mock := &mockEventBridge{}
 
-	err = q.Emitter.Enq(context.Background(),
-		swarm.Bag{
-			Category: "cat",
-			Object:   []byte(`value`),
-		},
-	)
-	it.Then(t).Should(
-		it.Nil(err),
-		it.Equal(*mock.val.DetailType, "cat"),
-		it.Equal(*mock.val.Detail, "value"),
-	)
+		q, err := NewWriter("test", WithService(mock))
+		it.Then(t).Should(it.Nil(err))
 
-	q.Close()
+		err = q.Emitter.Enq(context.Background(),
+			swarm.Bag{
+				Category: "cat",
+				Object:   []byte(`value`),
+			},
+		)
+		it.Then(t).Should(
+			it.Nil(err),
+			it.Equal(*mock.val.DetailType, "cat"),
+			it.Equal(*mock.val.Detail, "value"),
+		)
+
+		q.Close()
+	})
 }
 
 //------------------------------------------------------------------------------
