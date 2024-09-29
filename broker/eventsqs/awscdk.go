@@ -90,10 +90,10 @@ func (broker *Broker) NewQueue(props *awssqs.QueueProps) awssqs.IQueue {
 	return broker.Queue
 }
 
-func (broker *Broker) AddQueue(queueName string) awssqs.IQueue {
+func (broker *Broker) AddQueue(queueArn *string) awssqs.IQueue {
 	broker.Queue = awssqs.Queue_FromQueueAttributes(broker.Construct, jsii.String("Bus"),
 		&awssqs.QueueAttributes{
-			QueueName: jsii.String(queueName),
+			QueueArn: queueArn,
 		},
 	)
 
