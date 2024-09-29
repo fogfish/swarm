@@ -9,7 +9,7 @@ require (
 	github.com/aws/jsii-runtime-go v1.103.1
 	github.com/fogfish/guid/v2 v2.0.4
 	github.com/fogfish/it/v2 v2.0.2
-	github.com/fogfish/scud v0.10.1
+	github.com/fogfish/scud v0.10.2
 	github.com/fogfish/swarm v0.20.0
 )
 
