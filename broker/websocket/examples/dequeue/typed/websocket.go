@@ -9,13 +9,14 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"os"
 
-	"github.com/aws/aws-lambda-go/events"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/websocket"
-	"github.com/fogfish/swarm/queue"
+	"github.com/fogfish/swarm/dequeue"
+	"github.com/fogfish/swarm/enqueue"
 )
 
 type User struct {
@@ -25,26 +26,31 @@ type User struct {
 }
 
 func main() {
-	q := queue.Must(websocket.New(os.Getenv("CONFIG_SWARM_WS_URL"), swarm.WithLogStdErr()))
+	q, err := websocket.New(os.Getenv("CONFIG_SWARM_WS_URL"),
+		websocket.WithConfig(
+			swarm.WithLogStdErr(),
+		),
+	)
+	if err != nil {
+		slog.Error("sqs reader has failed", "err", err)
+		return
+	}
 
-	a := &actor{emit: queue.New[User](q)}
-
-	go a.handle(queue.Dequeue[User](q))
+	a := &actor{emit: enqueue.NewTyped[User](q.Enqueuer)}
+	go a.handle(dequeue.Typed[User](q.Dequeuer))
 
 	q.Await()
 }
 
 type actor struct {
-	emit queue.Enqueuer[User]
+	emit *enqueue.EmitterTyped[User]
 }
 
 func (a *actor) handle(rcv <-chan swarm.Msg[User], ack chan<- swarm.Msg[User]) {
 	for msg := range rcv {
-		ctx := msg.Ctx.Value(websocket.WSRequest).(events.APIGatewayWebsocketProxyRequestContext)
+		slog.Info("Event user", "data", msg.Object)
 
-		slog.Info("Event user", "msg", msg.Object, "ctx", ctx)
-
-		if err := a.emit.Enq(msg.Ctx.Digest, msg.Object); err != nil {
+		if err := a.emit.Enq(context.Background(), msg.Object, msg.Digest); err != nil {
 			ack <- msg.Fail(err)
 			continue
 		}

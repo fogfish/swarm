@@ -11,10 +11,10 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/apigatewaymanagementapi v1.22.1
 	github.com/aws/constructs-go/constructs/v10 v10.3.0
 	github.com/aws/jsii-runtime-go v1.103.1
+	github.com/fogfish/it/v2 v2.0.2
 	github.com/fogfish/logger/v3 v3.1.1
-	github.com/fogfish/scud v0.10.1
-	github.com/fogfish/swarm v0.16.0
-	github.com/fogfish/swarm/queue v0.16.1
+	github.com/fogfish/scud v0.10.2
+	github.com/fogfish/swarm v0.20.0
 )
 
 require (
@@ -39,7 +39,6 @@ require (
 	github.com/fogfish/faults v0.2.0 // indirect
 	github.com/fogfish/golem/hseq v1.2.0 // indirect
 	github.com/fogfish/golem/optics v0.13.0 // indirect
-	github.com/fogfish/golem/pure v0.10.1 // indirect
 	github.com/fogfish/guid/v2 v2.0.4 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
