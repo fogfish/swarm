@@ -11,11 +11,16 @@ package eventddb
 import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/fogfish/swarm"
-	queue "github.com/fogfish/swarm/queue"
+	"github.com/fogfish/swarm/dequeue"
+	"github.com/fogfish/swarm/kernel"
 )
 
 const Category = "DynamoDBEventRecord"
 
-func Dequeue(q swarm.Broker) (<-chan swarm.Msg[*events.DynamoDBEventRecord], chan<- swarm.Msg[*events.DynamoDBEventRecord]) {
-	return queue.Dequeue[*events.DynamoDBEventRecord](q)
+// The broker produces only [events.DynamoDBEventRecord], the function is helper.
+func Source(q *kernel.Dequeuer) (
+	<-chan swarm.Msg[*events.DynamoDBEventRecord],
+	chan<- swarm.Msg[*events.DynamoDBEventRecord],
+) {
+	return dequeue.Typed[*events.DynamoDBEventRecord](q)
 }
