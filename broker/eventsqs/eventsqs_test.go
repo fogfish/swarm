@@ -25,7 +25,11 @@ func TestReader(t *testing.T) {
 	bridge := &bridge{kernel.NewBridge(100 * time.Millisecond)}
 
 	t.Run("New", func(t *testing.T) {
-		q, err := NewDequeuer()
+		q, err := NewDequeuer(
+			WithConfig(
+				swarm.WithLogStdErr(),
+			),
+		)
 		it.Then(t).Should(it.Nil(err))
 		q.Close()
 	})
