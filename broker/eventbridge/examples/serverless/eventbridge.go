@@ -27,7 +27,8 @@ func main() {
 			},
 		},
 	)
-	//.
+
+	//
 	broker := eventbridge.NewBroker(stack, jsii.String("Broker"), nil)
 	broker.NewEventBus(nil)
 
@@ -49,6 +50,17 @@ func main() {
 			Function: &scud.FunctionGoProps{
 				SourceCodeModule: "github.com/fogfish/swarm/broker/eventbridge",
 				SourceCodeLambda: "examples/dequeue/event",
+			},
+		},
+	)
+
+	broker.NewSink(
+		&eventbridge.SinkProps{
+			Source:     []string{"swarm-example-eventbridge"},
+			Categories: []string{"User", "Note", "Like"},
+			Function: &scud.FunctionGoProps{
+				SourceCodeModule: "github.com/fogfish/swarm/broker/eventbridge",
+				SourceCodeLambda: "examples/dequeue/bytes",
 			},
 		},
 	)

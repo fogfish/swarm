@@ -54,7 +54,8 @@ func bus(rcv <-chan swarm.Msg[Event], ack chan<- swarm.Msg[Event]) {
 		}
 
 		v, _ := json.MarshalIndent(msg, prefix, " ")
-		fmt.Printf("common note > \n %s\n", v)
+		fmt.Printf("event > \n %s\n", v)
+
 		ack <- msg
 	}
 }
