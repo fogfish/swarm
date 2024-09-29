@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-sdk-go-v2/service/apigatewaymanagementapi"
 	"github.com/fogfish/it/v2"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/kernel"
@@ -59,4 +60,50 @@ func TestDequeuer(t *testing.T) {
 			it.Equiv(bag[0].Object, []byte(`{"sut":"test"}`)),
 		)
 	})
+}
+
+func TestEnqueuer(t *testing.T) {
+	t.Run("New", func(t *testing.T) {
+		q, err := NewEnqueuer("test",
+			WithConfig(
+				swarm.WithLogStdErr(),
+			),
+		)
+		it.Then(t).Should(it.Nil(err))
+		q.Close()
+	})
+
+	t.Run("Enqueue", func(t *testing.T) {
+		mock := &mockGateway{}
+
+		q, err := NewEnqueuer("test", WithService(mock))
+		it.Then(t).Should(it.Nil(err))
+
+		err = q.Emitter.Enq(context.Background(),
+			swarm.Bag{
+				Category: "cat",
+				Object:   []byte(`value`),
+			},
+		)
+		it.Then(t).Should(
+			it.Nil(err),
+			it.Equal(*mock.req.ConnectionId, "cat"),
+			it.Equal(string(mock.req.Data), "value"),
+		)
+
+		q.Close()
+	})
+}
+
+//------------------------------------------------------------------------------
+
+type mockGateway struct {
+	Gateway
+	req *apigatewaymanagementapi.PostToConnectionInput
+}
+
+func (m *mockGateway) PostToConnection(ctx context.Context, req *apigatewaymanagementapi.PostToConnectionInput, optFns ...func(*apigatewaymanagementapi.Options)) (*apigatewaymanagementapi.PostToConnectionOutput, error) {
+	m.req = req
+
+	return &apigatewaymanagementapi.PostToConnectionOutput{}, nil
 }
