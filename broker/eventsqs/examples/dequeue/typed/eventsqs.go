@@ -13,7 +13,7 @@ import (
 
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/eventsqs"
-	"github.com/fogfish/swarm/queue"
+	"github.com/fogfish/swarm/dequeue"
 )
 
 type User struct {
@@ -32,11 +32,19 @@ type Like struct {
 }
 
 func main() {
-	q := queue.Must(eventsqs.New("swarm-example-sqs-latest", swarm.WithLogStdErr()))
+	q, err := eventsqs.NewDequeuer(
+		eventsqs.WithConfig(
+			swarm.WithLogStdErr(),
+		),
+	)
+	if err != nil {
+		slog.Error("eventsqs reader has failed", "err", err)
+		return
+	}
 
-	go actor[User]("user").handle(queue.Dequeue[User](q))
-	go actor[Note]("note").handle(queue.Dequeue[Note](q))
-	go actor[Like]("like").handle(queue.Dequeue[Like](q))
+	go actor[User]("user").handle(dequeue.Typed[User](q))
+	go actor[Note]("note").handle(dequeue.Typed[Note](q))
+	go actor[Like]("like").handle(dequeue.Typed[Like](q))
 
 	q.Await()
 }

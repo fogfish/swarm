@@ -29,7 +29,7 @@ func TestEventBridgeCDK(t *testing.T) {
 		&eventsqs.SinkProps{
 			Function: &scud.FunctionGoProps{
 				SourceCodeModule: "github.com/fogfish/swarm/broker/eventsqs",
-				SourceCodeLambda: "examples/dequeue",
+				SourceCodeLambda: "examples/dequeue/typed",
 			},
 		},
 	)
