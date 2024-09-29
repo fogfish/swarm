@@ -41,6 +41,7 @@ type SinkProps struct {
 func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	sink := &Sink{Construct: constructs.NewConstruct(scope, id)}
 
+	props.Function.Setenv(EnvSourceEventS3, *props.Bucket.BucketName())
 	sink.Handler = scud.NewFunction(sink.Construct, jsii.String("Func"), props.Function)
 
 	eventsource := &awslambdaeventsources.S3EventSourceProps{

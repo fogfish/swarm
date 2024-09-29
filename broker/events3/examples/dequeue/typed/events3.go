@@ -11,17 +11,25 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/events3"
-	"github.com/fogfish/swarm/queue"
 )
 
 func main() {
-	q := queue.Must(events3.New("swarm-test", swarm.WithLogStdErr()))
+	q, err := events3.NewReader(
+		events3.WithConfig(
+			swarm.WithLogStdErr(),
+		),
+	)
+	if err != nil {
+		slog.Error("eventbridge reader has failed", "err", err)
+		return
+	}
 
-	go common(events3.Dequeue(q))
+	go common(events3.Source(q))
 
 	q.Await()
 }

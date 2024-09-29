@@ -9,7 +9,6 @@
 package events3
 
 import (
-	"context"
 	"encoding/json"
 
 	"github.com/aws/aws-lambda-go/lambda"
@@ -18,56 +17,69 @@ import (
 	"github.com/fogfish/swarm/kernel"
 )
 
-// New creates broker for AWS S3 (serverless events)
-func New(queue string, opts ...swarm.Option) (swarm.Broker, error) {
-	config := swarm.NewConfig()
-	for _, opt := range opts {
-		opt(&config)
-	}
-
-	starter := lambda.Start
-
-	type Mock interface{ Start(interface{}) }
-	if config.Service != nil {
-		service, ok := config.Service.(Mock)
-		if ok {
-			starter = service.Start
-		}
-	}
-
-	sls := spawner{f: starter, c: config}
-
-	return kernel.New(nil, sls, config), nil
+type Client struct {
+	bucket string
+	config swarm.Config
 }
+
+// Create reader from AWS S3 Events
+func NewReader(opts ...Option) (*kernel.Dequeuer, error) {
+	c := &Client{}
+
+	for _, opt := range defs {
+		opt(c)
+	}
+	for _, opt := range opts {
+		opt(c)
+	}
+
+	bridge := &bridge{kernel.NewBridge(c.config.TimeToFlight)}
+
+	return kernel.NewDequeuer(bridge, c.config), nil
+}
+
+// New creates broker for AWS S3 (serverless events)
+// func New(queue string, opts ...swarm.Option) (swarm.Broker, error) {
+// 	config := swarm.NewConfig()
+// 	for _, opt := range opts {
+// 		opt(&config)
+// 	}
+//
+// 	starter := lambda.Start
+//
+// 	type Mock interface{ Start(interface{}) }
+// 	if config.Service != nil {
+// 		service, ok := config.Service.(Mock)
+// 		if ok {
+// 			starter = service.Start
+// 		}
+// 	}
+//
+// 	sls := bridge{f: starter, c: config}
+//
+// 	return kernel.New(nil, sls, config), nil
+// }
 
 //------------------------------------------------------------------------------
 
-type spawner struct {
-	c swarm.Config
-	f func(any)
-}
+type bridge struct{ *kernel.Bridge }
 
+// Note: events.S3Event decodes all records, the swarm kernel protocol requires bytes.
 type S3Event struct {
 	Records []json.RawMessage `json:"Records"`
 }
 
-func (s spawner) Spawn(k *kernel.Kernel) error {
-	s.f(
-		func(events S3Event) error {
-			bag := make([]swarm.Bag, len(events.Records))
-			for i, obj := range events.Records {
-				bag[i] = swarm.Bag{
-					Ctx:    swarm.NewContext(context.Background(), Category, guid.G(guid.Clock).String()),
-					Object: obj,
-				}
-			}
+func (s bridge) Run() { lambda.Start(s.run) }
 
-			return k.Dispatch(bag, s.c.TimeToFlight)
-		},
-	)
+func (s bridge) run(events S3Event) error {
+	bag := make([]swarm.Bag, len(events.Records))
+	for i, obj := range events.Records {
+		bag[i] = swarm.Bag{
+			Category: Category,
+			Digest:   guid.G(guid.Clock).String(),
+			Object:   obj,
+		}
+	}
 
-	return nil
+	return s.Bridge.Dispatch(bag)
 }
-
-func (s spawner) Ack(digest string) error   { return nil }
-func (s spawner) Ask() ([]swarm.Bag, error) { return nil, nil }

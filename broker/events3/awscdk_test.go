@@ -29,7 +29,7 @@ func TestEventS3CDK(t *testing.T) {
 		&events3.SinkProps{
 			Function: &scud.FunctionGoProps{
 				SourceCodeModule: "github.com/fogfish/swarm/broker/events3",
-				SourceCodeLambda: "examples/dequeue",
+				SourceCodeLambda: "examples/dequeue/typed",
 			},
 		},
 	)
