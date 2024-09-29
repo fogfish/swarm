@@ -6,9 +6,8 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.31.0
 	github.com/aws/aws-sdk-go-v2/config v1.27.37
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.35.1
-	github.com/fogfish/swarm v0.16.0
-	github.com/fogfish/swarm/qtest v0.16.1
-	github.com/fogfish/swarm/queue v0.16.1
+	github.com/fogfish/it/v2 v2.0.2
+	github.com/fogfish/swarm v0.20.0
 )
 
 require (
@@ -27,7 +26,5 @@ require (
 	github.com/fogfish/faults v0.2.0 // indirect
 	github.com/fogfish/golem/hseq v1.2.0 // indirect
 	github.com/fogfish/golem/optics v0.13.0 // indirect
-	github.com/fogfish/golem/pure v0.10.1 // indirect
 	github.com/fogfish/guid/v2 v2.0.4 // indirect
-	github.com/fogfish/it/v2 v2.0.2 // indirect
 )
