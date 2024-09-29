@@ -41,8 +41,8 @@ func main() {
 		&events3.SinkProps{
 			// Note: the default property of EventSource captures OBJECT_CREATED and OBJECT_REMOVED events
 			Function: &scud.FunctionGoProps{
-				SourceCodeModule: "github.com/fogfish/swarm",
-				SourceCodeLambda: "examples/events3/dequeue",
+				SourceCodeModule: "github.com/fogfish/swarm/broker/events3",
+				SourceCodeLambda: "examples/dequeue/typed",
 			},
 		},
 	)
