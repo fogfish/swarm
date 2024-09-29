@@ -1,5 +1,5 @@
 {
-  "app": "go run main.go",
+  "app": "go run eventbridge.go",
   "requireApproval": "never",
   "context": {
     "@aws-cdk/aws-apigateway:usagePlanKeyOrderInsensitiveId": true,

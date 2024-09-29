@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2021 - 2022 Dmitry Kolesnikov
+// Copyright (C) 2021 - 2024 Dmitry Kolesnikov
 //
 // This file may be modified and distributed under the terms
 // of the Apache License Version 2.0. See the LICENSE file for details.
@@ -27,10 +27,11 @@ func TestEventBridgeCDK(t *testing.T) {
 
 	broker.NewSink(
 		&eventbridge.SinkProps{
-			Source: []string{"swarm-example-eventbridge"},
+			Source:     []string{"swarm-example-eventbridge"},
+			Categories: []string{"category"},
 			Function: &scud.FunctionGoProps{
 				SourceCodeModule: "github.com/fogfish/swarm/broker/eventbridge",
-				SourceCodeLambda: "examples/dequeue",
+				SourceCodeLambda: "examples/dequeue/typed",
 			},
 		},
 	)

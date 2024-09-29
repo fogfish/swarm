@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2021 - 2022 Dmitry Kolesnikov
+// Copyright (C) 2021 - 2024 Dmitry Kolesnikov
 //
 // This file may be modified and distributed under the terms
 // of the Apache License Version 2.0. See the LICENSE file for details.
@@ -79,6 +79,7 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	)
 
 	if props.Function != nil {
+		props.Function.Setenv(EnvEventBridge, *props.System.EventBusName())
 		sink.Handler = scud.NewFunction(sink.Construct, jsii.String("Func"), props.Function)
 
 		sink.Rule.AddTarget(awseventstargets.NewLambdaFunction(
