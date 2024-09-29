@@ -38,28 +38,6 @@ func NewReader(opts ...Option) (*kernel.Dequeuer, error) {
 	return kernel.NewDequeuer(bridge, c.config), nil
 }
 
-// New creates broker for AWS S3 (serverless events)
-// func New(queue string, opts ...swarm.Option) (swarm.Broker, error) {
-// 	config := swarm.NewConfig()
-// 	for _, opt := range opts {
-// 		opt(&config)
-// 	}
-//
-// 	starter := lambda.Start
-//
-// 	type Mock interface{ Start(interface{}) }
-// 	if config.Service != nil {
-// 		service, ok := config.Service.(Mock)
-// 		if ok {
-// 			starter = service.Start
-// 		}
-// 	}
-//
-// 	sls := bridge{f: starter, c: config}
-//
-// 	return kernel.New(nil, sls, config), nil
-// }
-
 //------------------------------------------------------------------------------
 
 type bridge struct{ *kernel.Bridge }
