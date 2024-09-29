@@ -29,13 +29,22 @@ func main() {
 	)
 
 	broker := eventsqs.NewBroker(stack, jsii.String("Broker"), nil)
-	broker.NewQueue(nil)
+	broker.AddQueue(
+		stack.FormatArn(
+			&awscdk.ArnComponents{
+				Service:  jsii.String("sqs"),
+				Account:  awscdk.Aws_ACCOUNT_ID(),
+				Region:   awscdk.Aws_REGION(),
+				Resource: jsii.String("swarm-test"),
+			},
+		),
+	)
 
 	broker.NewSink(
 		&eventsqs.SinkProps{
 			Function: &scud.FunctionGoProps{
-				SourceCodeModule: "github.com/fogfish/swarm",
-				SourceCodeLambda: "examples/eventsqs/dequeue",
+				SourceCodeModule: "github.com/fogfish/swarm/broker/eventsqs",
+				SourceCodeLambda: "examples/dequeue/typed",
 			},
 		},
 	)

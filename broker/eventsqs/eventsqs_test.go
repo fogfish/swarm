@@ -6,83 +6,88 @@
 // https://github.com/fogfish/swarm
 //
 
-package eventsqs_test
+package eventsqs
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	"github.com/fogfish/it/v2"
 	"github.com/fogfish/swarm"
-	sut "github.com/fogfish/swarm/broker/eventsqs"
-	sutsqs "github.com/fogfish/swarm/broker/sqs"
-	"github.com/fogfish/swarm/qtest"
-	"github.com/fogfish/swarm/queue"
+	"github.com/fogfish/swarm/kernel"
 )
 
-func TestDequeueEventSQS(t *testing.T) {
-	qtest.TestDequeueTyped(t, newMockDequeue)
-	qtest.TestDequeueBytes(t, newMockDequeue)
-	qtest.TestDequeueEvent(t, newMockDequeue)
-}
+func TestReader(t *testing.T) {
+	var bag []swarm.Bag
+	bridge := &bridge{kernel.NewBridge(100 * time.Millisecond)}
 
-func newMockDequeue(
-	loopback chan string,
-	queueName string,
-	returnCategory string,
-	returnMessage string,
-	returnReceipt string,
-	opts ...swarm.Option,
-) swarm.Broker {
-	mock := &mockLambda{
-		loopback:       loopback,
-		returnCategory: returnCategory,
-		returnMessage:  returnMessage,
-		returnReceipt:  returnReceipt,
-	}
-	conf := append(opts, swarm.WithService(mock))
-	return queue.Must(sut.New(queueName, conf...))
-}
+	t.Run("New", func(t *testing.T) {
+		q, err := NewDequeuer(
+			WithConfig(
+				swarm.WithLogStdErr(),
+			),
+		)
+		it.Then(t).Should(it.Nil(err))
+		q.Close()
+	})
 
-type mockLambda struct {
-	sutsqs.SQS
-	loopback       chan string
-	returnCategory string
-	returnMessage  string
-	returnReceipt  string
-}
+	t.Run("Dequeue", func(t *testing.T) {
+		go func() {
+			bag, _ = bridge.Ask(context.Background())
+			for _, m := range bag {
+				bridge.Ack(context.Background(), m.Digest)
+			}
+		}()
 
-func (mock *mockLambda) GetQueueUrl(ctx context.Context, req *sqs.GetQueueUrlInput, opts ...func(*sqs.Options)) (*sqs.GetQueueUrlOutput, error) {
-	return &sqs.GetQueueUrlOutput{
-		QueueUrl: aws.String("https://sqs.eu-west-1.amazonaws.com/000000000000/mock"),
-	}, nil
-}
-
-func (mock *mockLambda) Start(handler interface{}) {
-	msg, _ := json.Marshal(
-		events.SQSEvent{
-			Records: []events.SQSMessage{
-				{
-					MessageId:     "abc-def",
-					ReceiptHandle: mock.returnReceipt,
-					Body:          mock.returnMessage,
-					MessageAttributes: map[string]events.SQSMessageAttribute{
-						"Category": {StringValue: aws.String(mock.returnCategory)},
+		err := bridge.run(
+			events.SQSEvent{
+				Records: []events.SQSMessage{
+					{
+						MessageId:     "abc-def",
+						ReceiptHandle: "receipt",
+						Body:          `{"sut":"test"}`,
+						MessageAttributes: map[string]events.SQSMessageAttribute{
+							"Category": {StringValue: aws.String("cat")},
+						},
 					},
 				},
 			},
-		},
-	)
+		)
 
-	h := lambda.NewHandler(handler)
-	_, err := h.Invoke(context.Background(), msg)
-	if err != nil {
-		panic(err)
-	}
+		it.Then(t).Should(
+			it.Nil(err),
+			it.Equal(len(bag), 1),
+			it.Equal(bag[0].Category, "cat"),
+			it.Equal(bag[0].Digest, "receipt"),
+			it.Equiv(bag[0].Object, []byte(`{"sut":"test"}`)),
+		)
+	})
 
-	mock.loopback <- mock.returnReceipt
+	t.Run("Dequeue.Timeout", func(t *testing.T) {
+		go func() {
+			bag, _ = bridge.Ask(context.Background())
+		}()
+
+		err := bridge.run(
+			events.SQSEvent{
+				Records: []events.SQSMessage{
+					{
+						MessageId:     "abc-def",
+						ReceiptHandle: "receipt",
+						Body:          `{"sut":"test"}`,
+						MessageAttributes: map[string]events.SQSMessageAttribute{
+							"Category": {StringValue: aws.String("cat")},
+						},
+					},
+				},
+			},
+		)
+
+		it.Then(t).ShouldNot(
+			it.Nil(err),
+		)
+	})
 }
