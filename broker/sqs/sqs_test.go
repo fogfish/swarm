@@ -123,8 +123,8 @@ func TestDequeuer(t *testing.T) {
 
 		q.Await()
 
-		it.Then(t).ShouldNot(
-			it.Equal(*mock.req.ReceiptHandle, "1"),
+		it.Then(t).Should(
+			it.True(mock.req == nil),
 		)
 	})
 }
