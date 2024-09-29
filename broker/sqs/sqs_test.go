@@ -10,6 +10,7 @@ package sqs_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -25,7 +26,12 @@ import (
 func TestEnqueuer(t *testing.T) {
 	t.Run("NewEnqueuer", func(t *testing.T) {
 		mock := &mockEnqueue{}
-		q, err := sqs.NewEnqueuer("test", sqs.WithService(mock))
+		q, err := sqs.NewEnqueuer("test",
+			sqs.WithService(mock),
+			sqs.WithConfig(
+				swarm.WithLogStdErr(),
+			),
+		)
 		it.Then(t).Should(it.Nil(err))
 		q.Close()
 	})
@@ -55,7 +61,26 @@ func TestEnqueuer(t *testing.T) {
 func TestDequeuer(t *testing.T) {
 	t.Run("NewDequeuer", func(t *testing.T) {
 		mock := &mockDequeue{}
-		q, err := sqs.NewDequeuer("test", sqs.WithService(mock))
+		q, err := sqs.NewDequeuer("test",
+			sqs.WithService(mock),
+			sqs.WithBatchSize(10),
+			sqs.WithConfig(
+				swarm.WithLogStdErr(),
+			),
+		)
+		it.Then(t).Should(it.Nil(err))
+		q.Close()
+	})
+
+	t.Run("New", func(t *testing.T) {
+		mock := &mockDequeue{}
+		q, err := sqs.New("test",
+			sqs.WithService(mock),
+			sqs.WithBatchSize(10),
+			sqs.WithConfig(
+				swarm.WithLogStdErr(),
+			),
+		)
 		it.Then(t).Should(it.Nil(err))
 		q.Close()
 	})
@@ -77,6 +102,28 @@ func TestDequeuer(t *testing.T) {
 		q.Await()
 
 		it.Then(t).Should(
+			it.Equal(*mock.req.ReceiptHandle, "1"),
+		)
+	})
+
+	t.Run("Dequeue.Error", func(t *testing.T) {
+		mock := &mockDequeue{}
+
+		q, err := sqs.NewDequeuer("test", sqs.WithService(mock))
+		it.Then(t).Should(it.Nil(err))
+
+		rcv, ack := dequeue.Bytes(q, "test")
+		go func() {
+			msg := <-rcv
+			ack <- msg.Fail(fmt.Errorf("fail"))
+
+			time.Sleep(5 * time.Millisecond)
+			q.Close()
+		}()
+
+		q.Await()
+
+		it.Then(t).ShouldNot(
 			it.Equal(*mock.req.ReceiptHandle, "1"),
 		)
 	})
