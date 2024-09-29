@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2021 Dmitry Kolesnikov
+// Copyright (C) 2021 - 2024 Dmitry Kolesnikov
 //
 // This file may be modified and distributed under the terms
 // of the Apache License Version 2.0. See the LICENSE file for details.
@@ -13,7 +13,7 @@ import (
 
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/sqs"
-	"github.com/fogfish/swarm/queue"
+	"github.com/fogfish/swarm/dequeue"
 )
 
 type User struct {
@@ -32,11 +32,19 @@ type Like struct {
 }
 
 func main() {
-	q := queue.Must(sqs.New("swarm-test", swarm.WithLogStdErr()))
+	q, err := sqs.NewDequeuer("swarm-test",
+		sqs.WithConfig(
+			swarm.WithLogStdErr(),
+		),
+	)
+	if err != nil {
+		slog.Error("sqs reader has failed", "err", err)
+		return
+	}
 
-	go actor[User]("user").handle(queue.Dequeue[User](q))
-	go actor[Note]("note").handle(queue.Dequeue[Note](q))
-	go actor[Like]("like").handle(queue.Dequeue[Like](q))
+	go actor[User]("user").handle(dequeue.Typed[User](q))
+	go actor[Note]("note").handle(dequeue.Typed[Note](q))
+	go actor[Like]("like").handle(dequeue.Typed[Like](q))
 
 	q.Await()
 }

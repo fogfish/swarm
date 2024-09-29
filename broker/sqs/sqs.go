@@ -29,41 +29,68 @@ type SQS interface {
 }
 
 type Client struct {
-	service SQS
-	config  swarm.Config
-	queue   *string
-	isFIFO  bool
+	service   SQS
+	config    swarm.Config
+	queue     *string
+	isFIFO    bool
+	batchSize int
 }
 
-func New(queue string, opts ...swarm.Option) (swarm.Broker, error) {
-	cli, err := NewSQS(queue, opts...)
+// Create enqueue routine to AWS SQS
+func NewEnqueuer(queue string, opts ...Option) (*kernel.Enqueuer, error) {
+	cli, err := newSQS(queue, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	config := swarm.NewConfig()
-	for _, opt := range opts {
-		opt(&config)
-	}
-
-	return kernel.New(cli, cli, config), err
+	return kernel.NewEnqueuer(cli, cli.config), nil
 }
 
-func NewSQS(queue string, opts ...swarm.Option) (*Client, error) {
-	config := swarm.NewConfig()
-	for _, opt := range opts {
-		opt(&config)
-	}
-
-	api, err := newService(&config)
+// Create dequeue routine to AWS SQS
+func NewDequeuer(queue string, opts ...Option) (*kernel.Dequeuer, error) {
+	cli, err := newSQS(queue, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), config.NetworkTimeout)
+	return kernel.NewDequeuer(cli, cli.config), nil
+}
+
+// Create enqueue & dequeue routine to AWS SQS
+func New(queue string, opts ...Option) (*kernel.Kernel, error) {
+	cli, err := newSQS(queue, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return kernel.New(
+		kernel.NewEnqueuer(cli, cli.config),
+		kernel.NewDequeuer(cli, cli.config),
+	), nil
+}
+
+func newSQS(queue string, opts ...Option) (*Client, error) {
+	c := &Client{}
+
+	for _, opt := range defs {
+		opt(c)
+	}
+	for _, opt := range opts {
+		opt(c)
+	}
+
+	if c.service == nil {
+		aws, err := config.LoadDefaultConfig(context.Background())
+		if err != nil {
+			return nil, swarm.ErrServiceIO.New(err)
+		}
+		c.service = sqs.NewFromConfig(aws)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), c.config.NetworkTimeout)
 	defer cancel()
 
-	spec, err := api.GetQueueUrl(ctx,
+	spec, err := c.service.GetQueueUrl(ctx,
 		&sqs.GetQueueUrlInput{
 			QueueName: aws.String(queue),
 		},
@@ -72,45 +99,27 @@ func NewSQS(queue string, opts ...swarm.Option) (*Client, error) {
 		return nil, swarm.ErrServiceIO.New(err)
 	}
 
-	return &Client{
-		service: api,
-		config:  config,
-		queue:   spec.QueueUrl,
-		isFIFO:  strings.HasSuffix(queue, ".fifo"),
-	}, nil
-}
+	c.queue = spec.QueueUrl
+	c.isFIFO = strings.HasSuffix(queue, ".fifo")
 
-func newService(conf *swarm.Config) (SQS, error) {
-	if conf.Service != nil {
-		service, ok := conf.Service.(SQS)
-		if ok {
-			return service, nil
-		}
-	}
-
-	aws, err := config.LoadDefaultConfig(context.Background())
-	if err != nil {
-		return nil, swarm.ErrServiceIO.New(err)
-	}
-
-	return sqs.NewFromConfig(aws), nil
+	return c, nil
 }
 
 // Enq enqueues message to broker
-func (cli *Client) Enq(bag swarm.Bag) error {
-	ctx, cancel := context.WithTimeout(context.Background(), cli.config.NetworkTimeout)
+func (cli *Client) Enq(ctx context.Context, bag swarm.Bag) error {
+	ctx, cancel := context.WithTimeout(ctx, cli.config.NetworkTimeout)
 	defer cancel()
 
 	var idMsgGroup *string
 	if cli.isFIFO {
-		idMsgGroup = aws.String(bag.Ctx.Category)
+		idMsgGroup = aws.String(bag.Category)
 	}
 
 	_, err := cli.service.SendMessage(ctx,
 		&sqs.SendMessageInput{
 			MessageAttributes: map[string]types.MessageAttributeValue{
 				"Source":   {StringValue: aws.String(cli.config.Source), DataType: aws.String("String")},
-				"Category": {StringValue: aws.String(bag.Ctx.Category), DataType: aws.String("String")},
+				"Category": {StringValue: aws.String(bag.Category), DataType: aws.String("String")},
 			},
 			MessageGroupId: idMsgGroup,
 			MessageBody:    aws.String(string(bag.Object)),
@@ -124,8 +133,8 @@ func (cli *Client) Enq(bag swarm.Bag) error {
 	return nil
 }
 
-func (cli *Client) Ack(digest string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), cli.config.NetworkTimeout)
+func (cli *Client) Ack(ctx context.Context, digest string) error {
+	ctx, cancel := context.WithTimeout(ctx, cli.config.NetworkTimeout)
 	defer cancel()
 
 	_, err := cli.service.DeleteMessage(ctx,
@@ -141,16 +150,21 @@ func (cli *Client) Ack(digest string) error {
 	return nil
 }
 
+func (cli *Client) Err(ctx context.Context, digest string, err error) error {
+	// Note: do nothing, AWS SQS makes the magic
+	return nil
+}
+
 // Deq dequeues message from broker
-func (cli Client) Ask() ([]swarm.Bag, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), cli.config.NetworkTimeout*2)
+func (cli Client) Ask(ctx context.Context) ([]swarm.Bag, error) {
+	ctx, cancel := context.WithTimeout(ctx, cli.config.NetworkTimeout*2)
 	defer cancel()
 
 	result, err := cli.service.ReceiveMessage(ctx,
 		&sqs.ReceiveMessageInput{
 			MessageAttributeNames: []string{string(types.QueueAttributeNameAll)},
 			QueueUrl:              cli.queue,
-			MaxNumberOfMessages:   1, // TODO
+			MaxNumberOfMessages:   int32(cli.batchSize),
 			WaitTimeSeconds:       int32(cli.config.NetworkTimeout.Seconds()),
 		},
 	)
@@ -162,14 +176,16 @@ func (cli Client) Ask() ([]swarm.Bag, error) {
 		return nil, nil
 	}
 
-	head := result.Messages[0]
+	bag := make([]swarm.Bag, len(result.Messages))
+	for i, msg := range result.Messages {
+		bag[i] = swarm.Bag{
+			Category: attr(&msg, "Category"),
+			Digest:   aws.ToString(msg.ReceiptHandle),
+			Object:   []byte(aws.ToString(msg.Body)),
+		}
+	}
 
-	return []swarm.Bag{
-		{
-			Ctx:    swarm.NewContext(context.Background(), attr(&head, "Category"), *head.ReceiptHandle),
-			Object: []byte(*head.Body),
-		},
-	}, nil
+	return bag, nil
 }
 
 func attr(msg *types.Message, key string) string {
