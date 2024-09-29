@@ -29,7 +29,7 @@ func TestEventDdbCDK(t *testing.T) {
 		&eventddb.SinkProps{
 			Function: &scud.FunctionGoProps{
 				SourceCodeModule: "github.com/fogfish/swarm/broker/eventddb",
-				SourceCodeLambda: "examples/dequeue",
+				SourceCodeLambda: "examples/dequeue/typed",
 			},
 		},
 	)

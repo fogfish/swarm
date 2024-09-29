@@ -78,48 +78,6 @@ func NewBroker(scope constructs.Construct, id *string, props *BrokerProps) *Brok
 	return broker
 }
 
-// func (broker *Broker) NewTable(props *awsdynamodb.TableProps) awsdynamodb.ITable {
-// 	if props == nil {
-// 		props = &awsdynamodb.TableProps{}
-// 	}
-
-// 	if props.TableName == nil {
-// 		props.TableName = awscdk.Aws_STACK_NAME()
-// 	}
-
-// 	if props.PartitionKey == nil && props.SortKey == nil {
-// 		props.PartitionKey = &awsdynamodb.Attribute{
-// 			Type: awsdynamodb.AttributeType_STRING,
-// 			Name: jsii.String("prefix"),
-// 		}
-
-// 		props.SortKey = &awsdynamodb.Attribute{
-// 			Type: awsdynamodb.AttributeType_STRING,
-// 			Name: jsii.String("suffix"),
-// 		}
-// 	}
-
-// 	if props.BillingMode == "" {
-// 		props.BillingMode = awsdynamodb.BillingMode_PAY_PER_REQUEST
-// 	}
-
-// 	if props.Stream == "" {
-// 		props.Stream = awsdynamodb.StreamViewType_NEW_IMAGE
-// 	}
-
-// 	broker.Table = awsdynamodb.NewTable(broker.Construct, jsii.String("Table"), props)
-
-// 	return broker.Table
-// }
-
-// func (broker *Broker) AddTable(tableName string) awsdynamodb.ITable {
-// 	broker.Table = awsdynamodb.Table_FromTableName(broker.Construct, jsii.String("Table"),
-// 		jsii.String(tableName),
-// 	)
-
-// 	return broker.Table
-// }
-
 func (broker *Broker) NewTable(props *awsdynamodb.TablePropsV2) awsdynamodb.ITable {
 	if props == nil {
 		props = &awsdynamodb.TablePropsV2{}
