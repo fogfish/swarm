@@ -35,7 +35,7 @@ type Client struct {
 }
 
 // Create writer to AWS EventBridge
-func NewWriter(queue string, opts ...Option) (*kernel.Enqueuer, error) {
+func NewEnqueuer(queue string, opts ...Option) (*kernel.Enqueuer, error) {
 	cli, err := newEventBridge(queue, opts...)
 	if err != nil {
 		return nil, err
@@ -45,7 +45,7 @@ func NewWriter(queue string, opts ...Option) (*kernel.Enqueuer, error) {
 }
 
 // Create reader from AWS EventBridge
-func NewReader(queue string, opts ...Option) (*kernel.Dequeuer, error) {
+func NewDequeuer(queue string, opts ...Option) (*kernel.Dequeuer, error) {
 	c := &Client{bus: queue}
 
 	for _, opt := range defs {
