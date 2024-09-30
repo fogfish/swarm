@@ -19,7 +19,7 @@ import (
 )
 
 func main() {
-	q, err := events3.NewReader(
+	q, err := events3.NewDequeuer(
 		events3.WithConfig(
 			swarm.WithLogStdErr(),
 		),

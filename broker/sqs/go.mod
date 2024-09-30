@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.27.37
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.35.1
 	github.com/fogfish/it/v2 v2.0.2
-	github.com/fogfish/swarm v0.20.0
+	github.com/fogfish/swarm v0.20.1
 )
 
 require (

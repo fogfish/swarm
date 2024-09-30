@@ -79,7 +79,6 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	)
 
 	if props.Function != nil {
-		props.Function.Setenv(EnvEventBridge, *props.System.EventBusName())
 		sink.Handler = scud.NewFunction(sink.Construct, jsii.String("Func"), props.Function)
 
 		sink.Rule.AddTarget(awseventstargets.NewLambdaFunction(

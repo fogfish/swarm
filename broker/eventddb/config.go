@@ -14,6 +14,9 @@ import (
 	"github.com/fogfish/swarm"
 )
 
+// Environment variable to config event source
+const EnvConfigSourceDynamoDB = "CONFIG_SWARM_SOURCE_DYNAMODB"
+
 type Option func(*Client)
 
 var defs = []Option{WithConfig()}

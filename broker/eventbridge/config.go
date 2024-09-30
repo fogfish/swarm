@@ -9,16 +9,18 @@
 package eventbridge
 
 import (
-	"os"
 	"time"
 
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/kernel/encoding"
 )
 
+// Environment variable to config event source
+const EnvConfigSourceEventBridge = "CONFIG_SWARM_SOURCE_EVENTBRIDGE"
+
 type Option func(*Client)
 
-var defs = []Option{WithConfig(), WithEnv()}
+var defs = []Option{WithConfig()}
 
 func WithConfig(opts ...swarm.Option) Option {
 	return func(c *Client) {
@@ -38,15 +40,5 @@ func WithConfig(opts ...swarm.Option) Option {
 func WithService(service EventBridge) Option {
 	return func(c *Client) {
 		c.service = service
-	}
-}
-
-const EnvEventBridge = "CONFIG_SWARM_EVENT_BRIDGE"
-
-func WithEnv() Option {
-	return func(c *Client) {
-		if val, has := os.LookupEnv(EnvEventBridge); has {
-			c.bus = val
-		}
 	}
 }

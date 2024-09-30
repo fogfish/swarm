@@ -10,21 +10,35 @@
  - '*.md'
  - 'doc/*'
  - 'doc/**/*'
- - 'examples/**/*'
 
 "[#] core":
  - '*.go'
- - 'queue/*'
- - 'queue/**/*'
- - 'internal/*'
- - 'internal/**/*'
+ - 'kernel/*'
+ - 'kernel/**/*'
+ - 'dequeue/*'
+ - 'dequeue/**/*'
+ - 'enqueue/*'
+ - 'enqueue/**/*'
+
+"[#] eventbridge":
+ - 'broker/eventbridge/*'
+ - 'broker/eventbridge/**/*'
+
+"[#] eventddb":
+ - 'broker/eventddb/*'
+ - 'broker/eventddb/**/*'
+
+"[#] events3":
+ - 'broker/events3/*'
+ - 'broker/events3/**/*'
+
+"[#] eventsqs":
+ - 'broker/eventsqs/*'
+ - 'broker/eventsqs/**/*'
 
 "[#] sqs":
  - 'broker/sqs/*'
  - 'broker/eventsqs/*'
-
-"[#] eventbridge":
- - 'broker/eventbridge/*'
 
 "[#] websocket":
  - 'broker/websocket/*'

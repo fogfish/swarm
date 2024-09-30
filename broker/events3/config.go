@@ -9,15 +9,17 @@
 package events3
 
 import (
-	"os"
 	"time"
 
 	"github.com/fogfish/swarm"
 )
 
+// Environment variable to config event source
+const EnvConfigSourceS3 = "CONFIG_SWARM_SOURCE_S3"
+
 type Option func(*Client)
 
-var defs = []Option{WithConfig(), WithEnv()}
+var defs = []Option{WithConfig()}
 
 func WithConfig(opts ...swarm.Option) Option {
 	return func(c *Client) {
@@ -38,19 +40,3 @@ func WithConfig(opts ...swarm.Option) Option {
 // 		c.service = service
 // 	}
 // }
-
-const EnvSourceEventS3 = "CONFIG_SWARM_EVENT_S3"
-
-func WithEnv() Option {
-	return func(c *Client) {
-		if val, has := os.LookupEnv(EnvSourceEventS3); has {
-			c.bucket = val
-		}
-	}
-}
-
-func WithBucket(bucket string) Option {
-	return func(c *Client) {
-		c.bucket = bucket
-	}
-}

@@ -12,6 +12,9 @@ import (
 	"github.com/fogfish/swarm"
 )
 
+// Environment variable to config event source
+const EnvConfigSourceSQS = "CONFIG_SWARM_SOURCE_SQS"
+
 type Option func(*Client)
 
 var defs = []Option{WithConfig()}
