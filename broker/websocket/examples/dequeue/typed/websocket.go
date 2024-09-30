@@ -26,7 +26,7 @@ type User struct {
 }
 
 func main() {
-	q, err := websocket.New(os.Getenv("CONFIG_SWARM_WS_URL"),
+	q, err := websocket.New(os.Getenv(websocket.EnvConfigSourceWebSocket),
 		websocket.WithConfig(
 			swarm.WithLogStdErr(),
 		),
