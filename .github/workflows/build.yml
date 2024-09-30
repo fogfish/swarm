@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        module: [".", "queue", "qtest", "broker/eventbridge", "broker/eventddb", "broker/events3", "broker/eventsqs", "broker/sqs", "broker/websocket"]
+        module: [".", "broker/eventbridge", "broker/eventddb", "broker/events3", "broker/eventsqs", "broker/sqs", "broker/websocket"]
 
     steps:
       - uses: actions/setup-go@v5
