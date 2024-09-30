@@ -22,7 +22,14 @@ func TestDequeuer(t *testing.T) {
 	codec := encoding.NewCodecJson[string]()
 	none := mockCathode(nil, nil)
 	pass := mockCathode(make(chan string),
-		[]swarm.Bag{{Category: "test", Digest: "1", Object: []byte(`"1"`)}},
+		[]swarm.Bag{
+			{
+				Category:  "test",
+				Digest:    "1",
+				IOContext: "context",
+				Object:    []byte(`"1"`),
+			},
+		},
 	)
 
 	t.Run("Kernel", func(t *testing.T) {
@@ -55,6 +62,21 @@ func TestDequeuer(t *testing.T) {
 		ack <- <-rcv
 		it.Then(t).Should(
 			it.Equal(string(<-pass.ack), `1`),
+		)
+
+		k.Close()
+	})
+
+	t.Run("Dequeue.1.Context", func(t *testing.T) {
+		k := NewDequeuer(pass, swarm.Config{PollFrequency: 10 * time.Millisecond})
+		rcv, ack := Dequeue(k, "test", codec)
+		go k.Await()
+
+		msg := <-rcv
+		ack <- msg
+		it.Then(t).Should(
+			it.Equal(string(<-pass.ack), `1`),
+			it.Equal(msg.IOContext.(string), "context"),
 		)
 
 		k.Close()

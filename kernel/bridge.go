@@ -10,7 +10,6 @@ package kernel
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/fogfish/swarm"
@@ -52,7 +51,7 @@ func (s *Bridge) Dispatch(seq []swarm.Bag) error {
 	case err := <-s.session:
 		return err
 	case <-time.After(s.timeToFlight):
-		return fmt.Errorf("ack timeout")
+		return swarm.ErrTimeout("ack", s.timeToFlight)
 	}
 }
 

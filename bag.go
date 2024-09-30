@@ -25,6 +25,9 @@ type Msg[T any] struct {
 	// Error on the message processing
 	Error error
 
+	// I/O Context of the message, as obtained from broker
+	IOContext any
+
 	// Message decoded content
 	Object T
 }
@@ -47,16 +50,20 @@ type Bag struct {
 	// Error on the message processing
 	Error error
 
+	// I/O Context of the message, as obtained from broker
+	IOContext any
+
 	// Message raw content
 	Object []byte
 }
 
 func ToMsg[T any](bag Bag, object T) Msg[T] {
 	return Msg[T]{
-		Category: bag.Category,
-		Digest:   bag.Digest,
-		Error:    bag.Error,
-		Object:   object,
+		Category:  bag.Category,
+		Digest:    bag.Digest,
+		Error:     bag.Error,
+		IOContext: bag.IOContext,
+		Object:    object,
 	}
 }
 

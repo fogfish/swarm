@@ -17,6 +17,13 @@ import (
 	"github.com/fogfish/swarm/kernel/backoff"
 )
 
+// Environment variable to config kernel
+const (
+	EnvConfigPollFrequency  = "CONFIG_SWARM_POLL_FREQUENCY"
+	EnvConfigTimeToFlight   = "CONFIG_SWARM_TIME_TO_FLIGHT"
+	EnvConfigNetworkTimeout = "CONFIG_SWARM_NETWORK_TIMEOUT"
+)
+
 // Grade of Service Policy
 type Policy int
 
@@ -64,22 +71,26 @@ type Config struct {
 	// Timeout for any network operations
 	NetworkTimeout time.Duration
 
-	// Codec for binary packets
-	Codec Codec
+	// Fail fast the message if category is not known to kernel.
+	FailOnUnknownCategory bool
+
+	// PacketCodec for binary packets
+	PacketCodec Codec
 }
 
 func NewConfig() Config {
 	return Config{
-		Source:         "github.com/fogfish/swarm",
-		Policy:         PolicyAtLeastOnce,
-		CapOut:         0,
-		CapDlq:         0,
-		CapRcv:         0,
-		CapAck:         0,
-		Backoff:        backoff.Exp(10*time.Millisecond, 10, 0.5),
-		PollFrequency:  10 * time.Millisecond,
-		TimeToFlight:   5 * time.Second,
-		NetworkTimeout: 5 * time.Second,
+		Source:                "github.com/fogfish/swarm",
+		Policy:                PolicyAtLeastOnce,
+		CapOut:                0,
+		CapDlq:                0,
+		CapRcv:                0,
+		CapAck:                0,
+		Backoff:               backoff.Exp(10*time.Millisecond, 10, 0.5),
+		PollFrequency:         10 * time.Millisecond,
+		TimeToFlight:          5 * time.Second,
+		NetworkTimeout:        5 * time.Second,
+		FailOnUnknownCategory: false,
 	}
 }
 
@@ -179,9 +190,9 @@ func WithNetworkTimeout(t time.Duration) Option {
 // - CONFIG_SWARM_NETWORK_TIMEOUT
 func WithConfigFromEnv() Option {
 	return func(conf *Config) {
-		conf.PollFrequency = durationFromEnv("CONFIG_SWARM_POLL_FREQUENCY", conf.PollFrequency)
-		conf.TimeToFlight = durationFromEnv("CONFIG_SWARM_TIME_TO_FLIGHT", conf.TimeToFlight)
-		conf.NetworkTimeout = durationFromEnv("CONFIG_SWARM_NETWORK_TIMEOUT", conf.NetworkTimeout)
+		conf.PollFrequency = durationFromEnv(EnvConfigPollFrequency, conf.PollFrequency)
+		conf.TimeToFlight = durationFromEnv(EnvConfigTimeToFlight, conf.TimeToFlight)
+		conf.NetworkTimeout = durationFromEnv(EnvConfigNetworkTimeout, conf.NetworkTimeout)
 	}
 }
 
@@ -223,5 +234,19 @@ func WithPolicyAtLeastOnce(n int) Option {
 		conf.CapDlq = 0
 		conf.CapRcv = n
 		conf.CapAck = n
+	}
+}
+
+// Configure codec for binary packets
+func WithPacketCodec(codec Codec) Option {
+	return func(conf *Config) {
+		conf.PacketCodec = codec
+	}
+}
+
+// Fail fast the message if category is not known to kernel.
+func WithFailOnUnknownCategory() Option {
+	return func(conf *Config) {
+		conf.FailOnUnknownCategory = true
 	}
 }

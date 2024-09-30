@@ -10,6 +10,7 @@ package kernel
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -101,6 +102,13 @@ func (k *Dequeuer) receive() {
 				if k.Config.StdErr != nil && err != nil {
 					k.Config.StdErr <- err
 					return
+				}
+			} else {
+				if k.Config.FailOnUnknownCategory {
+					slog.Error("Unknown category", "cat", bag.Category, "kernel", k.Config.Source)
+					k.Cathode.Err(k.context, bag.Digest, swarm.ErrDequeue.New(fmt.Errorf("unknown category %s ", bag.Category)))
+				} else {
+					slog.Warn("Unknown category", "cat", bag.Category, "kernel", k.Config.Source)
 				}
 			}
 		}

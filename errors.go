@@ -8,10 +8,35 @@
 
 package swarm
 
-import "github.com/fogfish/faults"
+import (
+	"fmt"
+	"time"
+
+	"github.com/fogfish/faults"
+)
 
 const (
 	ErrServiceIO = faults.Type("service i/o failed")
 	ErrEnqueue   = faults.Type("enqueue is failed")
 	ErrDequeue   = faults.Type("dequeue is failed")
 )
+
+type errTimeout struct {
+	op    string
+	timer time.Duration
+}
+
+func ErrTimeout(op string, timer time.Duration) error {
+	return errTimeout{
+		op:    op,
+		timer: timer,
+	}
+}
+
+func (err errTimeout) Error() string {
+	return fmt.Sprintf("timeout %s after %s", err.op, err.timer)
+}
+
+func (err errTimeout) Timeout() time.Duration {
+	return err.timer
+}
