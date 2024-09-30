@@ -14,6 +14,10 @@ import (
 	"github.com/fogfish/swarm"
 )
 
+// Environment variable to config event source
+const EnvConfigEventType = "CONFIG_SWARM_WS_EVENT_TYPE"
+const EnvConfigSourceWebSocket = "CONFIG_SWARM_WS_URL"
+
 type Option func(*Client)
 
 var defs = []Option{WithConfig()}

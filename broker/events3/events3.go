@@ -18,12 +18,11 @@ import (
 )
 
 type Client struct {
-	bucket string
 	config swarm.Config
 }
 
 // Create reader from AWS S3 Events
-func NewReader(opts ...Option) (*kernel.Dequeuer, error) {
+func NewDequeuer(opts ...Option) (*kernel.Dequeuer, error) {
 	c := &Client{}
 
 	for _, opt := range defs {

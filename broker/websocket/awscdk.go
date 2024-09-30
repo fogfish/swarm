@@ -48,7 +48,9 @@ type SinkProps struct {
 func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	sink := &Sink{Construct: constructs.NewConstruct(scope, id)}
 
-	defaultEnvironment(props)
+	props.Function.Setenv(EnvConfigEventType, props.Route)
+	props.Function.Setenv(EnvConfigSourceWebSocket, aws.ToString(props.Gateway.ApiEndpoint())+"/"+stage)
+
 	sink.Handler = scud.NewFunction(sink.Construct, jsii.String("Func"), props.Function)
 
 	it := integrations.NewWebSocketLambdaIntegration(jsii.String(props.Route), sink.Handler,
@@ -64,29 +66,6 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	props.Gateway.GrantManageConnections(sink.Handler)
 
 	return sink
-}
-
-func defaultEnvironment(props *SinkProps) {
-	switch f := props.Function.(type) {
-	case *scud.FunctionGoProps:
-		if f.FunctionProps == nil {
-			f.FunctionProps = &awslambda.FunctionProps{}
-		}
-		if f.FunctionProps.Environment == nil {
-			f.FunctionProps.Environment = &map[string]*string{}
-		}
-		(*f.FunctionProps.Environment)["CONFIG_SWARM_WS_EVENT_TYPE"] = jsii.String(props.Route)
-		(*f.FunctionProps.Environment)["CONFIG_SWARM_WS_URL"] = jsii.String(aws.ToString(props.Gateway.ApiEndpoint()) + "/" + stage)
-	case *scud.ContainerGoProps:
-		if f.DockerImageFunctionProps == nil {
-			f.DockerImageFunctionProps = &awslambda.DockerImageFunctionProps{}
-		}
-		if f.DockerImageFunctionProps.Environment == nil {
-			f.DockerImageFunctionProps.Environment = &map[string]*string{}
-		}
-		(*f.DockerImageFunctionProps.Environment)["CONFIG_SWARM_WS_EVENT_TYPE"] = jsii.String(props.Route)
-		(*f.DockerImageFunctionProps.Environment)["CONFIG_SWARM_WS_URL"] = jsii.String(aws.ToString(props.Gateway.ApiEndpoint()) + "/" + stage)
-	}
 }
 
 //------------------------------------------------------------------------------
