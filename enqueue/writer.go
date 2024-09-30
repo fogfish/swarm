@@ -119,8 +119,8 @@ type EmitterBytes struct {
 // Creates synchronous emitter
 func NewBytes(q *kernel.Enqueuer, category string) *EmitterBytes {
 	var codec swarm.Codec
-	if q.Config.Codec != nil {
-		codec = q.Config.Codec
+	if q.Config.PacketCodec != nil {
+		codec = q.Config.PacketCodec
 	} else {
 		codec = encoding.NewCodecByte()
 	}

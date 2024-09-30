@@ -33,8 +33,8 @@ func Event[M, T any](q *kernel.Dequeuer, category ...string) (<-chan swarm.Msg[s
 
 // Create pair of channels to receive and acknowledge pure binary
 func Bytes(q *kernel.Dequeuer, cat string) (<-chan swarm.Msg[[]byte], chan<- swarm.Msg[[]byte]) {
-	if q.Config.Codec != nil {
-		return kernel.Dequeue(q, cat, q.Config.Codec)
+	if q.Config.PacketCodec != nil {
+		return kernel.Dequeue(q, cat, q.Config.PacketCodec)
 	}
 
 	return kernel.Dequeue(q, cat, encoding.NewCodecByte())

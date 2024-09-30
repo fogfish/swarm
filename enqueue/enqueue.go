@@ -33,8 +33,8 @@ func Event[M, T any](q *kernel.Enqueuer, category ...string) (snd chan<- swarm.E
 
 // Create pair of channels to emit pure binaries
 func Bytes(q *kernel.Enqueuer, cat string) (snd chan<- []byte, dlq <-chan []byte) {
-	if q.Config.Codec != nil {
-		return kernel.Enqueue(q, cat, q.Config.Codec)
+	if q.Config.PacketCodec != nil {
+		return kernel.Enqueue(q, cat, q.Config.PacketCodec)
 	}
 
 	return kernel.Enqueue(q, cat, encoding.NewCodecByte())
