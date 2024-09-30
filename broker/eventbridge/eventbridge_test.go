@@ -28,7 +28,7 @@ func TestReader(t *testing.T) {
 	bridge := &bridge{kernel.NewBridge(100 * time.Millisecond)}
 
 	t.Run("New", func(t *testing.T) {
-		q, err := NewReader("test")
+		q, err := NewDequeuer("test")
 		it.Then(t).Should(it.Nil(err))
 		q.Close()
 	})
@@ -78,7 +78,7 @@ func TestReader(t *testing.T) {
 
 func TestWriter(t *testing.T) {
 	t.Run("New", func(t *testing.T) {
-		q, err := NewWriter("test")
+		q, err := NewEnqueuer("test")
 		it.Then(t).Should(it.Nil(err))
 		q.Close()
 	})
@@ -86,7 +86,7 @@ func TestWriter(t *testing.T) {
 	t.Run("Enqueue", func(t *testing.T) {
 		mock := &mockEventBridge{}
 
-		q, err := NewWriter("test", WithService(mock))
+		q, err := NewEnqueuer("test", WithService(mock))
 		it.Then(t).Should(it.Nil(err))
 
 		err = q.Emitter.Enq(context.Background(),

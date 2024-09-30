@@ -29,7 +29,7 @@ func WithConfig(opts ...swarm.Option) Option {
 
 		// Mandatory overrides
 		config.PollFrequency = 5 * time.Microsecond
-		config.Codec = encoding.NewCodecPacket()
+		config.PacketCodec = encoding.NewCodecPacket()
 
 		c.config = config
 	}

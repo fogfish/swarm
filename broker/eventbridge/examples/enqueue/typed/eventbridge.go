@@ -32,7 +32,7 @@ type Like struct {
 }
 
 func main() {
-	q, err := eventbridge.NewWriter("swarm-example-eventbridge",
+	q, err := eventbridge.NewEnqueuer("swarm-example-eventbridge",
 		eventbridge.WithConfig(
 			swarm.WithSource("swarm-example-eventbridge"),
 			swarm.WithLogStdErr(),
