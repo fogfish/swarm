@@ -42,7 +42,7 @@ func main() {
 
 	lambda.Start(
 		func(evt events.APIGatewayV2CustomAuthorizerV1Request) (events.APIGatewayCustomAuthorizerResponse, error) {
-			tkn, has := evt.QueryStringParameters["token"]
+			tkn, has := evt.QueryStringParameters["apikey"]
 			if !has || len(tkn) == 0 {
 				return None, ErrForbidden
 			}

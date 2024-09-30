@@ -48,8 +48,8 @@ func main() {
 		&websocket.SinkProps{
 			Route: "User",
 			Function: &scud.FunctionGoProps{
-				SourceCodeModule: "github.com/fogfish/swarm",
-				SourceCodeLambda: "examples/websocket/dequeue",
+				SourceCodeModule: "github.com/fogfish/swarm/broker/websocket",
+				SourceCodeLambda: "examples/dequeue/typed",
 			},
 		},
 	)
