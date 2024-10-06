@@ -62,6 +62,9 @@ type Config struct {
 	// Standard Error I/O channel
 	StdErr chan<- error
 
+	// Size of poller pool in the system
+	PollerPool int
+
 	// Frequency to poll broker api
 	PollFrequency time.Duration
 
@@ -87,6 +90,7 @@ func NewConfig() Config {
 		CapRcv:                0,
 		CapAck:                0,
 		Backoff:               backoff.Exp(10*time.Millisecond, 10, 0.5),
+		PollerPool:            1,
 		PollFrequency:         10 * time.Millisecond,
 		TimeToFlight:          5 * time.Second,
 		NetworkTimeout:        5 * time.Second,
@@ -160,6 +164,13 @@ func WithLogStdErr() Option {
 
 	return func(conf *Config) {
 		conf.StdErr = err
+	}
+}
+
+// Number of poller in the system
+func WithPollerPool(n int) Option {
+	return func(conf *Config) {
+		conf.PollerPool = n
 	}
 }
 
