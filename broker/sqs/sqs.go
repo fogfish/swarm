@@ -10,6 +10,7 @@ package sqs
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -169,6 +170,9 @@ func (cli Client) Ask(ctx context.Context) ([]swarm.Bag, error) {
 		},
 	)
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return nil, nil
+		}
 		return nil, swarm.ErrDequeue.New(err)
 	}
 

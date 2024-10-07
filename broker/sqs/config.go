@@ -19,6 +19,7 @@ type Option func(*Client)
 
 var defs = []Option{WithConfig()}
 
+// Global "kernel" configuration.
 func WithConfig(opts ...swarm.Option) Option {
 	return func(c *Client) {
 		config := swarm.NewConfig()
@@ -26,20 +27,33 @@ func WithConfig(opts ...swarm.Option) Option {
 			opt(&config)
 		}
 
-		c.batchSize = 1
+		if c.batchSize == 0 {
+			c.batchSize = 1
+		}
 
 		c.config = config
 	}
 }
 
+// Passes AWS SQS client instance to broker
 func WithService(service SQS) Option {
 	return func(c *Client) {
 		c.service = service
 	}
 }
 
+// Configure's SQS batch size.
+// Note: AWS SQS limits the MaxNumberOfMessages to 10 per poller.
+// This config increases number of poller
 func WithBatchSize(batch int) Option {
 	return func(c *Client) {
-		c.batchSize = batch
+		if batch <= 10 {
+			c.batchSize = batch
+			return
+		}
+
+		const maxNumberOfMessages = 10
+		c.batchSize = maxNumberOfMessages
+		c.config.PollerPool = batch/maxNumberOfMessages + 1
 	}
 }
