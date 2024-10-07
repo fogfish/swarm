@@ -54,6 +54,11 @@ type Dequeuer struct {
 func NewDequeuer(cathode Cathode, config swarm.Config) *Dequeuer {
 	ctx, can := context.WithCancel(context.Background())
 
+	// Must not be 0
+	if config.PollerPool == 0 {
+		config.PollerPool = 1
+	}
+
 	return &Dequeuer{
 		Config:  config,
 		context: ctx,
@@ -114,29 +119,31 @@ func (k *Dequeuer) receive() {
 		}
 	}
 
-	k.WaitGroup.Add(1)
-	go func() {
-		slog.Debug("kernel receive loop started")
+	for pid := 0; pid < k.Config.PollerPool; pid++ {
+		k.WaitGroup.Add(1)
+		go func() {
+			slog.Debug("kernel poller started", "pid", pid)
 
-	exit:
-		for {
-			select {
-			case <-k.context.Done():
-				break exit
-			default:
+		exit:
+			for {
+				select {
+				case <-k.context.Done():
+					break exit
+				default:
+				}
+
+				select {
+				case <-k.context.Done():
+					break exit
+				case <-time.After(k.Config.PollFrequency):
+					asker()
+				}
 			}
 
-			select {
-			case <-k.context.Done():
-				break exit
-			case <-time.After(k.Config.PollFrequency):
-				asker()
-			}
-		}
-
-		k.WaitGroup.Done()
-		slog.Debug("kernel receive loop stopped")
-	}()
+			k.WaitGroup.Done()
+			slog.Debug("kernel poller stopped", "pid", pid)
+		}()
+	}
 }
 
 // Dequeue creates pair of channels within kernel to enqueue messages
