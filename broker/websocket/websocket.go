@@ -134,9 +134,10 @@ func (s bridge) Run() { lambda.Start(s.run) }
 func (s bridge) run(evt events.APIGatewayWebsocketProxyRequest) (events.APIGatewayProxyResponse, error) {
 	bag := make([]swarm.Bag, 1)
 	bag[0] = swarm.Bag{
-		Category: evt.RequestContext.RouteKey,
-		Digest:   evt.RequestContext.ConnectionID,
-		Object:   []byte(evt.Body),
+		Category:  evt.RequestContext.RouteKey,
+		Digest:    evt.RequestContext.ConnectionID,
+		IOContext: &evt.RequestContext,
+		Object:    []byte(evt.Body),
 	}
 
 	if err := s.Bridge.Dispatch(bag); err != nil {

@@ -34,6 +34,7 @@ func main() {
 		&websocket.AuthorizerApiKeyProps{
 			Access: "test",
 			Secret: "test",
+			Scope:  []string{"test", "read"},
 		},
 	)
 
