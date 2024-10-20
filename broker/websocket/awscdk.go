@@ -96,6 +96,7 @@ func NewBroker(scope constructs.Construct, id *string, props *BrokerProps) *Brok
 type AuthorizerApiKeyProps struct {
 	Access string
 	Secret string
+	Scope  []string
 }
 
 func (broker *Broker) NewAuthorizerApiKey(props *AuthorizerApiKeyProps) awsapigatewayv2.IWebSocketRouteAuthorizer {
@@ -115,6 +116,7 @@ func (broker *Broker) NewAuthorizerApiKey(props *AuthorizerApiKeyProps) awsapiga
 				Environment: &map[string]*string{
 					"CONFIG_SWARM_WS_AUTHORIZER_ACCESS": jsii.String(props.Access),
 					"CONFIG_SWARM_WS_AUTHORIZER_SECRET": jsii.String(props.Secret),
+					"CONFIG_SWARM_WS_AUTHORIZER_SCOPE":  jsii.String(strings.Join(props.Scope, " ")),
 				},
 			},
 		},

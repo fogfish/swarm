@@ -58,6 +58,14 @@ func TestDequeuer(t *testing.T) {
 			it.Equal(bag[0].Category, "test"),
 			it.Equal(bag[0].Digest, "digest"),
 			it.Equiv(bag[0].Object, []byte(`{"sut":"test"}`)),
+		).ShouldNot(
+			it.Nil(bag[0].IOContext),
+		)
+
+		ctx := bag[0].IOContext.(*events.APIGatewayWebsocketProxyRequestContext)
+		it.Then(t).Should(
+			it.Equal(ctx.RouteKey, "test"),
+			it.Equal(ctx.ConnectionID, "digest"),
 		)
 	})
 }

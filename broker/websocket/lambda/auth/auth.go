@@ -57,7 +57,8 @@ func main() {
 			}
 
 			if basic != nil {
-				principal, context, err := basic.Validate(tkn)
+				scope := evt.QueryStringParameters["scope"]
+				principal, context, err := basic.Validate(tkn, scope)
 				if err != nil {
 					return None, ErrForbidden
 				}
@@ -98,11 +99,15 @@ func AccessPolicy(principal, method string, context map[string]any) events.APIGa
 
 //------------------------------------------------------------------------------
 
-type AuthBasic struct{ access, secret string }
+type AuthBasic struct {
+	access, secret string
+	scope          []string
+}
 
 func NewAuthBasic() (*AuthBasic, error) {
 	access := os.Getenv("CONFIG_SWARM_WS_AUTHORIZER_ACCESS")
 	secret := os.Getenv("CONFIG_SWARM_WS_AUTHORIZER_SECRET")
+	scope := os.Getenv("CONFIG_SWARM_WS_AUTHORIZER_SCOPE")
 
 	if access == "" || secret == "" {
 		return nil, errors.New("basic auth is not configured")
@@ -111,10 +116,11 @@ func NewAuthBasic() (*AuthBasic, error) {
 	return &AuthBasic{
 		access: access,
 		secret: secret,
+		scope:  strings.Split(scope, " "),
 	}, nil
 }
 
-func (auth *AuthBasic) Validate(apikey string) (string, map[string]any, error) {
+func (auth *AuthBasic) Validate(apikey, scope string) (string, map[string]any, error) {
 	c, err := base64.RawStdEncoding.DecodeString(apikey)
 	if err != nil {
 		return "", nil, ErrForbidden
@@ -123,6 +129,22 @@ func (auth *AuthBasic) Validate(apikey string) (string, map[string]any, error) {
 	access, secret, ok := strings.Cut(string(c), ":")
 	if !ok {
 		return "", nil, ErrForbidden
+	}
+
+	seq, err := url.QueryUnescape(scope)
+	if err != nil {
+		return "", nil, ErrForbidden
+	}
+	for _, sid := range strings.Split(seq, " ") {
+		has := false
+		for _, allowed := range auth.scope {
+			if allowed == sid {
+				has = true
+			}
+		}
+		if !has {
+			return "", nil, ErrForbidden
+		}
 	}
 
 	gaccess := sha256.Sum256([]byte(access))
@@ -134,7 +156,7 @@ func (auth *AuthBasic) Validate(apikey string) (string, map[string]any, error) {
 	secretMatch := (subtle.ConstantTimeCompare(gsecret[:], hsecret[:]) == 1)
 
 	if accessMatch && secretMatch {
-		return access, map[string]any{"auth": "basic"}, nil
+		return access, map[string]any{"auth": "basic", "sub": access, "scope": scope}, nil
 	}
 
 	return "", nil, ErrForbidden
