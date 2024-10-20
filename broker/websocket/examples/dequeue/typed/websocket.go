@@ -50,8 +50,6 @@ func (a *actor) handle(rcv <-chan swarm.Msg[User], ack chan<- swarm.Msg[User]) {
 	for msg := range rcv {
 		slog.Info("Event user", "data", msg.Object)
 
-		websocket.PrincipalOf(msg)
-
 		if err := a.emit.Enq(context.Background(), msg.Object, msg.Digest); err != nil {
 			ack <- msg.Fail(err)
 			continue
