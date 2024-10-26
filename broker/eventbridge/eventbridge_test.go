@@ -105,6 +105,14 @@ func TestWriter(t *testing.T) {
 	})
 }
 
+func TestBroker(t *testing.T) {
+	t.Run("New", func(t *testing.T) {
+		q, err := New("test")
+		it.Then(t).Should(it.Nil(err))
+		q.Close()
+	})
+}
+
 //------------------------------------------------------------------------------
 
 type mockEventBridge struct {
