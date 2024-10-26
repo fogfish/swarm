@@ -60,6 +60,21 @@ func NewDequeuer(bus string, opts ...Option) (*kernel.Dequeuer, error) {
 	return kernel.NewDequeuer(bridge, c.config), nil
 }
 
+// Create enqueue & dequeue routine to AWS EventBridge
+func New(bus string, opts ...Option) (*kernel.Kernel, error) {
+	cli, err := newEventBridge(bus, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	bridge := &bridge{kernel.NewBridge(cli.config.TimeToFlight)}
+
+	return kernel.New(
+		kernel.NewEnqueuer(cli, cli.config),
+		kernel.NewDequeuer(bridge, cli.config),
+	), nil
+}
+
 func newEventBridge(queue string, opts ...Option) (*Client, error) {
 	c := &Client{bus: queue}
 
