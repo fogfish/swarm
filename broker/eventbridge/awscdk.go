@@ -34,40 +34,19 @@ type Sink struct {
 
 // See https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-event-patterns.html
 type SinkProps struct {
-	System     awsevents.IEventBus
-	Source     []string
-	Categories []string
-	Pattern    map[string]interface{}
-	Function   scud.FunctionProps
+	System       awsevents.IEventBus
+	EventPattern *awsevents.EventPattern
+	Function     scud.FunctionProps
 }
 
 func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	sink := &Sink{Construct: constructs.NewConstruct(scope, id)}
 
-	//
-	pattern := &awsevents.EventPattern{}
-	if len(props.Categories) > 0 {
-		seq := make([]*string, len(props.Categories))
-		for i, category := range props.Categories {
-			seq[i] = jsii.String(category)
+	pattern := props.EventPattern
+	if pattern == nil {
+		pattern = &awsevents.EventPattern{
+			Account: jsii.Strings(*awscdk.Aws_ACCOUNT_ID()),
 		}
-		pattern.DetailType = &seq
-	}
-
-	if len(props.Source) > 0 {
-		seq := make([]*string, len(props.Source))
-		for i, agent := range props.Source {
-			seq[i] = jsii.String(agent)
-		}
-		pattern.Source = &seq
-	}
-
-	if props.Pattern != nil {
-		pattern.Detail = &props.Pattern
-	}
-
-	if pattern.DetailType == nil && pattern.Source == nil {
-		pattern.Account = &[]*string{awscdk.Aws_ACCOUNT_ID()}
 	}
 
 	//

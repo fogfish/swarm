@@ -18,11 +18,11 @@ enq <- &swarm.Event[User]{
 
 stack.NewSink(
   &eventbridge.SinkProps{
-    Pattern: map[string]interface{}{
-      "@type": []string{"[User]"},
-      "agent": []string{"[swarm:example]"},
-      "participant": []string{"[user]"},
-    },
+    EventPattern: eventbridge.Event(
+      eventbridge.Type[User](),
+      eventbridge.Meta("agent", curie.IRI("swarm:example"))
+      eventbridge.Meta("participant", curie.IRI("user"))
+    ),
     /* ... */
   },
 )

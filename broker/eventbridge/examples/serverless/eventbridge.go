@@ -34,8 +34,10 @@ func main() {
 
 	broker.NewSink(
 		&eventbridge.SinkProps{
-			Source:     []string{"swarm-example-eventbridge"},
-			Categories: []string{"User", "Note", "Like"},
+			EventPattern: eventbridge.Like(
+				eventbridge.Source("swarm-example-eventbridge"),
+				eventbridge.Category("User", "Note", "Like"),
+			),
 			Function: &scud.FunctionGoProps{
 				SourceCodeModule: "github.com/fogfish/swarm/broker/eventbridge",
 				SourceCodeLambda: "examples/dequeue/typed",
@@ -45,8 +47,10 @@ func main() {
 
 	broker.NewSink(
 		&eventbridge.SinkProps{
-			Source:     []string{"swarm-example-eventbridge"},
-			Categories: []string{"EventNote"},
+			EventPattern: eventbridge.Like(
+				eventbridge.Source("swarm-example-eventbridge"),
+				eventbridge.Category("EventNote"),
+			),
 			Function: &scud.FunctionGoProps{
 				SourceCodeModule: "github.com/fogfish/swarm/broker/eventbridge",
 				SourceCodeLambda: "examples/dequeue/event",
@@ -56,8 +60,10 @@ func main() {
 
 	broker.NewSink(
 		&eventbridge.SinkProps{
-			Source:     []string{"swarm-example-eventbridge"},
-			Categories: []string{"User", "Note", "Like"},
+			EventPattern: eventbridge.Like(
+				eventbridge.Source("swarm-example-eventbridge"),
+				eventbridge.Category("User", "Note", "Like"),
+			),
 			Function: &scud.FunctionGoProps{
 				SourceCodeModule: "github.com/fogfish/swarm/broker/eventbridge",
 				SourceCodeLambda: "examples/dequeue/bytes",
