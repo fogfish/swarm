@@ -10,6 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/eventbridge v1.34.3
 	github.com/aws/constructs-go/constructs/v10 v10.3.0
 	github.com/aws/jsii-runtime-go v1.103.1
+	github.com/fogfish/curie v1.8.2
 	github.com/fogfish/it/v2 v2.0.2
 	github.com/fogfish/scud v0.10.2
 	github.com/fogfish/swarm v0.20.1
@@ -34,7 +35,6 @@ require (
 	github.com/cdklabs/awscdk-asset-node-proxy-agent-go/nodeproxyagentv6/v2 v2.1.0 // indirect
 	github.com/cdklabs/cloud-assembly-schema-go/awscdkcloudassemblyschema/v38 v38.0.1 // indirect
 	github.com/fatih/color v1.17.0 // indirect
-	github.com/fogfish/curie v1.8.2 // indirect
 	github.com/fogfish/faults v0.2.0 // indirect
 	github.com/fogfish/golem/hseq v1.2.0 // indirect
 	github.com/fogfish/golem/optics v0.13.0 // indirect
