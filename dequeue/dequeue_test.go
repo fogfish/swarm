@@ -32,7 +32,7 @@ type User struct {
 func TestDequeueType(t *testing.T) {
 	user := User{ID: "id", Text: "user"}
 
-	k := kernel.NewDequeuer(mockCathode(user), swarm.Config{})
+	k := kernel.NewDequeuer(mockCathode("User", user), swarm.Config{})
 	go func() {
 		time.Sleep(yield_before_close)
 		k.Close()
@@ -61,7 +61,7 @@ func TestDequeueEvent(t *testing.T) {
 		Data: &User{ID: "id", Text: "user"},
 	}
 
-	k := kernel.NewDequeuer(mockCathode(obj), swarm.Config{})
+	k := kernel.NewDequeuer(mockCathode("User", obj), swarm.Config{})
 	go func() {
 		time.Sleep(yield_before_close)
 		k.Close()
@@ -88,7 +88,7 @@ func TestDequeueEvent(t *testing.T) {
 func TestDequeueBytes(t *testing.T) {
 	user := User{ID: "id", Text: "user"}
 
-	k := kernel.NewDequeuer(mockCathode(user), swarm.Config{})
+	k := kernel.NewDequeuer(mockCathode("User", user), swarm.Config{})
 	go func() {
 		time.Sleep(yield_before_close)
 		k.Close()
@@ -117,9 +117,9 @@ type cathode[T any] struct {
 	obj T
 }
 
-func mockCathode[T any](obj T) cathode[T] {
+func mockCathode[T any](cat string, obj T) cathode[T] {
 	return cathode[T]{
-		cat: swarm.TypeOf[T](),
+		cat: cat,
 		obj: obj,
 	}
 }
