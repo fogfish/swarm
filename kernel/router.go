@@ -10,7 +10,7 @@ package kernel
 
 import (
 	"context"
-	"fmt"
+	"log/slog"
 
 	"github.com/fogfish/swarm"
 )
@@ -24,14 +24,19 @@ type router[T any] struct {
 func (a router[T]) Route(ctx context.Context, bag swarm.Bag) error {
 	obj, err := a.codec.Decode(bag.Object)
 	if err != nil {
-		return err
+		slog.Debug("rouetr failed to decode message",
+			slog.Any("cat", bag.Category),
+			slog.Any("bag", bag),
+			slog.Any("err", err),
+		)
+		return swarm.ErrDecoder.With(err)
 	}
 
 	msg := swarm.ToMsg(bag, obj)
 
 	select {
 	case <-ctx.Done():
-		return fmt.Errorf("routing cancelled: category %s", bag.Category)
+		return swarm.ErrRouting.With(nil, bag.Category)
 	case a.ch <- msg:
 		return nil
 	}

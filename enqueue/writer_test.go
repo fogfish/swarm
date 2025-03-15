@@ -16,6 +16,7 @@ import (
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/enqueue"
 	"github.com/fogfish/swarm/kernel"
+	"github.com/fogfish/swarm/kernel/encoding"
 )
 
 func TestNewTypes(t *testing.T) {
@@ -26,7 +27,7 @@ func TestNewTypes(t *testing.T) {
 	q.Enq(context.Background(), User{ID: "id", Text: "user"})
 
 	it.Then(t).Should(
-		it.Equal(mock.val, `{"id":"id","text":"user"}`),
+		it.Json(mock.val).Equiv(`{"id":"id","text":"user"}`),
 	)
 
 	k.Close()
@@ -45,12 +46,12 @@ func TestNewEvent(t *testing.T) {
 	)
 
 	it.Then(t).Should(
-		it.String(mock.val).Contain(`"meta":`),
-		it.String(mock.val).Contain(`"data":`),
-		it.String(mock.val).Contain(`"id":`),
-		it.String(mock.val).Contain(`"type":"[User]"`),
-		it.String(mock.val).Contain(`"created":`),
-		it.String(mock.val).Contain(`{"id":"id","text":"user"}`),
+		it.Json(mock.val).Equiv(`
+			{
+				"meta": {"type": "User", "id": "_", "created": "_"},
+				"data": {"id":"id","text":"user"}
+			}
+		`),
 	)
 
 	k.Close()
@@ -60,11 +61,11 @@ func TestNewBytes(t *testing.T) {
 	mock := mockEmitter(10)
 	k := kernel.NewEnqueuer(mock, swarm.Config{})
 
-	q := enqueue.NewBytes(k, "User")
+	q := enqueue.NewBytes(k, encoding.NewCodecByte("User"))
 	q.Enq(context.Background(), []byte(`{"id":"id","text":"user"}`))
 
 	it.Then(t).Should(
-		it.Equal(mock.val, `{"id":"id","text":"user"}`),
+		it.Json(mock.val).Equiv(`{"id":"id","text":"user"}`),
 	)
 
 	k.Close()

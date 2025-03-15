@@ -12,7 +12,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/fogfish/curie"
+	"github.com/fogfish/curie/v2"
 	"github.com/fogfish/golem/optics"
 	"github.com/fogfish/guid/v2"
 	"github.com/fogfish/swarm"
@@ -21,7 +21,9 @@ import (
 //------------------------------------------------------------------------------
 
 // Json codec for I/O kernel
-type CodecJson[T any] struct{}
+type CodecJson[T any] string
+
+func (c CodecJson[T]) Category() string { return string(c) }
 
 func (CodecJson[T]) Encode(x T) ([]byte, error) {
 	return json.Marshal(x)
@@ -32,26 +34,31 @@ func (CodecJson[T]) Decode(b []byte) (x T, err error) {
 	return
 }
 
-func NewCodecJson[T any]() CodecJson[T] { return CodecJson[T]{} }
+func NewCodecJson[T any](category ...string) CodecJson[T] {
+	return CodecJson[T](swarm.TypeOf[T](category...))
+}
 
 //------------------------------------------------------------------------------
 
 // Byte identity codec for I/O kernet
-type CodecByte struct{}
+type CodecByte string
 
+func (c CodecByte) Category() string              { return string(c) }
 func (CodecByte) Encode(x []byte) ([]byte, error) { return x, nil }
 func (CodecByte) Decode(x []byte) ([]byte, error) { return x, nil }
 
-func NewCodecByte() CodecByte { return CodecByte{} }
+func NewCodecByte(cat string) CodecByte { return CodecByte(cat) }
 
 //------------------------------------------------------------------------------
 
 // Encode Bytes as "JSON packet"
-type CodecPacket struct{}
+type CodecPacket string
 
 type packet struct {
 	Octets []byte `json:"p,omitempty"`
 }
+
+func (c CodecPacket) Category() string { return string(c) }
 
 func (CodecPacket) Encode(x []byte) ([]byte, error) {
 	b, err := json.Marshal(packet{Octets: x})
@@ -63,7 +70,7 @@ func (CodecPacket) Decode(x []byte) ([]byte, error) {
 	return pckt.Octets, err
 }
 
-func NewCodecPacket() CodecPacket { return CodecPacket{} }
+func NewCodecPacket(cat string) CodecPacket { return CodecPacket(cat) }
 
 //------------------------------------------------------------------------------
 
@@ -73,6 +80,8 @@ type CodecEvent[M, T any] struct {
 	cat    string
 	shape  optics.Lens4[M, string, curie.IRI, curie.IRI, time.Time]
 }
+
+func (c CodecEvent[M, T]) Category() string { return c.cat }
 
 func (c CodecEvent[M, T]) Encode(obj swarm.Event[M, T]) ([]byte, error) {
 	_, knd, src, _ := c.shape.Get(obj.Meta)
@@ -96,10 +105,10 @@ func (c CodecEvent[M, T]) Decode(b []byte) (swarm.Event[M, T], error) {
 	return x, err
 }
 
-func NewCodecEvent[M, T any](source, cat string) CodecEvent[M, T] {
+func NewCodecEvent[M, T any](source string, category ...string) CodecEvent[M, T] {
 	return CodecEvent[M, T]{
 		source: source,
-		cat:    cat,
+		cat:    swarm.TypeOf[T](category...),
 		shape:  optics.ForShape4[M, string, curie.IRI, curie.IRI, time.Time]("ID", "Type", "Agent", "Created"),
 	}
 }

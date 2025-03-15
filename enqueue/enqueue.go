@@ -15,27 +15,30 @@ import (
 )
 
 // Creates pair of channels to emit messages of type T
-func Typed[T any](q *kernel.Enqueuer, category ...string) (snd chan<- T, dlq <-chan T) {
-	return kernel.Enqueue(q,
-		swarm.TypeOf[T](category...),
-		encoding.NewCodecJson[T](),
-	)
+func Typed[T any](q *kernel.Enqueuer, codec ...kernel.Encoder[T]) (snd chan<- T, dlq <-chan T) {
+	var c kernel.Encoder[T]
+	if len(codec) == 0 {
+		c = encoding.NewCodecJson[T]()
+	} else {
+		c = codec[0]
+	}
+
+	return kernel.Enqueue(q, c.Category(), c)
 }
 
 // Creates pair of channels to emit events of type T
-func Event[M, T any](q *kernel.Enqueuer, category ...string) (snd chan<- swarm.Event[M, T], dlq <-chan swarm.Event[M, T]) {
-	cat := swarm.TypeOf[T](category...)
+func Event[M, T any](q *kernel.Enqueuer, codec ...kernel.Encoder[swarm.Event[M, T]]) (snd chan<- swarm.Event[M, T], dlq <-chan swarm.Event[M, T]) {
+	var c kernel.Encoder[swarm.Event[M, T]]
+	if len(codec) == 0 {
+		c = encoding.NewCodecEvent[M, T](q.Config.Source)
+	} else {
+		c = codec[0]
+	}
 
-	return kernel.Enqueue(q, cat,
-		encoding.NewCodecEvent[M, T](q.Config.Source, cat),
-	)
+	return kernel.Enqueue(q, c.Category(), c)
 }
 
 // Create pair of channels to emit pure binaries
-func Bytes(q *kernel.Enqueuer, cat string) (snd chan<- []byte, dlq <-chan []byte) {
-	if q.Config.PacketCodec != nil {
-		return kernel.Enqueue(q, cat, q.Config.PacketCodec)
-	}
-
-	return kernel.Enqueue(q, cat, encoding.NewCodecByte())
+func Bytes(q *kernel.Enqueuer, codec kernel.Encoder[[]byte]) (snd chan<- []byte, dlq <-chan []byte) {
+	return kernel.Enqueue(q, codec.Category(), codec)
 }

@@ -11,7 +11,7 @@ package swarm
 import (
 	"time"
 
-	"github.com/fogfish/curie"
+	"github.com/fogfish/curie/v2"
 )
 
 // Event defines immutable fact(s) placed into the queueing system.
@@ -57,7 +57,7 @@ type Meta struct {
 	//
 	// ISO8601 timestamps when action has been created
 	// It is automatically defined by the library upon the transmission
-	Created time.Time `json:"created,omitempty"`
+	Created time.Time `json:"created"`
 
 	//
 	// Indicates target performer of the event, a software service that is able to
@@ -67,3 +67,6 @@ type Meta struct {
 	// Indirect participants, a user who initiated an event.
 	Participant curie.IRI `json:"participant,omitempty"`
 }
+
+// Evt is a generic envelop type for incoming events.
+type Evt[M, T any] = Msg[Event[M, T]]

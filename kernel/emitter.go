@@ -10,6 +10,7 @@ package kernel
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 
 	"github.com/fogfish/swarm"
@@ -21,7 +22,10 @@ type Emitter interface {
 }
 
 // Encodes message into wire format
-type Encoder[T any] interface{ Encode(T) ([]byte, error) }
+type Encoder[T any] interface {
+	Category() string
+	Encode(T) ([]byte, error)
+}
 
 // Messaging Egress port
 type Enqueuer struct {
@@ -73,24 +77,36 @@ func Enqueue[T any](k *Enqueuer, cat string, codec Encoder[T]) ( /*snd*/ chan<- 
 		if err != nil {
 			dlq <- obj
 			if k.Config.StdErr != nil {
-				k.Config.StdErr <- err
+				k.Config.StdErr <- swarm.ErrEncoder.With(err)
 			}
+			slog.Debug("emitter failed to encode message",
+				slog.Any("cat", cat),
+				slog.Any("obj", obj),
+				slog.Any("err", err),
+			)
 			return
 		}
 
 		bag := swarm.Bag{Category: cat, Object: msg}
-
 		if err := k.Emitter.Enq(context.Background(), bag); err != nil {
 			dlq <- obj
 			if k.Config.StdErr != nil {
-				k.Config.StdErr <- err
+				k.Config.StdErr <- swarm.ErrEnqueue.With(err)
 			}
+			slog.Debug("emitter failed to send message",
+				slog.Any("cat", cat),
+				slog.Any("bag", bag),
+				slog.Any("err", err),
+			)
 			return
 		}
 	}
 
 	k.WaitGroup.Add(1)
 	go func() {
+		slog.Info("init emitter", slog.Any("cat", cat))
+		defer slog.Info("free emitter", slog.Any("cat", cat))
+
 	exit:
 		for {
 			// The try-receive operation here is to

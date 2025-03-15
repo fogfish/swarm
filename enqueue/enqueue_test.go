@@ -10,6 +10,7 @@ package enqueue_test
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/enqueue"
 	"github.com/fogfish/swarm/kernel"
+	"github.com/fogfish/swarm/kernel/encoding"
 )
 
 // controls yield time before kernel is closed
@@ -41,7 +43,7 @@ func TestType(t *testing.T) {
 	k.Await()
 
 	it.Then(t).Should(
-		it.Equal(mock.val, `{"id":"id","text":"user"}`),
+		it.Json(mock.val).Equiv(`{"id":"id","text":"user"}`),
 	)
 }
 
@@ -62,12 +64,12 @@ func TestEvent(t *testing.T) {
 	k.Await()
 
 	it.Then(t).Should(
-		it.String(mock.val).Contain(`"meta":`),
-		it.String(mock.val).Contain(`"data":`),
-		it.String(mock.val).Contain(`"id":`),
-		it.String(mock.val).Contain(`"type":"[User]"`),
-		it.String(mock.val).Contain(`"created":`),
-		it.String(mock.val).Contain(`{"id":"id","text":"user"}`),
+		it.Json(mock.val).Equiv(`
+			{
+				"meta": {"type": "User", "id": "_", "created": "_"},
+				"data": {"id":"id","text":"user"}
+			}
+		`),
 	)
 }
 
@@ -79,20 +81,20 @@ func TestBytes(t *testing.T) {
 		k.Close()
 	}()
 
-	snd, _ := enqueue.Bytes(k, "User")
+	snd, _ := enqueue.Bytes(k, encoding.NewCodecByte("User"))
 	snd <- []byte(`{"id":"id","text":"user"}`)
 
 	k.Await()
 
 	it.Then(t).Should(
-		it.Equal(mock.val, `{"id":"id","text":"user"}`),
+		it.Json(mock.val).Equiv(`{"id":"id","text":"user"}`),
 	)
 }
 
 //------------------------------------------------------------------------------
 
 type emitter struct {
-	val string
+	val any
 }
 
 func mockEmitter(wait int) *emitter {
@@ -100,6 +102,6 @@ func mockEmitter(wait int) *emitter {
 }
 
 func (e *emitter) Enq(ctx context.Context, bag swarm.Bag) error {
-	e.val = string(bag.Object)
-	return nil
+	err := json.Unmarshal(bag.Object, &e.val)
+	return err
 }

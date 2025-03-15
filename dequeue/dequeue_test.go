@@ -18,6 +18,7 @@ import (
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/dequeue"
 	"github.com/fogfish/swarm/kernel"
+	"github.com/fogfish/swarm/kernel/encoding"
 )
 
 // controls yield time before kernel is closed
@@ -64,7 +65,7 @@ func TestDequeueBytes(t *testing.T) {
 	}()
 
 	var msg swarm.Msg[[]byte]
-	rcv, ack := dequeue.Bytes(k, "User")
+	rcv, ack := dequeue.Bytes(k, encoding.NewCodecByte("User"))
 
 	go func() {
 		msg = <-rcv
