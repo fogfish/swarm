@@ -10,7 +10,6 @@ package kernel
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -26,7 +25,10 @@ type Cathode interface {
 }
 
 // Decode message from wire format
-type Decoder[T any] interface{ Decode([]byte) (T, error) }
+type Decoder[T any] interface {
+	Category() string
+	Decode([]byte) (T, error)
+}
 
 type Router = interface {
 	Route(context.Context, swarm.Bag) error
@@ -91,7 +93,7 @@ func (k *Dequeuer) receive() {
 	asker := func() {
 		seq, err := k.Cathode.Ask(k.context)
 		if k.Config.StdErr != nil && err != nil {
-			k.Config.StdErr <- err
+			k.Config.StdErr <- swarm.ErrDequeue.With(err)
 			return
 		}
 
@@ -105,15 +107,21 @@ func (k *Dequeuer) receive() {
 			if has {
 				err := r.Route(k.context, bag)
 				if k.Config.StdErr != nil && err != nil {
-					k.Config.StdErr <- err
+					k.Config.StdErr <- swarm.ErrDequeue.With(err)
 					return
 				}
 			} else {
+				slog.Warn("Unknown category",
+					slog.Any("cat", bag.Category),
+					slog.Any("kernel", k.Config.Source),
+				)
+				slog.Debug("Unknown category",
+					slog.Any("cat", bag.Category),
+					slog.Any("kernel", k.Config.Source),
+					slog.Any("bag", bag),
+				)
 				if k.Config.FailOnUnknownCategory {
-					slog.Error("Unknown category", "cat", bag.Category, "kernel", k.Config.Source)
-					k.Cathode.Err(k.context, bag.Digest, swarm.ErrDequeue.New(fmt.Errorf("unknown category %s ", bag.Category)))
-				} else {
-					slog.Warn("Unknown category", "cat", bag.Category, "kernel", k.Config.Source)
+					k.Cathode.Err(k.context, bag.Digest, swarm.ErrDequeue.With(swarm.ErrCatUnknown.With(nil, bag.Category)))
 				}
 			}
 		}
@@ -123,6 +131,7 @@ func (k *Dequeuer) receive() {
 		k.WaitGroup.Add(1)
 		go func() {
 			slog.Debug("kernel poller started", "pid", pid)
+			defer slog.Debug("kernel poller stopped", "pid", pid)
 
 		exit:
 			for {
@@ -141,7 +150,6 @@ func (k *Dequeuer) receive() {
 			}
 
 			k.WaitGroup.Done()
-			slog.Debug("kernel poller stopped", "pid", pid)
 		}()
 	}
 }
@@ -160,12 +168,12 @@ func Dequeue[T any](k *Dequeuer, cat string, codec Decoder[T]) ( /*rcv*/ <-chan 
 		if msg.Error == nil {
 			err := k.Cathode.Ack(k.context, msg.Digest)
 			if k.Config.StdErr != nil && err != nil {
-				k.Config.StdErr <- err
+				k.Config.StdErr <- swarm.ErrDequeue.With(err)
 			}
 		} else {
 			err := k.Cathode.Err(k.context, msg.Digest, msg.Error)
 			if k.Config.StdErr != nil && err != nil {
-				k.Config.StdErr <- err
+				k.Config.StdErr <- swarm.ErrDequeue.With(err)
 			}
 		}
 	}
@@ -173,6 +181,7 @@ func Dequeue[T any](k *Dequeuer, cat string, codec Decoder[T]) ( /*rcv*/ <-chan 
 	k.WaitGroup.Add(1)
 	go func() {
 		slog.Debug("kernel dequeue started", "cat", cat)
+		defer slog.Debug("kernel dequeue stopped", "cat", cat)
 
 	exit:
 		for {
@@ -206,7 +215,6 @@ func Dequeue[T any](k *Dequeuer, cat string, codec Decoder[T]) ( /*rcv*/ <-chan 
 		}
 
 		k.WaitGroup.Done()
-		slog.Debug("kernel dequeue stopped", "cat", cat)
 	}()
 
 	return rcv, ack

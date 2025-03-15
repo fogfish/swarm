@@ -16,9 +16,13 @@ import (
 )
 
 const (
-	ErrServiceIO = faults.Type("service i/o failed")
-	ErrEnqueue   = faults.Type("enqueue is failed")
-	ErrDequeue   = faults.Type("dequeue is failed")
+	ErrServiceIO  = faults.Type("service i/o failed")
+	ErrEnqueue    = faults.Type("enqueue i/o failed")
+	ErrEncoder    = faults.Type("encoder failure")
+	ErrDequeue    = faults.Type("dequeue i/o failed")
+	ErrDecoder    = faults.Type("decoder failure")
+	ErrRouting    = faults.Safe1[string]("routing has failed (cat %s)")
+	ErrCatUnknown = faults.Safe1[string]("unknown category %s")
 )
 
 type errTimeout struct {

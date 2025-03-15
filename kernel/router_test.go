@@ -20,7 +20,7 @@ import (
 func TestRoute(t *testing.T) {
 	r := router[string]{
 		ch:    make(chan swarm.Msg[string], 1),
-		codec: encoding.NewCodecJson[string](),
+		codec: encoding.ForTyped[string](),
 	}
 
 	r.Route(context.Background(), swarm.Bag{Object: []byte(`"1"`)})

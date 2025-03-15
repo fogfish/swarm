@@ -15,27 +15,30 @@ import (
 )
 
 // Creates pair of channels to receive and acknowledge messages of type T
-func Typed[T any](q *kernel.Dequeuer, category ...string) (rcv <-chan swarm.Msg[T], ack chan<- swarm.Msg[T]) {
-	return kernel.Dequeue(q,
-		swarm.TypeOf[T](category...),
-		encoding.NewCodecJson[T](),
-	)
+func Typed[T any](q *kernel.Dequeuer, codec ...kernel.Decoder[T]) (rcv <-chan swarm.Msg[T], ack chan<- swarm.Msg[T]) {
+	var c kernel.Decoder[T]
+	if len(codec) == 0 {
+		c = encoding.ForTyped[T]()
+	} else {
+		c = codec[0]
+	}
+
+	return kernel.Dequeue(q, c.Category(), c)
 }
 
 // Creates pair of channels to receive and acknowledge events of type T
-func Event[M, T any](q *kernel.Dequeuer, category ...string) (<-chan swarm.Msg[swarm.Event[M, T]], chan<- swarm.Msg[swarm.Event[M, T]]) {
-	cat := swarm.TypeOf[T](category...)
+func Event[M, T any](q *kernel.Dequeuer, codec ...kernel.Decoder[swarm.Event[M, T]]) (<-chan swarm.Evt[M, T], chan<- swarm.Evt[M, T]) {
+	var c kernel.Decoder[swarm.Event[M, T]]
+	if len(codec) == 0 {
+		c = encoding.ForEvent[M, T](q.Config.Source)
+	} else {
+		c = codec[0]
+	}
 
-	return kernel.Dequeue(q, cat,
-		encoding.NewCodecEvent[M, T](q.Config.Source, cat),
-	)
+	return kernel.Dequeue(q, c.Category(), c)
 }
 
 // Create pair of channels to receive and acknowledge pure binary
-func Bytes(q *kernel.Dequeuer, cat string) (<-chan swarm.Msg[[]byte], chan<- swarm.Msg[[]byte]) {
-	if q.Config.PacketCodec != nil {
-		return kernel.Dequeue(q, cat, q.Config.PacketCodec)
-	}
-
-	return kernel.Dequeue(q, cat, encoding.NewCodecByte())
+func Bytes(q *kernel.Dequeuer, codec kernel.Decoder[[]byte]) (<-chan swarm.Msg[[]byte], chan<- swarm.Msg[[]byte]) {
+	return kernel.Dequeue(q, codec.Category(), codec)
 }

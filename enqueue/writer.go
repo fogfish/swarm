@@ -25,10 +25,17 @@ type EmitterTyped[T any] struct {
 }
 
 // Creates synchronous typed emitter
-func NewTyped[T any](q *kernel.Enqueuer, category ...string) *EmitterTyped[T] {
+func NewTyped[T any](q *kernel.Enqueuer, codec ...kernel.Encoder[T]) *EmitterTyped[T] {
+	var c kernel.Encoder[T]
+	if len(codec) == 0 {
+		c = encoding.ForTyped[T]()
+	} else {
+		c = codec[0]
+	}
+
 	return &EmitterTyped[T]{
-		cat:    swarm.TypeOf[T](category...),
-		codec:  encoding.NewCodecJson[T](),
+		cat:    c.Category(),
+		codec:  c,
 		kernel: q,
 	}
 }
@@ -70,12 +77,17 @@ type EmitterEvent[M, T any] struct {
 }
 
 // Creates synchronous event emitter
-func NewEvent[M, T any](q *kernel.Enqueuer, category ...string) *EmitterEvent[M, T] {
-	cat := swarm.TypeOf[T](category...)
+func NewEvent[M, T any](q *kernel.Enqueuer, codec ...kernel.Encoder[swarm.Event[M, T]]) *EmitterEvent[M, T] {
+	var c kernel.Encoder[swarm.Event[M, T]]
+	if len(codec) == 0 {
+		c = encoding.ForEvent[M, T](q.Config.Source)
+	} else {
+		c = codec[0]
+	}
 
 	return &EmitterEvent[M, T]{
-		cat:    cat,
-		codec:  encoding.NewCodecEvent[M, T](q.Config.Source, cat),
+		cat:    c.Category(),
+		codec:  c,
 		kernel: q,
 	}
 }
@@ -117,16 +129,9 @@ type EmitterBytes struct {
 }
 
 // Creates synchronous emitter
-func NewBytes(q *kernel.Enqueuer, category string) *EmitterBytes {
-	var codec swarm.Codec
-	if q.Config.PacketCodec != nil {
-		codec = q.Config.PacketCodec
-	} else {
-		codec = encoding.NewCodecByte()
-	}
-
+func NewBytes(q *kernel.Enqueuer, codec kernel.Encoder[[]byte]) *EmitterBytes {
 	return &EmitterBytes{
-		cat:    category,
+		cat:    codec.Category(),
 		codec:  codec,
 		kernel: q,
 	}

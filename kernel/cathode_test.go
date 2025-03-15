@@ -19,7 +19,7 @@ import (
 )
 
 func TestDequeuer(t *testing.T) {
-	codec := encoding.NewCodecJson[string]()
+	codec := encoding.ForTyped[string]()
 	none := mockCathode(nil, nil)
 	pass := mockCathode(make(chan string),
 		[]swarm.Bag{

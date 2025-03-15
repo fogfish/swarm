@@ -11,32 +11,20 @@ package kernel
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/fogfish/it/v2"
-	"github.com/fogfish/logger/v3"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/kernel/encoding"
 )
-
-func init() {
-	slog.SetDefault(
-		logger.New(
-			logger.WithSourceShorten(),
-			logger.WithoutTimestamp(),
-			logger.WithLogLevel(slog.LevelDebug),
-		),
-	)
-}
 
 // controls yield time before kernel is closed
 const yield_before_close = 5 * time.Millisecond
 
 func TestBridge(t *testing.T) {
-	codec := encoding.NewCodecJson[string]()
+	codec := encoding.ForTyped[string]()
 	config := swarm.Config{PollFrequency: 0 * time.Millisecond}
 
 	//

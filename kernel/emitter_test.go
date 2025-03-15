@@ -20,7 +20,7 @@ import (
 )
 
 func TestEnqueuer(t *testing.T) {
-	codec := encoding.NewCodecJson[string]()
+	codec := encoding.ForTyped[string]()
 	mockit := func(config swarm.Config) (*Enqueuer, *emitter) {
 		mock := mockEmitter(10)
 		k := NewEnqueuer(mock, config)
@@ -206,6 +206,8 @@ type looser struct{}
 func (e looser) Enq(ctx context.Context, bag swarm.Bag) error {
 	return fmt.Errorf("lost")
 }
+
+func (e looser) Category() string { return "test" }
 
 func (e looser) Encode(x string) ([]byte, error) {
 	return nil, fmt.Errorf("invalid")
