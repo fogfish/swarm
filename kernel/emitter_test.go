@@ -20,7 +20,7 @@ import (
 )
 
 func TestEnqueuer(t *testing.T) {
-	codec := encoding.NewCodecJson[string]()
+	codec := encoding.ForTyped[string]()
 	mockit := func(config swarm.Config) (*Enqueuer, *emitter) {
 		mock := mockEmitter(10)
 		k := NewEnqueuer(mock, config)

@@ -24,7 +24,7 @@ import (
 const yield_before_close = 5 * time.Millisecond
 
 func TestBridge(t *testing.T) {
-	codec := encoding.NewCodecJson[string]()
+	codec := encoding.ForTyped[string]()
 	config := swarm.Config{PollFrequency: 0 * time.Millisecond}
 
 	//

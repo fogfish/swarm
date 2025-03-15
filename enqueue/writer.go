@@ -28,7 +28,7 @@ type EmitterTyped[T any] struct {
 func NewTyped[T any](q *kernel.Enqueuer, codec ...kernel.Encoder[T]) *EmitterTyped[T] {
 	var c kernel.Encoder[T]
 	if len(codec) == 0 {
-		c = encoding.NewCodecJson[T]()
+		c = encoding.ForTyped[T]()
 	} else {
 		c = codec[0]
 	}
@@ -80,7 +80,7 @@ type EmitterEvent[M, T any] struct {
 func NewEvent[M, T any](q *kernel.Enqueuer, codec ...kernel.Encoder[swarm.Event[M, T]]) *EmitterEvent[M, T] {
 	var c kernel.Encoder[swarm.Event[M, T]]
 	if len(codec) == 0 {
-		c = encoding.NewCodecEvent[M, T](q.Config.Source)
+		c = encoding.ForEvent[M, T](q.Config.Source)
 	} else {
 		c = codec[0]
 	}

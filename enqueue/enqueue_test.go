@@ -81,7 +81,7 @@ func TestBytes(t *testing.T) {
 		k.Close()
 	}()
 
-	snd, _ := enqueue.Bytes(k, encoding.NewCodecByte("User"))
+	snd, _ := enqueue.Bytes(k, encoding.ForBytes("User"))
 	snd <- []byte(`{"id":"id","text":"user"}`)
 
 	k.Await()

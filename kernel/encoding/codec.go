@@ -20,70 +20,37 @@ import (
 
 //------------------------------------------------------------------------------
 
-// Json codec for I/O kernel
-type CodecJson[T any] string
+// JSON encoding for typed objects
+type Typed[T any] string
 
-func (c CodecJson[T]) Category() string { return string(c) }
+func (c Typed[T]) Category() string { return string(c) }
 
-func (CodecJson[T]) Encode(x T) ([]byte, error) {
+func (Typed[T]) Encode(x T) ([]byte, error) {
 	return json.Marshal(x)
 }
 
-func (CodecJson[T]) Decode(b []byte) (x T, err error) {
+func (Typed[T]) Decode(b []byte) (x T, err error) {
 	err = json.Unmarshal(b, &x)
 	return
 }
 
-func NewCodecJson[T any](category ...string) CodecJson[T] {
-	return CodecJson[T](swarm.TypeOf[T](category...))
+// Create JSON codec for typed objects
+func ForTyped[T any](category ...string) Typed[T] {
+	return Typed[T](swarm.TypeOf[T](category...))
 }
 
 //------------------------------------------------------------------------------
 
-// Byte identity codec for I/O kernet
-type CodecByte string
-
-func (c CodecByte) Category() string              { return string(c) }
-func (CodecByte) Encode(x []byte) ([]byte, error) { return x, nil }
-func (CodecByte) Decode(x []byte) ([]byte, error) { return x, nil }
-
-func NewCodecByte(cat string) CodecByte { return CodecByte(cat) }
-
-//------------------------------------------------------------------------------
-
-// Encode Bytes as "JSON packet"
-type CodecPacket string
-
-type packet struct {
-	Octets []byte `json:"p,omitempty"`
-}
-
-func (c CodecPacket) Category() string { return string(c) }
-
-func (CodecPacket) Encode(x []byte) ([]byte, error) {
-	b, err := json.Marshal(packet{Octets: x})
-	return b, err
-}
-func (CodecPacket) Decode(x []byte) ([]byte, error) {
-	var pckt packet
-	err := json.Unmarshal(x, &pckt)
-	return pckt.Octets, err
-}
-
-func NewCodecPacket(cat string) CodecPacket { return CodecPacket(cat) }
-
-//------------------------------------------------------------------------------
-
-// Event codec for I/O kernel
-type CodecEvent[M, T any] struct {
+// JSON encoding for events
+type Event[M, T any] struct {
 	source string
 	cat    string
 	shape  optics.Lens4[M, string, curie.IRI, curie.IRI, time.Time]
 }
 
-func (c CodecEvent[M, T]) Category() string { return c.cat }
+func (c Event[M, T]) Category() string { return c.cat }
 
-func (c CodecEvent[M, T]) Encode(obj swarm.Event[M, T]) ([]byte, error) {
+func (c Event[M, T]) Encode(obj swarm.Event[M, T]) ([]byte, error) {
 	_, knd, src, _ := c.shape.Get(obj.Meta)
 	if knd == "" {
 		knd = curie.IRI(c.cat)
@@ -98,17 +65,54 @@ func (c CodecEvent[M, T]) Encode(obj swarm.Event[M, T]) ([]byte, error) {
 	return json.Marshal(obj)
 }
 
-func (c CodecEvent[M, T]) Decode(b []byte) (swarm.Event[M, T], error) {
+func (c Event[M, T]) Decode(b []byte) (swarm.Event[M, T], error) {
 	var x swarm.Event[M, T]
 	err := json.Unmarshal(b, &x)
 
 	return x, err
 }
 
-func NewCodecEvent[M, T any](source string, category ...string) CodecEvent[M, T] {
-	return CodecEvent[M, T]{
+// Creates JSON codec for events
+func ForEvent[M, T any](source string, category ...string) Event[M, T] {
+	return Event[M, T]{
 		source: source,
 		cat:    swarm.TypeOf[T](category...),
 		shape:  optics.ForShape4[M, string, curie.IRI, curie.IRI, time.Time]("ID", "Type", "Agent", "Created"),
 	}
 }
+
+//------------------------------------------------------------------------------
+
+// Identity encoding for bytes
+type Bytes string
+
+func (c Bytes) Category() string              { return string(c) }
+func (Bytes) Encode(x []byte) ([]byte, error) { return x, nil }
+func (Bytes) Decode(x []byte) ([]byte, error) { return x, nil }
+
+// Create bytes identity codec
+func ForBytes(cat string) Bytes { return Bytes(cat) }
+
+//------------------------------------------------------------------------------
+
+// Base64 encoding for bytes, sent as JSON
+type BytesJB64 string
+
+type packet struct {
+	Octets []byte `json:"p,omitempty"`
+}
+
+func (c BytesJB64) Category() string { return string(c) }
+
+func (BytesJB64) Encode(x []byte) ([]byte, error) {
+	b, err := json.Marshal(packet{Octets: x})
+	return b, err
+}
+func (BytesJB64) Decode(x []byte) ([]byte, error) {
+	var pckt packet
+	err := json.Unmarshal(x, &pckt)
+	return pckt.Octets, err
+}
+
+// Creates bytes codec for Base64 encapsulated into Json "packat"
+func ForBytesJB64(cat string) BytesJB64 { return BytesJB64(cat) }

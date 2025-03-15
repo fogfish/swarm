@@ -55,6 +55,36 @@ func TestDequeueType(t *testing.T) {
 	)
 }
 
+func TestDequeueEvent(t *testing.T) {
+	obj := swarm.Event[swarm.Meta, User]{
+		Meta: &swarm.Meta{Type: "User"},
+		Data: &User{ID: "id", Text: "user"},
+	}
+
+	k := kernel.NewDequeuer(mockCathode(obj), swarm.Config{})
+	go func() {
+		time.Sleep(yield_before_close)
+		k.Close()
+	}()
+
+	var evt swarm.Evt[swarm.Meta, User]
+	rcv, ack := dequeue.Event[swarm.Meta, User](k)
+
+	go func() {
+		evt = <-rcv
+		ack <- evt
+	}()
+	k.Await()
+
+	it.Then(t).Should(
+		it.Equal(evt.Category, "User"),
+		it.Equal(evt.Digest, "1"),
+		it.Equal(evt.Object.Meta.Type, "User"),
+		it.Equal(evt.Object.Data.ID, "id"),
+		it.Equal(evt.Object.Data.Text, "user"),
+	)
+}
+
 func TestDequeueBytes(t *testing.T) {
 	user := User{ID: "id", Text: "user"}
 
@@ -65,7 +95,7 @@ func TestDequeueBytes(t *testing.T) {
 	}()
 
 	var msg swarm.Msg[[]byte]
-	rcv, ack := dequeue.Bytes(k, encoding.NewCodecByte("User"))
+	rcv, ack := dequeue.Bytes(k, encoding.ForBytes("User"))
 
 	go func() {
 		msg = <-rcv
@@ -82,28 +112,28 @@ func TestDequeueBytes(t *testing.T) {
 
 //------------------------------------------------------------------------------
 
-type cathode struct {
-	cat  string
-	user User
+type cathode[T any] struct {
+	cat string
+	obj T
 }
 
-func mockCathode(user User) cathode {
-	return cathode{
-		cat:  swarm.TypeOf[User](),
-		user: user,
+func mockCathode[T any](obj T) cathode[T] {
+	return cathode[T]{
+		cat: swarm.TypeOf[T](),
+		obj: obj,
 	}
 }
 
-func (c cathode) Ack(ctx context.Context, digest string) error {
+func (c cathode[T]) Ack(ctx context.Context, digest string) error {
 	return nil
 }
 
-func (c cathode) Err(ctx context.Context, digest string, err error) error {
+func (c cathode[T]) Err(ctx context.Context, digest string, err error) error {
 	return nil
 }
 
-func (c cathode) Ask(context.Context) ([]swarm.Bag, error) {
-	data, err := json.Marshal(c.user)
+func (c cathode[T]) Ask(context.Context) ([]swarm.Bag, error) {
+	data, err := json.Marshal(c.obj)
 	if err != nil {
 		return nil, err
 	}

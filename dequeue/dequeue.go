@@ -18,7 +18,7 @@ import (
 func Typed[T any](q *kernel.Dequeuer, codec ...kernel.Decoder[T]) (rcv <-chan swarm.Msg[T], ack chan<- swarm.Msg[T]) {
 	var c kernel.Decoder[T]
 	if len(codec) == 0 {
-		c = encoding.NewCodecJson[T]()
+		c = encoding.ForTyped[T]()
 	} else {
 		c = codec[0]
 	}
@@ -30,7 +30,7 @@ func Typed[T any](q *kernel.Dequeuer, codec ...kernel.Decoder[T]) (rcv <-chan sw
 func Event[M, T any](q *kernel.Dequeuer, codec ...kernel.Decoder[swarm.Event[M, T]]) (<-chan swarm.Evt[M, T], chan<- swarm.Evt[M, T]) {
 	var c kernel.Decoder[swarm.Event[M, T]]
 	if len(codec) == 0 {
-		c = encoding.NewCodecEvent[M, T](q.Config.Source)
+		c = encoding.ForEvent[M, T](q.Config.Source)
 	} else {
 		c = codec[0]
 	}
