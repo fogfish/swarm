@@ -21,6 +21,7 @@ import (
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/sqs"
 	"github.com/fogfish/swarm/dequeue"
+	"github.com/fogfish/swarm/kernel/encoding"
 )
 
 func TestEnqueuer(t *testing.T) {
@@ -91,7 +92,7 @@ func TestDequeuer(t *testing.T) {
 		q, err := sqs.NewDequeuer("test", sqs.WithService(mock))
 		it.Then(t).Should(it.Nil(err))
 
-		rcv, ack := dequeue.Bytes(q, "test")
+		rcv, ack := dequeue.Bytes(q, encoding.ForBytes("test"))
 		go func() {
 			ack <- <-rcv
 
@@ -112,7 +113,7 @@ func TestDequeuer(t *testing.T) {
 		q, err := sqs.NewDequeuer("test", sqs.WithService(mock))
 		it.Then(t).Should(it.Nil(err))
 
-		rcv, ack := dequeue.Bytes(q, "test")
+		rcv, ack := dequeue.Bytes(q, encoding.ForBytes("test"))
 		go func() {
 			msg := <-rcv
 			ack <- msg.Fail(fmt.Errorf("fail"))

@@ -9,7 +9,6 @@
 package websocket
 
 import (
-	"strconv"
 	"strings"
 
 	"github.com/aws/aws-cdk-go/awscdk/v2"
@@ -84,7 +83,6 @@ type Broker struct {
 	Authorizer awsapigatewayv2.IWebSocketRouteAuthorizer
 	domain     awsapigatewayv2.DomainName
 	dns        awsroute53.ARecord
-	acc        int
 }
 
 func NewBroker(scope constructs.Construct, id *string, props *BrokerProps) *Broker {
@@ -324,8 +322,7 @@ func (broker *Broker) NewSink(props *SinkProps) *Sink {
 
 	props.Gateway = broker.Gateway
 
-	broker.acc++
-	name := "Sink" + strconv.Itoa(broker.acc)
+	name := props.Function.UniqueID()
 	sink := NewSink(broker.Construct, jsii.String(name), props)
 
 	return sink

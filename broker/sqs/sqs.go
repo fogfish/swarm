@@ -17,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
+	"github.com/fogfish/opts"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/kernel"
 )
@@ -70,20 +71,23 @@ func New(queue string, opts ...Option) (*kernel.Kernel, error) {
 	), nil
 }
 
-func newSQS(queue string, opts ...Option) (*Client, error) {
+func newSQS(queue string, opt ...Option) (*Client, error) {
 	c := &Client{}
-
-	for _, opt := range defs {
-		opt(c)
+	if err := opts.Apply(c, defs); err != nil {
+		return nil, err
 	}
-	for _, opt := range opts {
-		opt(c)
+	if err := opts.Apply(c, opt); err != nil {
+		return nil, err
+	}
+
+	if c.batchSize == 0 {
+		c.batchSize = 1
 	}
 
 	if c.service == nil {
 		aws, err := config.LoadDefaultConfig(context.Background())
 		if err != nil {
-			return nil, swarm.ErrServiceIO.New(err)
+			return nil, swarm.ErrServiceIO.With(err)
 		}
 		c.service = sqs.NewFromConfig(aws)
 	}
@@ -97,7 +101,7 @@ func newSQS(queue string, opts ...Option) (*Client, error) {
 		},
 	)
 	if err != nil {
-		return nil, swarm.ErrServiceIO.New(err)
+		return nil, swarm.ErrServiceIO.With(err)
 	}
 
 	c.queue = spec.QueueUrl
@@ -128,7 +132,7 @@ func (cli *Client) Enq(ctx context.Context, bag swarm.Bag) error {
 		},
 	)
 	if err != nil {
-		return swarm.ErrEnqueue.New(err)
+		return swarm.ErrEnqueue.With(err)
 	}
 
 	return nil
@@ -145,7 +149,7 @@ func (cli *Client) Ack(ctx context.Context, digest string) error {
 		},
 	)
 	if err != nil {
-		return swarm.ErrServiceIO.New(err)
+		return swarm.ErrServiceIO.With(err)
 	}
 
 	return nil
@@ -173,7 +177,7 @@ func (cli Client) Ask(ctx context.Context) ([]swarm.Bag, error) {
 		if errors.Is(err, context.Canceled) {
 			return nil, nil
 		}
-		return nil, swarm.ErrDequeue.New(err)
+		return nil, swarm.ErrDequeue.With(err)
 	}
 
 	if len(result.Messages) == 0 {

@@ -13,6 +13,7 @@ import (
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/fogfish/guid/v2"
+	"github.com/fogfish/opts"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/kernel"
 )
@@ -22,14 +23,13 @@ type Client struct {
 }
 
 // New creates broker for AWS EventBridge
-func NewReader(opts ...Option) (*kernel.Dequeuer, error) {
+func NewReader(opt ...Option) (*kernel.Dequeuer, error) {
 	c := &Client{}
-
-	for _, opt := range defs {
-		opt(c)
+	if err := opts.Apply(c, defs); err != nil {
+		return nil, err
 	}
-	for _, opt := range opts {
-		opt(c)
+	if err := opts.Apply(c, opt); err != nil {
+		return nil, err
 	}
 
 	bridge := &bridge{kernel.NewBridge(c.config.TimeToFlight)}

@@ -44,7 +44,11 @@ func main() {
 		func(evt events.APIGatewayV2CustomAuthorizerV1Request) (events.APIGatewayCustomAuthorizerResponse, error) {
 			tkn, has := evt.QueryStringParameters["apikey"]
 			if !has || len(tkn) == 0 {
-				return None, ErrForbidden
+				// Note: both apikey & token are accepted for compatibility
+				tkn, has = evt.QueryStringParameters["token"]
+				if !has || len(tkn) == 0 {
+					return None, ErrForbidden
+				}
 			}
 
 			if jwt != nil && strings.HasPrefix(tkn, "ey") {
@@ -123,28 +127,14 @@ func NewAuthBasic() (*AuthBasic, error) {
 func (auth *AuthBasic) Validate(apikey, scope string) (string, map[string]any, error) {
 	c, err := base64.RawStdEncoding.DecodeString(apikey)
 	if err != nil {
+		slog.Error("corrupted apikey.")
 		return "", nil, ErrForbidden
 	}
 
 	access, secret, ok := strings.Cut(string(c), ":")
 	if !ok {
+		slog.Error("malformed apikey.")
 		return "", nil, ErrForbidden
-	}
-
-	seq, err := url.QueryUnescape(scope)
-	if err != nil {
-		return "", nil, ErrForbidden
-	}
-	for _, sid := range strings.Split(seq, " ") {
-		has := false
-		for _, allowed := range auth.scope {
-			if allowed == sid {
-				has = true
-			}
-		}
-		if !has {
-			return "", nil, ErrForbidden
-		}
 	}
 
 	gaccess := sha256.Sum256([]byte(access))
@@ -155,11 +145,41 @@ func (auth *AuthBasic) Validate(apikey, scope string) (string, map[string]any, e
 	accessMatch := (subtle.ConstantTimeCompare(gaccess[:], haccess[:]) == 1)
 	secretMatch := (subtle.ConstantTimeCompare(gsecret[:], hsecret[:]) == 1)
 
-	if accessMatch && secretMatch {
-		return access, map[string]any{"auth": "basic", "sub": access, "scope": scope}, nil
+	if !(accessMatch && secretMatch) {
+		slog.Error("apikey forbidden.")
+		return "", nil, ErrForbidden
 	}
 
-	return "", nil, ErrForbidden
+	if err := auth.inScope(scope); err != nil {
+		slog.Error("scope is not allowed.", "scope", scope)
+		return "", nil, ErrForbidden
+	}
+
+	return access, map[string]any{"auth": "basic", "sub": access, "scope": scope}, nil
+}
+
+func (auth *AuthBasic) inScope(scope string) error {
+	if len(auth.scope) == 0 {
+		return nil
+	}
+
+	seq, err := url.QueryUnescape(scope)
+	if err != nil {
+		return ErrForbidden
+	}
+	for _, sid := range strings.Split(seq, " ") {
+		has := false
+		for _, allowed := range auth.scope {
+			if allowed == sid {
+				has = true
+			}
+		}
+		if !has {
+			return ErrForbidden
+		}
+	}
+
+	return nil
 }
 
 //------------------------------------------------------------------------------

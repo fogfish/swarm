@@ -14,15 +14,28 @@ import (
 	"github.com/aws/jsii-runtime-go"
 	"github.com/fogfish/curie"
 	"github.com/fogfish/it/v2"
+	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/eventbridge"
 )
 
 func TestLike(t *testing.T) {
-	t.Run("Type", func(t *testing.T) {
+	t.Run("Typed", func(t *testing.T) {
 		type Event string
 
 		p := eventbridge.Like(
-			eventbridge.Type[Event](),
+			eventbridge.Typed[Event](),
+		)
+
+		it.Then(t).Should(
+			it.Seq(*p.DetailType).Equal(jsii.String("Event")),
+		)
+	})
+
+	t.Run("Event", func(t *testing.T) {
+		type Event string
+
+		p := eventbridge.Like(
+			eventbridge.Event[swarm.Meta, Event](),
 		)
 
 		it.Then(t).Should(

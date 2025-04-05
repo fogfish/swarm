@@ -29,8 +29,19 @@ func Like(seq ...Expr) *awsevents.EventPattern {
 	return p
 }
 
-// Configure event pattern to match a type
-func Type[T any]() Expr {
+// Configure event pattern to match a typed object
+func Typed[T any]() Expr {
+	return func(p *awsevents.EventPattern) {
+		cat := swarm.TypeOf[T]()
+		if p.DetailType == nil {
+			p.DetailType = jsii.Strings()
+		}
+		*p.DetailType = append(*p.DetailType, jsii.String(cat))
+	}
+}
+
+// Configure event pattern to match a events
+func Event[M, T any]() Expr {
 	return func(p *awsevents.EventPattern) {
 		cat := swarm.TypeOf[T]()
 		if p.DetailType == nil {

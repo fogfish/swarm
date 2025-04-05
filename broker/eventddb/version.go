@@ -8,4 +8,4 @@
 
 package eventddb
 
-const Version = "broker/eventddb/v0.20.2"
+const Version = "broker/eventddb/v0.21.0"

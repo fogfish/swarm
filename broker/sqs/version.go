@@ -8,4 +8,4 @@
 
 package sqs
 
-const Version = "broker/sqs/v0.20.2"
+const Version = "broker/sqs/v0.21.0"

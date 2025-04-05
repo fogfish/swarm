@@ -14,6 +14,7 @@ import (
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/sqs"
 	"github.com/fogfish/swarm/enqueue"
+	"github.com/fogfish/swarm/kernel/encoding"
 )
 
 func main() {
@@ -27,9 +28,9 @@ func main() {
 		return
 	}
 
-	user := swarm.LogDeadLetters(enqueue.Bytes(q, "User"))
-	note := swarm.LogDeadLetters(enqueue.Bytes(q, "Note"))
-	like := swarm.LogDeadLetters(enqueue.Bytes(q, "Like"))
+	user := swarm.LogDeadLetters(enqueue.Bytes(q, encoding.ForBytes("User")))
+	note := swarm.LogDeadLetters(enqueue.Bytes(q, encoding.ForBytes("Note")))
+	like := swarm.LogDeadLetters(enqueue.Bytes(q, encoding.ForBytes("Like")))
 
 	user <- []byte("user|some text by user")
 

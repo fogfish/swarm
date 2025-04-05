@@ -196,7 +196,7 @@ The library encourages developers to use Golang struct for asynchronous communic
 
 ## Getting started
 
-The library requires **Go 1.18** or later due to usage of [generics](https://go.dev/blog/intro-generics).
+The library requires **Go 1.24** or later due to usage of [generic alias types](https://go.dev/blog/alias-names#generic-alias-types).
 
 The latest version of the library is available at `main` branch of this repository. All development, including new features and bug fixes, take place on the `main` branch using forking and pull requests as described in contribution guidelines. The stable version is available via Golang modules.
 
