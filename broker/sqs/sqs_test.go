@@ -24,6 +24,23 @@ import (
 	"github.com/fogfish/swarm/kernel/encoding"
 )
 
+func TestNew(t *testing.T) {
+	mock := &mockEnqueue{}
+	q, err := sqs.NewEnqueuer("test",
+		sqs.WithService(mock),
+		sqs.WithConfig(
+			swarm.WithLogStdErr(),
+		),
+		sqs.WithBatchSize(100),
+	)
+
+	it.Then(t).Should(
+		it.Nil(err),
+		it.Equal(q.Config.PollerPool, 11),
+	)
+	q.Close()
+}
+
 func TestEnqueuer(t *testing.T) {
 	t.Run("NewEnqueuer", func(t *testing.T) {
 		mock := &mockEnqueue{}

@@ -25,7 +25,7 @@ var (
 	// Configure's SQS batch size.
 	// Note: AWS SQS limits the MaxNumberOfMessages to 10 per poller.
 	// This config increases number of poller
-	WithBatchSize = opts.ForName[Client, int]("batchSize",
+	WithBatchSize = opts.ForName("batchSize",
 		func(c *Client, batch int) error {
 			if batch <= 10 {
 				c.batchSize = batch
