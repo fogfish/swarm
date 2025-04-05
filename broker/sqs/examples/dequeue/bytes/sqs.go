@@ -14,6 +14,7 @@ import (
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/sqs"
 	"github.com/fogfish/swarm/dequeue"
+	"github.com/fogfish/swarm/kernel/encoding"
 )
 
 func main() {
@@ -27,9 +28,9 @@ func main() {
 		return
 	}
 
-	go actor("user").handle(dequeue.Bytes(q, "User"))
-	go actor("note").handle(dequeue.Bytes(q, "Note"))
-	go actor("like").handle(dequeue.Bytes(q, "Like"))
+	go actor("user").handle(dequeue.Bytes(q, encoding.ForBytes("User")))
+	go actor("note").handle(dequeue.Bytes(q, encoding.ForBytes("Note")))
+	go actor("like").handle(dequeue.Bytes(q, encoding.ForBytes("Like")))
 
 	q.Await()
 }

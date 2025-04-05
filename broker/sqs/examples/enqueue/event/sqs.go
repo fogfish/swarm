@@ -24,22 +24,14 @@ type User struct {
 
 type CreatedUser User
 
-type EventCreateUser = swarm.Event[swarm.Meta, CreatedUser]
-
 type UpdatedUser User
 
-type EventUpdateUser = swarm.Event[swarm.Meta, UpdatedUser]
-
 type RemovedUser User
-
-type EventRemoveUser = swarm.Event[swarm.Meta, RemovedUser]
 
 type Note struct {
 	ID   string `json:"id"`
 	Text string `json:"text"`
 }
-
-type EventNote = swarm.Event[swarm.Meta, Note]
 
 func main() {
 	q, err := sqs.NewEnqueuer("swarm-test",
@@ -59,7 +51,7 @@ func main() {
 
 	//
 	// Multiple channels emits events
-	userCreated <- EventCreateUser{
+	userCreated <- swarm.Event[swarm.Meta, CreatedUser]{
 		Meta: &swarm.Meta{
 			Agent:       "example",
 			Participant: "user",
@@ -67,7 +59,7 @@ func main() {
 		Data: &CreatedUser{ID: "user", Text: "some text"},
 	}
 
-	userUpdated <- EventUpdateUser{
+	userUpdated <- swarm.Event[swarm.Meta, UpdatedUser]{
 		Meta: &swarm.Meta{
 			Agent:       "example",
 			Participant: "user",
@@ -85,7 +77,7 @@ func main() {
 
 	//
 	// Single channel emits event
-	note <- EventNote{
+	note <- swarm.Event[swarm.Meta, Note]{
 		Meta: &swarm.Meta{
 			Type:        "note:EventCreateNote",
 			Agent:       "example",
@@ -94,7 +86,7 @@ func main() {
 		Data: &Note{ID: "note", Text: "some text"},
 	}
 
-	note <- EventNote{
+	note <- swarm.Event[swarm.Meta, Note]{
 		Meta: &swarm.Meta{
 			Type:        "note:EventUpdateNote",
 			Agent:       "example",
@@ -103,7 +95,7 @@ func main() {
 		Data: &Note{ID: "note", Text: "some text with changes"},
 	}
 
-	note <- EventNote{
+	note <- swarm.Event[swarm.Meta, Note]{
 		Meta: &swarm.Meta{
 			Type:        "note:EventRemoveNote",
 			Agent:       "example",

@@ -11,26 +11,29 @@ package eventsqs
 import (
 	"time"
 
+	"github.com/fogfish/opts"
 	"github.com/fogfish/swarm"
 )
 
 // Environment variable to config event source
 const EnvConfigSourceSQS = "CONFIG_SWARM_SOURCE_EVENT_SQS"
 
-type Option func(*Client)
+type Option = opts.Option[Client]
 
-var defs = []Option{WithConfig()}
-
-func WithConfig(opts ...swarm.Option) Option {
-	return func(c *Client) {
+// Global "kernel" configuration.
+func WithConfig(opt ...opts.Option[swarm.Config]) Option {
+	return opts.Type[Client](func(c *Client) error {
 		config := swarm.NewConfig()
-		for _, opt := range opts {
-			opt(&config)
+		if err := opts.Apply(&config, opt); err != nil {
+			return err
 		}
 
 		// Mandatory overrides
 		config.PollFrequency = 5 * time.Microsecond
 
 		c.config = config
-	}
+		return nil
+	})
 }
+
+var defs = []Option{WithConfig()}

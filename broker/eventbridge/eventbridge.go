@@ -18,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/eventbridge"
 	"github.com/aws/aws-sdk-go-v2/service/eventbridge/types"
+	"github.com/fogfish/opts"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/kernel"
 )
@@ -45,14 +46,13 @@ func NewEnqueuer(bus string, opts ...Option) (*kernel.Enqueuer, error) {
 }
 
 // Create reader from AWS EventBridge
-func NewDequeuer(bus string, opts ...Option) (*kernel.Dequeuer, error) {
-	c := &Client{bus: bus}
-
-	for _, opt := range defs {
-		opt(c)
+func NewDequeuer(opt ...Option) (*kernel.Dequeuer, error) {
+	c := &Client{}
+	if err := opts.Apply(c, defs); err != nil {
+		return nil, err
 	}
-	for _, opt := range opts {
-		opt(c)
+	if err := opts.Apply(c, opt); err != nil {
+		return nil, err
 	}
 
 	bridge := &bridge{kernel.NewBridge(c.config.TimeToFlight)}
@@ -75,20 +75,19 @@ func New(bus string, opts ...Option) (*kernel.Kernel, error) {
 	), nil
 }
 
-func newEventBridge(queue string, opts ...Option) (*Client, error) {
-	c := &Client{bus: queue}
-
-	for _, opt := range defs {
-		opt(c)
+func newEventBridge(bus string, opt ...Option) (*Client, error) {
+	c := &Client{bus: bus}
+	if err := opts.Apply(c, defs); err != nil {
+		return nil, err
 	}
-	for _, opt := range opts {
-		opt(c)
+	if err := opts.Apply(c, opt); err != nil {
+		return nil, err
 	}
 
 	if c.service == nil {
 		aws, err := config.LoadDefaultConfig(context.Background())
 		if err != nil {
-			return nil, swarm.ErrServiceIO.New(err)
+			return nil, swarm.ErrServiceIO.With(err)
 		}
 		c.service = eventbridge.NewFromConfig(aws)
 	}
@@ -114,7 +113,7 @@ func (cli *Client) Enq(ctx context.Context, bag swarm.Bag) error {
 		},
 	)
 	if err != nil {
-		return swarm.ErrEnqueue.New(err)
+		return swarm.ErrEnqueue.With(err)
 	}
 
 	if ret.FailedEntryCount > 0 {

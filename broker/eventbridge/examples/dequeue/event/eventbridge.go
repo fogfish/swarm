@@ -26,7 +26,7 @@ type EventNote struct {
 }
 
 func main() {
-	q, err := eventbridge.NewDequeuer("swarm-example-eventbridge",
+	q, err := eventbridge.NewDequeuer(
 		eventbridge.WithConfig(
 			swarm.WithLogStdErr(),
 		),

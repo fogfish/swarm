@@ -18,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/apigatewaymanagementapi"
+	"github.com/fogfish/opts"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/kernel"
 )
@@ -43,14 +44,13 @@ func NewEnqueuer(endpoint string, opts ...Option) (*kernel.Enqueuer, error) {
 }
 
 // Creates dequeue routine from WebSocket (AWS API Gateway)
-func NewDequeuer(opts ...Option) (*kernel.Dequeuer, error) {
+func NewDequeuer(opt ...Option) (*kernel.Dequeuer, error) {
 	c := &Client{}
-
-	for _, opt := range defs {
-		opt(c)
+	if err := opts.Apply(c, defs); err != nil {
+		return nil, err
 	}
-	for _, opt := range opts {
-		opt(c)
+	if err := opts.Apply(c, opt); err != nil {
+		return nil, err
 	}
 
 	bridge := &bridge{kernel.NewBridge(c.config.TimeToFlight)}
@@ -73,20 +73,19 @@ func New(endpoint string, opts ...Option) (*kernel.Kernel, error) {
 	), nil
 }
 
-func newWebSocket(endpoint string, opts ...Option) (*Client, error) {
+func newWebSocket(endpoint string, opt ...Option) (*Client, error) {
 	c := &Client{}
-
-	for _, opt := range defs {
-		opt(c)
+	if err := opts.Apply(c, defs); err != nil {
+		return nil, err
 	}
-	for _, opt := range opts {
-		opt(c)
+	if err := opts.Apply(c, opt); err != nil {
+		return nil, err
 	}
 
 	if c.service == nil {
 		cfg, err := config.LoadDefaultConfig(context.Background())
 		if err != nil {
-			return nil, swarm.ErrServiceIO.New(err)
+			return nil, swarm.ErrServiceIO.With(err)
 		}
 		c.service = apigatewaymanagementapi.NewFromConfig(cfg,
 			func(o *apigatewaymanagementapi.Options) {
@@ -119,7 +118,7 @@ func (cli *Client) Enq(ctx context.Context, bag swarm.Bag) error {
 	)
 
 	if err != nil {
-		return swarm.ErrEnqueue.New(err)
+		return swarm.ErrEnqueue.With(err)
 	}
 
 	return nil

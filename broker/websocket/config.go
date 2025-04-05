@@ -11,6 +11,7 @@ package websocket
 import (
 	"time"
 
+	"github.com/fogfish/opts"
 	"github.com/fogfish/swarm"
 )
 
@@ -18,26 +19,27 @@ import (
 const EnvConfigEventType = "CONFIG_SWARM_WS_EVENT_TYPE"
 const EnvConfigSourceWebSocket = "CONFIG_SWARM_WS_URL"
 
-type Option func(*Client)
+type Option = opts.Option[Client]
 
-var defs = []Option{WithConfig()}
+var (
+	// Passes AWS SQS client instance to broker
+	WithService = opts.ForType[Client, Gateway]()
+)
 
-func WithConfig(opts ...swarm.Option) Option {
-	return func(c *Client) {
+// Global "kernel" configuration.
+func WithConfig(opt ...opts.Option[swarm.Config]) Option {
+	return opts.Type[Client](func(c *Client) error {
 		config := swarm.NewConfig()
-		for _, opt := range opts {
-			opt(&config)
+		if err := opts.Apply(&config, opt); err != nil {
+			return err
 		}
 
 		// Mandatory overrides
 		config.PollFrequency = 5 * time.Microsecond
 
 		c.config = config
-	}
+		return nil
+	})
 }
 
-func WithService(service Gateway) Option {
-	return func(c *Client) {
-		c.service = service
-	}
-}
+var defs = []Option{WithConfig()}

@@ -14,10 +14,11 @@ import (
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/eventbridge"
 	"github.com/fogfish/swarm/dequeue"
+	"github.com/fogfish/swarm/kernel/encoding"
 )
 
 func main() {
-	q, err := eventbridge.NewDequeuer("swarm-example-eventbridge",
+	q, err := eventbridge.NewDequeuer(
 		eventbridge.WithConfig(
 			swarm.WithLogStdErr(),
 		),
@@ -28,9 +29,9 @@ func main() {
 	}
 
 	//
-	go actor("user").handle(dequeue.Bytes(q, "User"))
-	go actor("note").handle(dequeue.Bytes(q, "Note"))
-	go actor("like").handle(dequeue.Bytes(q, "Like"))
+	go actor("user").handle(dequeue.Bytes(q, encoding.ForBytesJB64("User")))
+	go actor("note").handle(dequeue.Bytes(q, encoding.ForBytesJB64("Note")))
+	go actor("like").handle(dequeue.Bytes(q, encoding.ForBytesJB64("Like")))
 
 	q.Await()
 }

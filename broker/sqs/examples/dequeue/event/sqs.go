@@ -26,22 +26,14 @@ type User struct {
 
 type CreatedUser User
 
-type EventCreateUser = swarm.Event[swarm.Meta, CreatedUser]
-
 type UpdatedUser User
 
-type EventUpdateUser = swarm.Event[swarm.Meta, UpdatedUser]
-
 type RemovedUser User
-
-type EventRemoveUser = swarm.Event[swarm.Meta, RemovedUser]
 
 type Note struct {
 	ID   string `json:"id"`
 	Text string `json:"text"`
 }
-
-type EventNote = swarm.Event[swarm.Meta, Note]
 
 func main() {
 	q, err := sqs.NewDequeuer("swarm-test",
@@ -62,7 +54,7 @@ func main() {
 	q.Await()
 }
 
-func create(rcv <-chan swarm.Msg[EventCreateUser], ack chan<- swarm.Msg[EventCreateUser]) {
+func create(rcv <-chan swarm.Evt[swarm.Meta, CreatedUser], ack chan<- swarm.Evt[swarm.Meta, CreatedUser]) {
 	for msg := range rcv {
 		v, _ := json.MarshalIndent(msg, "+ |", " ")
 		fmt.Printf("create user > \n %s\n", v)
@@ -70,7 +62,7 @@ func create(rcv <-chan swarm.Msg[EventCreateUser], ack chan<- swarm.Msg[EventCre
 	}
 }
 
-func update(rcv <-chan swarm.Msg[EventUpdateUser], ack chan<- swarm.Msg[EventUpdateUser]) {
+func update(rcv <-chan swarm.Evt[swarm.Meta, UpdatedUser], ack chan<- swarm.Evt[swarm.Meta, UpdatedUser]) {
 	for msg := range rcv {
 		v, _ := json.MarshalIndent(msg, "~ |", " ")
 		fmt.Printf("update user > \n %s\n", v)
@@ -78,7 +70,7 @@ func update(rcv <-chan swarm.Msg[EventUpdateUser], ack chan<- swarm.Msg[EventUpd
 	}
 }
 
-func remove(rcv <-chan swarm.Msg[EventRemoveUser], ack chan<- swarm.Msg[EventRemoveUser]) {
+func remove(rcv <-chan swarm.Evt[swarm.Meta, RemovedUser], ack chan<- swarm.Evt[swarm.Meta, RemovedUser]) {
 	for msg := range rcv {
 		v, _ := json.MarshalIndent(msg, "- |", " ")
 		fmt.Printf("remove user > \n %s\n", v)
@@ -86,7 +78,7 @@ func remove(rcv <-chan swarm.Msg[EventRemoveUser], ack chan<- swarm.Msg[EventRem
 	}
 }
 
-func common(rcv <-chan swarm.Msg[EventNote], ack chan<- swarm.Msg[EventNote]) {
+func common(rcv <-chan swarm.Evt[swarm.Meta, Note], ack chan<- swarm.Evt[swarm.Meta, Note]) {
 	for msg := range rcv {
 		prefix := ""
 		switch string(msg.Object.Meta.Type) {

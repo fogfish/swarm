@@ -9,8 +9,6 @@
 package eventddb
 
 import (
-	"strconv"
-
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsdynamodb"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
@@ -39,6 +37,8 @@ type SinkProps struct {
 
 func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	sink := &Sink{Construct: constructs.NewConstruct(scope, id)}
+
+	props.Function.Setenv(EnvConfigSourceDynamoDB, *props.Table.TableName())
 
 	sink.Handler = scud.NewFunction(sink.Construct, jsii.String("Func"), props.Function)
 
@@ -69,7 +69,6 @@ type BrokerProps struct {
 type Broker struct {
 	constructs.Construct
 	Table awsdynamodb.ITable
-	acc   int
 }
 
 func NewBroker(scope constructs.Construct, id *string, props *BrokerProps) *Broker {
@@ -129,8 +128,7 @@ func (broker *Broker) NewSink(props *SinkProps) *Sink {
 
 	props.Table = broker.Table
 
-	broker.acc++
-	name := "Sink" + strconv.Itoa(broker.acc)
+	name := props.Function.UniqueID()
 	sink := NewSink(broker.Construct, jsii.String(name), props)
 
 	return sink
