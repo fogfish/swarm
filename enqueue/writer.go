@@ -77,10 +77,10 @@ type EmitterEvent[M, T any] struct {
 }
 
 // Creates synchronous event emitter
-func NewEvent[M, T any](q *kernel.Enqueuer, codec ...kernel.Encoder[swarm.Event[M, T]]) *EmitterEvent[M, T] {
+func NewEvent[E swarm.Event[M, T], M, T any](q *kernel.Enqueuer, codec ...kernel.Encoder[swarm.Event[M, T]]) *EmitterEvent[M, T] {
 	var c kernel.Encoder[swarm.Event[M, T]]
 	if len(codec) == 0 {
-		c = encoding.ForEvent[M, T](q.Config.Source)
+		c = encoding.ForEvent[E](q.Config.Source)
 	} else {
 		c = codec[0]
 	}

@@ -73,7 +73,7 @@ func (c Event[M, T]) Decode(b []byte) (swarm.Event[M, T], error) {
 }
 
 // Creates JSON codec for events
-func ForEvent[M, T any](source string, category ...string) Event[M, T] {
+func ForEvent[E swarm.Event[M, T], M, T any](source string, category ...string) Event[M, T] {
 	return Event[M, T]{
 		source: source,
 		cat:    swarm.TypeOf[T](category...),
