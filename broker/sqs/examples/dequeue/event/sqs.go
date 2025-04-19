@@ -26,14 +26,22 @@ type User struct {
 
 type CreatedUser User
 
+type EvtCreatedUser = swarm.Event[swarm.Meta, CreatedUser]
+
 type UpdatedUser User
 
+type EvtUpdatedUser = swarm.Event[swarm.Meta, UpdatedUser]
+
 type RemovedUser User
+
+type EvtRemovedUser = swarm.Event[swarm.Meta, RemovedUser]
 
 type Note struct {
 	ID   string `json:"id"`
 	Text string `json:"text"`
 }
+
+type EvtNote = swarm.Event[swarm.Meta, Note]
 
 func main() {
 	q, err := sqs.NewDequeuer("swarm-test",
@@ -46,15 +54,15 @@ func main() {
 		return
 	}
 
-	go create(dequeue.Event[swarm.Meta, CreatedUser](q))
-	go update(dequeue.Event[swarm.Meta, UpdatedUser](q))
-	go remove(dequeue.Event[swarm.Meta, RemovedUser](q))
-	go common(dequeue.Event[swarm.Meta, Note](q))
+	go create(dequeue.Event[EvtCreatedUser](q))
+	go update(dequeue.Event[EvtUpdatedUser](q))
+	go remove(dequeue.Event[EvtRemovedUser](q))
+	go common(dequeue.Event[EvtNote](q))
 
 	q.Await()
 }
 
-func create(rcv <-chan swarm.Evt[swarm.Meta, CreatedUser], ack chan<- swarm.Evt[swarm.Meta, CreatedUser]) {
+func create(rcv <-chan swarm.Msg[EvtCreatedUser], ack chan<- swarm.Msg[EvtCreatedUser]) {
 	for msg := range rcv {
 		v, _ := json.MarshalIndent(msg, "+ |", " ")
 		fmt.Printf("create user > \n %s\n", v)
@@ -62,7 +70,7 @@ func create(rcv <-chan swarm.Evt[swarm.Meta, CreatedUser], ack chan<- swarm.Evt[
 	}
 }
 
-func update(rcv <-chan swarm.Evt[swarm.Meta, UpdatedUser], ack chan<- swarm.Evt[swarm.Meta, UpdatedUser]) {
+func update(rcv <-chan swarm.Msg[EvtUpdatedUser], ack chan<- swarm.Msg[EvtUpdatedUser]) {
 	for msg := range rcv {
 		v, _ := json.MarshalIndent(msg, "~ |", " ")
 		fmt.Printf("update user > \n %s\n", v)
@@ -70,7 +78,7 @@ func update(rcv <-chan swarm.Evt[swarm.Meta, UpdatedUser], ack chan<- swarm.Evt[
 	}
 }
 
-func remove(rcv <-chan swarm.Evt[swarm.Meta, RemovedUser], ack chan<- swarm.Evt[swarm.Meta, RemovedUser]) {
+func remove(rcv <-chan swarm.Msg[EvtRemovedUser], ack chan<- swarm.Msg[EvtRemovedUser]) {
 	for msg := range rcv {
 		v, _ := json.MarshalIndent(msg, "- |", " ")
 		fmt.Printf("remove user > \n %s\n", v)
@@ -78,7 +86,7 @@ func remove(rcv <-chan swarm.Evt[swarm.Meta, RemovedUser], ack chan<- swarm.Evt[
 	}
 }
 
-func common(rcv <-chan swarm.Evt[swarm.Meta, Note], ack chan<- swarm.Evt[swarm.Meta, Note]) {
+func common(rcv <-chan swarm.Msg[EvtNote], ack chan<- swarm.Msg[EvtNote]) {
 	for msg := range rcv {
 		prefix := ""
 		switch string(msg.Object.Meta.Type) {
