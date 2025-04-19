@@ -8,4 +8,4 @@
 
 package swarm
 
-const Version = "v0.21.0"
+const Version = "v0.22.0"

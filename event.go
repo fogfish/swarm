@@ -67,6 +67,3 @@ type Meta struct {
 	// Indirect participants, a user who initiated an event.
 	Participant curie.IRI `json:"participant,omitempty"`
 }
-
-// Evt is a generic envelop type for incoming events.
-type Evt[M, T any] = Msg[Event[M, T]]
