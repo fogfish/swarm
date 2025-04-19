@@ -8,4 +8,4 @@
 
 package eventbridge
 
-const Version = "broker/eventbridge/v0.21.1"
+const Version = "broker/eventbridge/v0.22.0"

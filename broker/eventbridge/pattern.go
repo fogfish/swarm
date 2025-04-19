@@ -41,7 +41,7 @@ func Typed[T any]() Expr {
 }
 
 // Configure event pattern to match a events
-func Event[M, T any]() Expr {
+func Event[E swarm.Event[M, T], M, T any]() Expr {
 	return func(p *awsevents.EventPattern) {
 		cat := swarm.TypeOf[T]()
 		if p.DetailType == nil {

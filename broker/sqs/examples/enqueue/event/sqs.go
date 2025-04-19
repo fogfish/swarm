@@ -24,14 +24,22 @@ type User struct {
 
 type CreatedUser User
 
+type EvtCreatedUser = swarm.Event[swarm.Meta, CreatedUser]
+
 type UpdatedUser User
 
+type EvtUpdatedUser = swarm.Event[swarm.Meta, UpdatedUser]
+
 type RemovedUser User
+
+type EvtRemovedUser = swarm.Event[swarm.Meta, RemovedUser]
 
 type Note struct {
 	ID   string `json:"id"`
 	Text string `json:"text"`
 }
+
+type EvtNote = swarm.Event[swarm.Meta, Note]
 
 func main() {
 	q, err := sqs.NewEnqueuer("swarm-test",
@@ -44,14 +52,14 @@ func main() {
 		return
 	}
 
-	userCreated := swarm.LogDeadLetters(enqueue.Event[swarm.Meta, CreatedUser](q))
-	userUpdated := swarm.LogDeadLetters(enqueue.Event[swarm.Meta, UpdatedUser](q))
-	userRemoved := swarm.LogDeadLetters(enqueue.Event[swarm.Meta, RemovedUser](q))
-	note := swarm.LogDeadLetters(enqueue.Event[swarm.Meta, Note](q))
+	userCreated := swarm.LogDeadLetters(enqueue.Event[EvtCreatedUser](q))
+	userUpdated := swarm.LogDeadLetters(enqueue.Event[EvtUpdatedUser](q))
+	userRemoved := swarm.LogDeadLetters(enqueue.Event[EvtRemovedUser](q))
+	note := swarm.LogDeadLetters(enqueue.Event[EvtNote](q))
 
 	//
 	// Multiple channels emits events
-	userCreated <- swarm.Event[swarm.Meta, CreatedUser]{
+	userCreated <- EvtCreatedUser{
 		Meta: &swarm.Meta{
 			Agent:       "example",
 			Participant: "user",
@@ -59,7 +67,7 @@ func main() {
 		Data: &CreatedUser{ID: "user", Text: "some text"},
 	}
 
-	userUpdated <- swarm.Event[swarm.Meta, UpdatedUser]{
+	userUpdated <- EvtUpdatedUser{
 		Meta: &swarm.Meta{
 			Agent:       "example",
 			Participant: "user",
@@ -67,7 +75,7 @@ func main() {
 		Data: &UpdatedUser{ID: "user", Text: "some text with changes"},
 	}
 
-	userRemoved <- swarm.Event[swarm.Meta, RemovedUser]{
+	userRemoved <- EvtRemovedUser{
 		Meta: &swarm.Meta{
 			Agent:       "example",
 			Participant: "user",
@@ -77,7 +85,7 @@ func main() {
 
 	//
 	// Single channel emits event
-	note <- swarm.Event[swarm.Meta, Note]{
+	note <- EvtNote{
 		Meta: &swarm.Meta{
 			Type:        "note:EventCreateNote",
 			Agent:       "example",
@@ -86,7 +94,7 @@ func main() {
 		Data: &Note{ID: "note", Text: "some text"},
 	}
 
-	note <- swarm.Event[swarm.Meta, Note]{
+	note <- EvtNote{
 		Meta: &swarm.Meta{
 			Type:        "note:EventUpdateNote",
 			Agent:       "example",
@@ -95,7 +103,7 @@ func main() {
 		Data: &Note{ID: "note", Text: "some text with changes"},
 	}
 
-	note <- swarm.Event[swarm.Meta, Note]{
+	note <- EvtNote{
 		Meta: &swarm.Meta{
 			Type:        "note:EventRemoveNote",
 			Agent:       "example",

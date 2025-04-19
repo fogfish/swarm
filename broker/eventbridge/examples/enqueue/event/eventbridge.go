@@ -35,7 +35,7 @@ func main() {
 		return
 	}
 
-	bus := swarm.LogDeadLetters(enqueue.Event[swarm.Meta, EventNote](q))
+	bus := swarm.LogDeadLetters(enqueue.Event[Event](q))
 
 	bus <- Event{
 		Meta: &swarm.Meta{

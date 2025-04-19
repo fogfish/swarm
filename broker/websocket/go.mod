@@ -17,7 +17,7 @@ require (
 	github.com/fogfish/logger/v3 v3.2.0
 	github.com/fogfish/opts v0.0.5
 	github.com/fogfish/scud v0.10.5
-	github.com/fogfish/swarm v0.21.0
+	github.com/fogfish/swarm v0.22.1
 )
 
 require (

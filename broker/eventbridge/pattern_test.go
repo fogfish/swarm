@@ -35,7 +35,7 @@ func TestLike(t *testing.T) {
 		type Event string
 
 		p := eventbridge.Like(
-			eventbridge.Event[swarm.Meta, Event](),
+			eventbridge.Event[swarm.Event[swarm.Meta, Event]](),
 		)
 
 		it.Then(t).Should(
