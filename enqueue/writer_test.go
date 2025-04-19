@@ -42,11 +42,11 @@ func TestNewEvent(t *testing.T) {
 	k := kernel.NewEnqueuer(mock, swarm.Config{})
 
 	for _, q := range []*enqueue.EmitterEvent[swarm.Meta, User]{
-		enqueue.NewEvent[swarm.Meta, User](k),
-		enqueue.NewEvent(k, encoding.ForEvent[swarm.Meta, User]("test")),
+		enqueue.NewEvent[Evt](k),
+		enqueue.NewEvent(k, encoding.ForEvent[Evt]("test")),
 	} {
 		q.Enq(context.Background(),
-			swarm.Event[swarm.Meta, User]{
+			Evt{
 				Meta: &swarm.Meta{},
 				Data: &User{ID: "id", Text: "user"},
 			},
