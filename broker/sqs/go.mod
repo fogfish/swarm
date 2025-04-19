@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.38.1
 	github.com/fogfish/it/v2 v2.2.1
 	github.com/fogfish/opts v0.0.5
-	github.com/fogfish/swarm v0.22.0
+	github.com/fogfish/swarm v0.22.1
 )
 
 require (
