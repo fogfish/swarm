@@ -36,7 +36,7 @@ func main() {
 		return
 	}
 
-	go bus(dequeue.Event[swarm.Meta, EventNote](q))
+	go bus(dequeue.Event[Event](q))
 
 	q.Await()
 }
