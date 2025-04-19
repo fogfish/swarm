@@ -29,6 +29,8 @@ type User struct {
 	Text string `json:"text"`
 }
 
+type Evt = swarm.Event[swarm.Meta, User]
+
 func TestType(t *testing.T) {
 	mock := mockEmitter(10)
 	k := kernel.NewEnqueuer(mock, swarm.Config{})
@@ -55,8 +57,8 @@ func TestEvent(t *testing.T) {
 		k.Close()
 	}()
 
-	snd, _ := enqueue.Event[swarm.Meta, User](k)
-	snd <- swarm.Event[swarm.Meta, User]{
+	snd, _ := enqueue.Event[Evt](k)
+	snd <- Evt{
 		Meta: &swarm.Meta{},
 		Data: &User{ID: "id", Text: "user"},
 	}

@@ -29,6 +29,8 @@ type User struct {
 	Text string `json:"text"`
 }
 
+type Evt = swarm.Event[swarm.Meta, User]
+
 func TestDequeueType(t *testing.T) {
 	user := User{ID: "id", Text: "user"}
 
@@ -56,7 +58,7 @@ func TestDequeueType(t *testing.T) {
 }
 
 func TestDequeueEvent(t *testing.T) {
-	obj := swarm.Event[swarm.Meta, User]{
+	obj := Evt{
 		Meta: &swarm.Meta{Type: "User"},
 		Data: &User{ID: "id", Text: "user"},
 	}
@@ -67,8 +69,8 @@ func TestDequeueEvent(t *testing.T) {
 		k.Close()
 	}()
 
-	var evt swarm.Evt[swarm.Meta, User]
-	rcv, ack := dequeue.Event[swarm.Meta, User](k)
+	var evt swarm.Msg[Evt]
+	rcv, ack := dequeue.Event[Evt](k)
 
 	go func() {
 		evt = <-rcv
