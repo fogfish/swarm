@@ -32,7 +32,7 @@ func main() {
 	broker := eventbridge.NewBroker(stack, jsii.String("Broker"), nil)
 	broker.NewEventBus(nil)
 
-	broker.NewSink(
+	typed := broker.NewSink(
 		&eventbridge.SinkProps{
 			EventPattern: eventbridge.Like(
 				eventbridge.Source("swarm-example-eventbridge"),
@@ -44,8 +44,10 @@ func main() {
 			},
 		},
 	)
+	broker.GrantReadEvents(typed.Handler, "eventbridge:example/typed")
+	broker.GrantWriteEvents(typed.Handler, "eventbridge:example/typed")
 
-	broker.NewSink(
+	event := broker.NewSink(
 		&eventbridge.SinkProps{
 			EventPattern: eventbridge.Like(
 				eventbridge.Source("swarm-example-eventbridge"),
@@ -57,8 +59,9 @@ func main() {
 			},
 		},
 	)
+	broker.GrantReadEvents(event.Handler, "eventbridge:example/event")
 
-	broker.NewSink(
+	octets := broker.NewSink(
 		&eventbridge.SinkProps{
 			EventPattern: eventbridge.Like(
 				eventbridge.Source("swarm-example-eventbridge"),
@@ -70,6 +73,7 @@ func main() {
 			},
 		},
 	)
+	broker.GrantReadEvents(octets.Handler, "eventbridge:example/bytes")
 
 	app.Synth(nil)
 }

@@ -11,7 +11,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log/slog"
 
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/eventbridge"
@@ -26,15 +25,7 @@ type EventNote struct {
 }
 
 func main() {
-	q, err := eventbridge.NewDequeuer(
-		eventbridge.WithConfig(
-			swarm.WithLogStdErr(),
-		),
-	)
-	if err != nil {
-		slog.Error("eventbridge reader has failed", "err", err)
-		return
-	}
+	q := eventbridge.MustDequeuer()
 
 	go bus(dequeue.Event[Event](q))
 

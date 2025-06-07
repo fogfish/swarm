@@ -9,6 +9,7 @@
 package eventbridge
 
 import (
+	"os"
 	"time"
 
 	"github.com/fogfish/opts"
@@ -18,13 +19,25 @@ import (
 // Environment variable to config event source
 const EnvConfigSourceEventBridge = "CONFIG_SWARM_SOURCE_EVENTBRIDGE"
 
+// Environment variable to config event agent
+const EnvConfigEventAgent = "CONFIG_SWARM_EVENT_AGENT"
+
 type Option = opts.Option[Client]
 
-var defs = []Option{WithConfig()}
+var defs = []Option{
+	WithConfig(
+		swarm.WithSource(os.Getenv(EnvConfigEventAgent)),
+		swarm.WithLogStdErr(),
+		swarm.WithConfigFromEnv(),
+	),
+}
 
 var (
 	// Configures
 	WithService = opts.ForType[Client, EventBridge]()
+
+	// Explicitly configures the event bus to use, (by default it uses environment variable CONFIG_SWARM_SOURCE_EVENTBRIDGE)
+	WithEventBus = opts.ForName[Client, string]("bus")
 )
 
 // Global "kernel" configuration.
@@ -42,28 +55,3 @@ func WithConfig(opt ...opts.Option[swarm.Config]) Option {
 		return nil
 	})
 }
-
-// type Option func(*Client)
-
-// var defs = []Option{WithConfig()}
-
-// func WithConfig(opts ...swarm.Option) Option {
-// 	return func(c *Client) {
-// 		config := swarm.NewConfig()
-// 		for _, opt := range opts {
-// 			opt(&config)
-// 		}
-
-// 		// Mandatory overrides
-// 		config.PollFrequency = 5 * time.Microsecond
-// 		config.PacketCodec = encoding.ForBytesJB64()
-
-// 		c.config = config
-// 	}
-// }
-
-// func WithService(service EventBridge) Option {
-// 	return func(c *Client) {
-// 		c.service = service
-// 	}
-// }

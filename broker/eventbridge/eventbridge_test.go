@@ -78,7 +78,7 @@ func TestReader(t *testing.T) {
 
 func TestWriter(t *testing.T) {
 	t.Run("New", func(t *testing.T) {
-		q, err := NewEnqueuer("test")
+		q, err := NewEnqueuer(WithEventBus("test"))
 		it.Then(t).Should(it.Nil(err))
 		q.Close()
 	})
@@ -86,7 +86,7 @@ func TestWriter(t *testing.T) {
 	t.Run("Enqueue", func(t *testing.T) {
 		mock := &mockEventBridge{}
 
-		q, err := NewEnqueuer("test", WithService(mock))
+		q, err := NewEnqueuer(WithEventBus("test"), WithService(mock))
 		it.Then(t).Should(it.Nil(err))
 
 		err = q.Emitter.Enq(context.Background(),
@@ -107,7 +107,7 @@ func TestWriter(t *testing.T) {
 
 func TestBroker(t *testing.T) {
 	t.Run("New", func(t *testing.T) {
-		q, err := New("test")
+		q, err := New(WithEventBus("test"))
 		it.Then(t).Should(it.Nil(err))
 		q.Close()
 	})

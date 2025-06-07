@@ -32,15 +32,7 @@ type Like struct {
 }
 
 func main() {
-	q, err := eventbridge.NewDequeuer(
-		eventbridge.WithConfig(
-			swarm.WithLogStdErr(),
-		),
-	)
-	if err != nil {
-		slog.Error("eventbridge reader has failed", "err", err)
-		return
-	}
+	q := eventbridge.MustDequeuer()
 
 	//
 	go actor[User]("user").handle(dequeue.Typed[User](q))

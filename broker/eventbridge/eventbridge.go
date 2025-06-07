@@ -11,6 +11,7 @@ package eventbridge
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -18,6 +19,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/eventbridge"
 	"github.com/aws/aws-sdk-go-v2/service/eventbridge/types"
+	"github.com/fogfish/logger/x/xlog"
 	"github.com/fogfish/opts"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/kernel"
@@ -36,13 +38,23 @@ type Client struct {
 }
 
 // Create writer to AWS EventBridge
-func NewEnqueuer(bus string, opts ...Option) (*kernel.Enqueuer, error) {
-	cli, err := newEventBridge(bus, opts...)
+func NewEnqueuer(opts ...Option) (*kernel.Enqueuer, error) {
+	cli, err := newEventBridge(opts...)
 	if err != nil {
 		return nil, err
 	}
 
 	return kernel.NewEnqueuer(cli, cli.config), nil
+}
+
+// Create writer to AWS EventBridge
+func MustEnqueuer(opts ...Option) *kernel.Enqueuer {
+	cli, err := NewEnqueuer(opts...)
+	if err != nil {
+		xlog.Emergency("eventbridge client has failed", err)
+	}
+
+	return cli
 }
 
 // Create reader from AWS EventBridge
@@ -60,9 +72,18 @@ func NewDequeuer(opt ...Option) (*kernel.Dequeuer, error) {
 	return kernel.NewDequeuer(bridge, c.config), nil
 }
 
+func MustDequeuer(opt ...Option) *kernel.Dequeuer {
+	cli, err := NewDequeuer(opt...)
+	if err != nil {
+		xlog.Emergency("eventbridge client has failed", err)
+	}
+
+	return cli
+}
+
 // Create enqueue & dequeue routine to AWS EventBridge
-func New(bus string, opts ...Option) (*kernel.Kernel, error) {
-	cli, err := newEventBridge(bus, opts...)
+func New(opts ...Option) (*kernel.Kernel, error) {
+	cli, err := newEventBridge(opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -75,8 +96,8 @@ func New(bus string, opts ...Option) (*kernel.Kernel, error) {
 	), nil
 }
 
-func newEventBridge(bus string, opt ...Option) (*Client, error) {
-	c := &Client{bus: bus}
+func newEventBridge(opt ...Option) (*Client, error) {
+	c := &Client{bus: os.Getenv(EnvConfigSourceEventBridge)}
 	if err := opts.Apply(c, defs); err != nil {
 		return nil, err
 	}
