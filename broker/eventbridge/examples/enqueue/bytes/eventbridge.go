@@ -9,8 +9,6 @@
 package main
 
 import (
-	"log/slog"
-
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/eventbridge"
 	"github.com/fogfish/swarm/enqueue"
@@ -18,16 +16,13 @@ import (
 )
 
 func main() {
-	q, err := eventbridge.NewEnqueuer("swarm-example-eventbridge",
+	q := eventbridge.MustEnqueuer(
+		eventbridge.WithEventBus("swarm-example-eventbridge"),
 		eventbridge.WithConfig(
 			swarm.WithSource("swarm-example-eventbridge"),
 			swarm.WithLogStdErr(),
 		),
 	)
-	if err != nil {
-		slog.Error("eventbridge writer has failed", "err", err)
-		return
-	}
 
 	user := swarm.LogDeadLetters(enqueue.Bytes(q, encoding.ForBytesJB64("User")))
 	note := swarm.LogDeadLetters(enqueue.Bytes(q, encoding.ForBytesJB64("Note")))

@@ -8,4 +8,8 @@
 
 package eventbridge
 
-const Version = "broker/eventbridge/v0.22.0"
+// MAJOR.MINOR.PATCH
+// MAJOR - incompatible api changes
+// MINOR - version of the event kernel
+// PATCH - version of the event bridge module
+const Version = "broker/eventbridge/v0.22.1"

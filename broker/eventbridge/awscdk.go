@@ -9,13 +9,17 @@
 package eventbridge
 
 import (
+	"strconv"
+
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsevents"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awseventstargets"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/constructs-go/constructs/v10"
 	"github.com/aws/jsii-runtime-go"
 	"github.com/fogfish/scud"
+	"github.com/fogfish/swarm"
 )
 
 //------------------------------------------------------------------------------
@@ -27,7 +31,7 @@ import (
 type Sink struct {
 	constructs.Construct
 	Rule    awsevents.Rule
-	Handler awslambda.IFunction
+	Handler awslambda.Function
 }
 
 // See https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-event-patterns.html
@@ -35,12 +39,11 @@ type SinkProps struct {
 	System       awsevents.IEventBus
 	EventPattern *awsevents.EventPattern
 	Function     scud.FunctionProps
+	EventAgent   *string
 }
 
 func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	sink := &Sink{Construct: constructs.NewConstruct(scope, id)}
-
-	props.Function.Setenv(EnvConfigSourceEventBridge, *props.System.EventBusName())
 
 	pattern := props.EventPattern
 	if pattern == nil {
@@ -59,6 +62,27 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 
 	if props.Function != nil {
 		sink.Handler = scud.NewFunction(sink.Construct, jsii.String("Func"), props.Function)
+
+		switch v := props.Function.(type) {
+		case *scud.FunctionGoProps:
+			if v.FunctionProps != nil && v.Timeout != nil {
+				t := int(aws.ToFloat64(v.Timeout.ToSeconds(nil)))
+				sink.Handler.AddEnvironment(
+					jsii.String(swarm.EnvConfigTimeToFlight),
+					jsii.String(strconv.Itoa(t)),
+					nil,
+				)
+			}
+		case *scud.ContainerGoProps:
+			if v.DockerImageFunctionProps != nil && v.Timeout != nil {
+				t := int(aws.ToFloat64(v.Timeout.ToSeconds(nil)))
+				sink.Handler.AddEnvironment(
+					jsii.String(swarm.EnvConfigTimeToFlight),
+					jsii.String(strconv.Itoa(t)),
+					nil,
+				)
+			}
+		}
 
 		sink.Rule.AddTarget(awseventstargets.NewLambdaFunction(
 			sink.Handler,
@@ -125,4 +149,45 @@ func (broker *Broker) NewSink(props *SinkProps) *Sink {
 	sink := NewSink(broker.Construct, jsii.String(name), props)
 
 	return sink
+}
+
+// Grant permission to write events to the EventBus
+func (broker *Broker) GrantWriteEvents(f awslambda.Function, agent string) {
+	if broker.Bus == nil {
+		panic("EventBus is not defined.")
+	}
+
+	if agent == "" {
+		panic("Event agent is not defined.")
+	}
+
+	broker.Bus.GrantPutEventsTo(f)
+
+	f.AddEnvironment(
+		jsii.String(EnvConfigEventAgent),
+		jsii.String(agent),
+		nil,
+	)
+}
+
+func (broker *Broker) GrantReadEvents(f awslambda.Function, agent string) {
+	if broker.Bus == nil {
+		panic("EventBus is not defined.")
+	}
+
+	if agent == "" {
+		panic("Event agent is not defined.")
+	}
+
+	f.AddEnvironment(
+		jsii.String(EnvConfigSourceEventBridge),
+		broker.Bus.EventBusName(),
+		nil,
+	)
+
+	f.AddEnvironment(
+		jsii.String(EnvConfigEventAgent),
+		jsii.String(agent),
+		nil,
+	)
 }

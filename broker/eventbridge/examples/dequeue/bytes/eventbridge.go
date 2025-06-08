@@ -18,15 +18,7 @@ import (
 )
 
 func main() {
-	q, err := eventbridge.NewDequeuer(
-		eventbridge.WithConfig(
-			swarm.WithLogStdErr(),
-		),
-	)
-	if err != nil {
-		slog.Error("eventbridge reader has failed", "err", err)
-		return
-	}
+	q := eventbridge.MustDequeuer()
 
 	//
 	go actor("user").handle(dequeue.Bytes(q, encoding.ForBytesJB64("User")))
