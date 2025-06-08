@@ -164,6 +164,12 @@ func (broker *Broker) GrantWriteEvents(f awslambda.Function, agent string) {
 	broker.Bus.GrantPutEventsTo(f, nil)
 
 	f.AddEnvironment(
+		jsii.String(EnvConfigSourceEventBridge),
+		broker.Bus.EventBusName(),
+		nil,
+	)
+
+	f.AddEnvironment(
 		jsii.String(EnvConfigEventAgent),
 		jsii.String(agent),
 		nil,
@@ -178,12 +184,6 @@ func (broker *Broker) GrantReadEvents(f awslambda.Function, agent string) {
 	if agent == "" {
 		panic("Event agent is not defined.")
 	}
-
-	f.AddEnvironment(
-		jsii.String(EnvConfigSourceEventBridge),
-		broker.Bus.EventBusName(),
-		nil,
-	)
 
 	f.AddEnvironment(
 		jsii.String(EnvConfigEventAgent),
