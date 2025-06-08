@@ -67,6 +67,10 @@ func NewDequeuer(opt ...Option) (*kernel.Dequeuer, error) {
 		return nil, err
 	}
 
+	if err := c.checkRequired(); err != nil {
+		return nil, err
+	}
+
 	bridge := &bridge{kernel.NewBridge(c.config.TimeToFlight)}
 
 	return kernel.NewDequeuer(bridge, c.config), nil
@@ -96,6 +100,11 @@ func New(opts ...Option) (*kernel.Kernel, error) {
 	), nil
 }
 
+// checkRequired validates that all mandatory configuration parameters are provided
+func (c *Client) checkRequired() error {
+	return opts.Required(c, WithEventBus(""))
+}
+
 func newEventBridge(opt ...Option) (*Client, error) {
 	c := &Client{bus: os.Getenv(EnvConfigSourceEventBridge)}
 	if err := opts.Apply(c, defs); err != nil {
@@ -111,6 +120,10 @@ func newEventBridge(opt ...Option) (*Client, error) {
 			return nil, swarm.ErrServiceIO.With(err)
 		}
 		c.service = eventbridge.NewFromConfig(aws)
+	}
+
+	if err := c.checkRequired(); err != nil {
+		return nil, err
 	}
 
 	return c, nil
