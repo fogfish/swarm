@@ -30,7 +30,7 @@ func TestReader(t *testing.T) {
 
 	t.Run("New", func(t *testing.T) {
 		_, err := NewDequeuer()
-		it.Then(t).ShouldNot(it.Nil(err))
+		it.Then(t).Should(it.Nil(err))
 	})
 
 	t.Run("Dequeue", func(t *testing.T) {

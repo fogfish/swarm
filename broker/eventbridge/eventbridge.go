@@ -67,10 +67,6 @@ func NewDequeuer(opt ...Option) (*kernel.Dequeuer, error) {
 		return nil, err
 	}
 
-	if err := c.checkRequired(); err != nil {
-		return nil, err
-	}
-
 	bridge := &bridge{kernel.NewBridge(c.config.TimeToFlight)}
 
 	return kernel.NewDequeuer(bridge, c.config), nil
