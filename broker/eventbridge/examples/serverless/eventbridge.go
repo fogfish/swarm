@@ -45,7 +45,6 @@ func main() {
 		},
 	)
 	broker.GrantReadEvents(typed.Handler, "eventbridge:example/typed")
-	broker.GrantWriteEvents(typed.Handler, "eventbridge:example/typed")
 
 	event := broker.NewSink(
 		&eventbridge.SinkProps{
