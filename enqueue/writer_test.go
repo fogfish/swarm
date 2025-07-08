@@ -41,10 +41,9 @@ func TestNewEvent(t *testing.T) {
 	mock := mockEmitter(10)
 	k := kernel.NewEnqueuer(mock, swarm.Config{})
 
-	for _, q := range []*enqueue.EmitterEvent[swarm.Meta, User]{
-		enqueue.NewEvent[Evt](k),
-		enqueue.NewEvent(k, encoding.ForEvent[Evt]("test")),
-	} {
+	t.Run("DefaultCodec", func(t *testing.T) {
+		q := enqueue.NewEvent[Evt](k)
+
 		q.Enq(context.Background(),
 			Evt{
 				Meta: &swarm.Meta{},
@@ -60,10 +59,31 @@ func TestNewEvent(t *testing.T) {
 			}
 		`),
 		)
-	}
+	})
+
+	t.Run("CustomCodec", func(t *testing.T) {
+		q := enqueue.NewEvent(k, encoding.ForEvent[Evt]("realm", "test"))
+		q.Enq(context.Background(),
+			Evt{
+				Meta: &swarm.Meta{},
+				Data: &User{ID: "id", Text: "user"},
+			},
+		)
+
+		it.Then(t).Should(
+			it.Json(mock.val).Equiv(`
+			{
+				"meta": {"type": "User", "realm": "realm", "agent": "test", "id": "_", "created": "_"},
+				"data": {"id":"id","text":"user"}
+			}
+		`),
+		)
+	})
 
 	k.Close()
 }
+
+//
 
 func TestNewBytes(t *testing.T) {
 	mock := mockEmitter(10)

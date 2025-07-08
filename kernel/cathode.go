@@ -113,11 +113,11 @@ func (k *Dequeuer) receive() {
 			} else {
 				slog.Warn("Unknown category",
 					slog.Any("cat", bag.Category),
-					slog.Any("kernel", k.Config.Source),
+					slog.Any("kernel", k.Config.Agent),
 				)
 				slog.Debug("Unknown category",
 					slog.Any("cat", bag.Category),
-					slog.Any("kernel", k.Config.Source),
+					slog.Any("kernel", k.Config.Agent),
 					slog.Any("bag", bag),
 				)
 				if k.Config.FailOnUnknownCategory {
