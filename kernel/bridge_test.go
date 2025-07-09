@@ -217,9 +217,8 @@ func TestBridge(t *testing.T) {
 
 func TestBridgeWait(t *testing.T) {
 	cfg := newConfig()
-	// cfg.timeToEmit = 10 * time.Millisecond // TODO: Test Timeout
 	cfg.kernel.PollFrequency = 10 * time.Nanosecond
-	cfg.kernel.TimeToFlight = 2 * time.Millisecond // making extreme for testing
+	cfg.kernel.TimeToFlight = 10 * time.Millisecond // making extreme for testing
 
 	codec := encoding.ForTyped[string]()
 	mock := mockFactory{}
