@@ -35,6 +35,10 @@ type Enqueuer struct {
 	context context.Context
 	cancel  context.CancelFunc
 
+	// Control-plane to preempt emitter loop, used in externally scheduled
+	// environment to guarantee that all emitted messages are sent to broken
+	ctrlPreempt chan chan struct{}
+
 	// Kernel configuration
 	Config swarm.Config
 
@@ -42,8 +46,12 @@ type Enqueuer struct {
 	Emitter Emitter
 }
 
-// Creates instance of broker writer
 func NewEnqueuer(emitter Emitter, config swarm.Config) *Enqueuer {
+	return builder().Enqueuer(emitter, config)
+}
+
+// Creates instance of broker writer
+func newEnqueuer(emitter Emitter, config swarm.Config) *Enqueuer {
 	ctx, can := context.WithCancel(context.Background())
 
 	return &Enqueuer{
@@ -124,6 +132,12 @@ func Enqueue[T any](k *Enqueuer, cat string, codec Encoder[T]) ( /*snd*/ chan<- 
 			select {
 			case <-k.context.Done():
 				break exit
+			case sack := <-k.ctrlPreempt:
+				slog.Debug("emitter suspend requested", slog.Any("cat", cat))
+				for range len(snd) {
+					emit(<-snd)
+				}
+				sack <- struct{}{}
 			case obj := <-snd:
 				emit(obj)
 			}

@@ -20,61 +20,64 @@ import (
 )
 
 func TestEnqueuer(t *testing.T) {
+	cfg := newConfig()
+
 	codec := encoding.ForTyped[string]()
-	mockit := func(config swarm.Config) (*Enqueuer, *emitter) {
-		mock := mockEmitter(10)
-		k := NewEnqueuer(mock, config)
-
-		go func() {
-			time.Sleep(yield_before_close)
-			k.Close()
-		}()
-
-		return k, mock
-	}
+	mock := mockFactory{}
 
 	t.Run("Kernel", func(t *testing.T) {
-		k := New(NewEnqueuer(mockEmitter(10), swarm.Config{}), nil)
+		emit := mock.Emitter(cfg)
+		k := New(NewEnqueuer(emit, cfg.kernel), nil)
+
 		go func() {
-			time.Sleep(yield_before_close)
+			time.Sleep(cfg.yieldBeforeClose)
 			k.Close()
 		}()
 		k.Await()
 	})
 
 	t.Run("None", func(t *testing.T) {
-		k, _ := mockit(swarm.Config{})
+		emit := mock.Emitter(cfg)
+		k := mock.Enqueuer(emit, cfg)
+
 		Enqueue(k, "test", codec)
 		k.Await()
 	})
 
 	t.Run("Enqueue.1", func(t *testing.T) {
-		k, e := mockit(swarm.Config{})
+		emit := mock.Emitter(cfg)
+		k := mock.Enqueuer(emit, cfg)
+
 		snd, _ := Enqueue(k, "test", codec)
 
 		snd <- "1"
 		it.Then(t).Should(
-			it.Equal(<-e.val, `"1"`),
+			it.Equal(<-emit.val, `"1"`),
 		)
 
 		k.Await()
 	})
 
 	t.Run("Enqueue.1.Shut", func(t *testing.T) {
-		k, e := mockit(swarm.Config{})
+		emit := mock.Emitter(cfg)
+		k := mock.Enqueuer(emit, cfg)
+
 		snd, _ := Enqueue(k, "test", codec)
 
 		snd <- "1"
 		k.Await()
 
 		it.Then(t).Should(
-			it.Seq(e.seq).Equal(`"1"`),
+			it.Seq(emit.seq).Equal(`"1"`),
 		)
 	})
 
 	t.Run("Enqueue.1.Error", func(t *testing.T) {
+		cfg := newConfig()
 		err := make(chan error)
-		k := NewEnqueuer(looser{}, swarm.Config{StdErr: err})
+		cfg.kernel.StdErr = err
+		k := mock.Enqueuer(looser{}, cfg)
+
 		snd, dlq := Enqueue(k, "test", codec)
 
 		snd <- "1"
@@ -87,8 +90,11 @@ func TestEnqueuer(t *testing.T) {
 	})
 
 	t.Run("Enqueue.1.Codec", func(t *testing.T) {
+		cfg := newConfig()
 		err := make(chan error)
-		k := NewEnqueuer(mockEmitter(10), swarm.Config{StdErr: err})
+		cfg.kernel.StdErr = err
+		k := mock.Enqueuer(looser{}, cfg)
+
 		snd, dlq := Enqueue(k, "test", looser{})
 
 		snd <- "1"
@@ -101,29 +107,33 @@ func TestEnqueuer(t *testing.T) {
 	})
 
 	t.Run("Enqueue.N", func(t *testing.T) {
-		k, e := mockit(swarm.Config{})
+		emit := mock.Emitter(cfg)
+		k := mock.Enqueuer(emit, cfg)
+
 		snd, _ := Enqueue(k, "test", codec)
 
 		snd <- "1"
 		it.Then(t).Should(
-			it.Equal(<-e.val, `"1"`),
+			it.Equal(<-emit.val, `"1"`),
 		)
 
 		snd <- "2"
 		it.Then(t).Should(
-			it.Equal(<-e.val, `"2"`),
+			it.Equal(<-emit.val, `"2"`),
 		)
 
 		snd <- "3"
 		it.Then(t).Should(
-			it.Equal(<-e.val, `"3"`),
+			it.Equal(<-emit.val, `"3"`),
 		)
 
 		k.Await()
 	})
 
 	t.Run("Enqueue.N.Shut", func(t *testing.T) {
-		k, e := mockit(swarm.Config{})
+		emit := mock.Emitter(cfg)
+		k := mock.Enqueuer(emit, cfg)
+
 		snd, _ := Enqueue(k, "test", codec)
 
 		snd <- "1"
@@ -133,13 +143,17 @@ func TestEnqueuer(t *testing.T) {
 		k.Await()
 
 		it.Then(t).Should(
-			it.Seq(e.seq).Equal(`"1"`, `"2"`, `"3"`),
+			it.Seq(emit.seq).Equal(`"1"`, `"2"`, `"3"`),
 		)
 	})
 
 	t.Run("Enqueue.N.Backlog", func(t *testing.T) {
-		e := mockEmitter(10)
-		k := NewEnqueuer(e, swarm.Config{CapOut: 4})
+		cfg := newConfig()
+		cfg.kernel.CapOut = 4
+
+		emit := mock.Emitter(cfg)
+		k := mock.Enqueuer(emit, cfg)
+
 		snd, _ := Enqueue(k, "test", codec)
 
 		snd <- "1"
@@ -149,13 +163,19 @@ func TestEnqueuer(t *testing.T) {
 		k.Close()
 
 		it.Then(t).Should(
-			it.Seq(e.seq).Equal(`"1"`, `"2"`, `"3"`),
+			it.Seq(emit.seq).Equal(`"1"`, `"2"`, `"3"`),
 		)
 	})
 
 	t.Run("Enqueue.N.Error", func(t *testing.T) {
 		err := make(chan error)
-		k := NewEnqueuer(looser{}, swarm.Config{CapOut: 4, CapDlq: 4, StdErr: err})
+		cfg := newConfig()
+		cfg.kernel.CapOut = 4
+		cfg.kernel.CapDlq = 4
+		cfg.kernel.StdErr = err
+
+		k := mock.Enqueuer(looser{}, cfg)
+
 		snd, dlq := Enqueue(k, "test", codec)
 
 		snd <- "1"
@@ -178,28 +198,6 @@ func TestEnqueuer(t *testing.T) {
 }
 
 //------------------------------------------------------------------------------
-
-type emitter struct {
-	wait int
-	seq  []string
-	val  chan string
-}
-
-func mockEmitter(wait int) *emitter {
-	return &emitter{
-		wait: wait,
-		seq:  make([]string, 0),
-		val:  make(chan string, 1000),
-	}
-}
-
-func (e *emitter) Enq(ctx context.Context, bag swarm.Bag) error {
-	time.Sleep(time.Duration(e.wait) * time.Microsecond)
-	e.seq = append(e.seq, string(bag.Object))
-
-	e.val <- string(bag.Object)
-	return nil
-}
 
 type looser struct{}
 

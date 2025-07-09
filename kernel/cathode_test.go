@@ -9,7 +9,6 @@
 package kernel
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -20,20 +19,12 @@ import (
 
 func TestDequeuer(t *testing.T) {
 	codec := encoding.ForTyped[string]()
-	none := mockCathode(nil, nil)
-	pass := mockCathode(make(chan string),
-		[]swarm.Bag{
-			{
-				Category:  "test",
-				Digest:    "1",
-				IOContext: "context",
-				Object:    []byte(`"1"`),
-			},
-		},
-	)
+	mock := mockFactory{}
+	none := mock.Cathode(nil, nil)
+	pass := mock.Cathode(make(chan string), mock.Bag(1))
 
 	t.Run("Kernel", func(t *testing.T) {
-		k := New(nil, NewDequeuer(mockCathode(nil, nil), swarm.Config{}))
+		k := New(nil, NewDequeuer(newMockCathode(nil, nil), swarm.Config{}))
 		go func() {
 			time.Sleep(yield_before_close)
 			k.Close()
@@ -100,29 +91,4 @@ func TestDequeuer(t *testing.T) {
 			it.Equal(string(<-pass.ack), `1`),
 		)
 	})
-}
-
-//------------------------------------------------------------------------------
-
-type cathode struct {
-	seq []swarm.Bag
-	ack chan string
-}
-
-func mockCathode(ack chan string, seq []swarm.Bag) cathode {
-	return cathode{seq: seq, ack: ack}
-}
-
-func (c cathode) Ack(ctx context.Context, digest string) error {
-	c.ack <- digest
-	return nil
-}
-
-func (c cathode) Err(ctx context.Context, digest string, err error) error {
-	c.ack <- digest
-	return nil
-}
-
-func (c cathode) Ask(context.Context) ([]swarm.Bag, error) {
-	return c.seq, nil
 }

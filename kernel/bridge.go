@@ -16,18 +16,29 @@ import (
 )
 
 // Bridge Lambda's main function to [Cathode] interface
+// Bridge is single threaded and should be used in the context of Lambda handler only.
 type Bridge struct {
 	timeToFlight time.Duration
 	inflight     map[string]struct{}
-	session      chan error
-	ch           chan []swarm.Bag
+
+	// I/O channels
+	inputCh chan []swarm.Bag
+	inputCx context.Context
+	replyCh chan error
+
+	// Control-plane ctrlPreempt emitter loop (MUST be non-blocking)
+	ctrlPreempt chan chan struct{}
 }
 
-func NewBridge(timeToFlight time.Duration) *Bridge {
+func NewBridge(cfg swarm.Config) *Bridge {
+	return builder().Bridge(cfg)
+}
+
+func newBridge(cfg swarm.Config) *Bridge {
 	return &Bridge{
-		ch:           make(chan []swarm.Bag),
-		session:      make(chan error),
-		timeToFlight: timeToFlight,
+		inputCh:      make(chan []swarm.Bag),
+		replyCh:      make(chan error),
+		timeToFlight: cfg.TimeToFlight,
 	}
 }
 
@@ -39,19 +50,47 @@ func NewBridge(timeToFlight time.Duration) *Bridge {
 //			bridge.Dispatch(bag)
 //		}
 //	)
-func (s *Bridge) Dispatch(seq []swarm.Bag) error {
+func (s *Bridge) Dispatch(ctx context.Context, seq []swarm.Bag) error {
 	s.inflight = map[string]struct{}{}
 	for _, bag := range seq {
 		s.inflight[bag.Digest] = struct{}{}
 	}
 
-	s.ch <- seq
+	reqctx, cancel := context.WithTimeout(context.Background(), s.timeToFlight)
+	defer cancel()
+
+	s.inputCx = reqctx
+	s.inputCh <- seq
 
 	select {
-	case err := <-s.session:
+	case err := <-s.replyCh:
+		if s.ctrlPreempt != nil {
+			sack := make(chan struct{})
+			s.ctrlPreempt <- sack
+			select {
+			case <-sack:
+			case <-reqctx.Done():
+				return swarm.ErrTimeout("ack", s.timeToFlight)
+			}
+			close(sack)
+		}
+
 		return err
-	case <-time.After(s.timeToFlight):
+	case <-reqctx.Done():
+		if s.ctrlPreempt != nil {
+			sack := make(chan struct{})
+			s.ctrlPreempt <- sack
+			select {
+			case <-sack:
+			case <-ctx.Done():
+			}
+			close(sack)
+		}
+
 		return swarm.ErrTimeout("ack", s.timeToFlight)
+
+	case <-ctx.Done():
+		return nil
 	}
 }
 
@@ -60,7 +99,7 @@ func (s *Bridge) Ask(ctx context.Context) ([]swarm.Bag, error) {
 	select {
 	case <-ctx.Done():
 		return nil, nil
-	case bag := <-s.ch:
+	case bag := <-s.inputCh:
 		return bag, nil
 	}
 }
@@ -69,15 +108,27 @@ func (s *Bridge) Ask(ctx context.Context) ([]swarm.Bag, error) {
 func (s *Bridge) Ack(ctx context.Context, digest string) error {
 	delete(s.inflight, digest)
 	if len(s.inflight) == 0 {
-		s.session <- nil
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-s.inputCx.Done():
+			return nil
+		case s.replyCh <- nil:
+			return nil
+		}
 	}
-
 	return nil
 }
 
 // Acknowledge error, allowing lambda handler progress
 func (s *Bridge) Err(ctx context.Context, digest string, err error) error {
 	delete(s.inflight, digest)
-	s.session <- err
-	return nil
+	select {
+	case <-ctx.Done():
+		return nil
+	case <-s.inputCx.Done():
+		return nil
+	case s.replyCh <- err:
+		return nil
+	}
 }

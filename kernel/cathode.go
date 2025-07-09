@@ -52,8 +52,12 @@ type Dequeuer struct {
 	Cathode Cathode
 }
 
-// Creates instance of broker reader
 func NewDequeuer(cathode Cathode, config swarm.Config) *Dequeuer {
+	return builder().Dequeuer(cathode, config)
+}
+
+// Creates instance of broker reader
+func newDequeuer(cathode Cathode, config swarm.Config) *Dequeuer {
 	ctx, can := context.WithCancel(context.Background())
 
 	// Must not be 0
@@ -78,11 +82,12 @@ func (k *Dequeuer) Close() {
 
 // Await reader to complete
 func (k *Dequeuer) Await() {
-	if spawner, ok := k.Cathode.(interface{ Run() }); ok {
-		go spawner.Run()
+	if spawner, ok := k.Cathode.(interface{ Run(context.Context) }); ok {
+		go spawner.Run(k.context)
 	}
 
 	k.receive()
+
 	<-k.context.Done()
 	k.WaitGroup.Wait()
 }
