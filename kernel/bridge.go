@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/fogfish/swarm"
+	"github.com/fogfish/swarm/kernel/broadcast"
 )
 
 // Bridge Lambda's main function to [Cathode] interface
@@ -27,7 +28,7 @@ type Bridge struct {
 	replyCh chan error
 
 	// Control-plane ctrlPreempt emitter loop (MUST be non-blocking)
-	ctrlPreempt chan chan struct{}
+	ctrlPreempt *broadcast.Broadcaster
 }
 
 func NewBridge(cfg swarm.Config) *Bridge {
@@ -56,7 +57,7 @@ func (s *Bridge) Dispatch(ctx context.Context, seq []swarm.Bag) error {
 		s.inflight[bag.Digest] = struct{}{}
 	}
 
-	reqctx, cancel := context.WithTimeout(context.Background(), s.timeToFlight)
+	reqctx, cancel := context.WithTimeout(ctx, s.timeToFlight)
 	defer cancel()
 
 	s.inputCx = reqctx
@@ -65,32 +66,15 @@ func (s *Bridge) Dispatch(ctx context.Context, seq []swarm.Bag) error {
 	select {
 	case err := <-s.replyCh:
 		if s.ctrlPreempt != nil {
-			sack := make(chan struct{})
-			s.ctrlPreempt <- sack
-			select {
-			case <-sack:
-			case <-reqctx.Done():
-				return swarm.ErrTimeout("ack", s.timeToFlight)
+			if exx := s.ctrlPreempt.Cast(reqctx); exx != nil {
+				return exx
 			}
-			close(sack)
 		}
-
 		return err
 	case <-reqctx.Done():
-		if s.ctrlPreempt != nil {
-			sack := make(chan struct{})
-			s.ctrlPreempt <- sack
-			select {
-			case <-sack:
-			case <-ctx.Done():
-			}
-			close(sack)
-		}
-
+		// Note: we acknowledge an error, the incoming message to be re-processed again.
+		//       it is acceptable to loose ongoing emits.
 		return swarm.ErrTimeout("ack", s.timeToFlight)
-
-	case <-ctx.Done():
-		return nil
 	}
 }
 

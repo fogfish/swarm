@@ -308,6 +308,6 @@ func TestBridgeWaitTimeout(t *testing.T) {
 	deq.Await()
 
 	it.Then(t).Should(
-		it.Fail(bridge.Status).Contain("timeout"),
+		it.Fail(bridge.Status).Contain("deadline"),
 	)
 }

@@ -14,6 +14,7 @@ import (
 	"sync"
 
 	"github.com/fogfish/swarm"
+	"github.com/fogfish/swarm/kernel/broadcast"
 )
 
 // Emitter defines on-the-wire protocol for [swarm.Bag], covering egress.
@@ -35,9 +36,9 @@ type Enqueuer struct {
 	context context.Context
 	cancel  context.CancelFunc
 
-	// Control-plane to preempt emitter loop, used in externally scheduled
-	// environment to guarantee that all emitted messages are sent to broken
-	ctrlPreempt chan chan struct{}
+	// Control-plane to preempt emitter loop. It is used in externally scheduled
+	// environment to guarantee that all emitted messages are sent to broker before application is preempted.
+	ctrlPreempt *broadcast.Broadcaster
 
 	// Kernel configuration
 	Config swarm.Config
@@ -78,6 +79,11 @@ func (k *Enqueuer) Await() {
 func Enqueue[T any](k *Enqueuer, cat string, codec Encoder[T]) ( /*snd*/ chan<- T /*dlq*/, <-chan T) {
 	snd := make(chan T, k.Config.CapOut)
 	dlq := make(chan T, k.Config.CapDlq)
+
+	var ctl chan chan struct{}
+	if k.ctrlPreempt != nil {
+		ctl = k.ctrlPreempt.Register()
+	}
 
 	// emitter routine
 	emit := func(obj T) {
@@ -132,12 +138,16 @@ func Enqueue[T any](k *Enqueuer, cat string, codec Encoder[T]) ( /*snd*/ chan<- 
 			select {
 			case <-k.context.Done():
 				break exit
-			case sack := <-k.ctrlPreempt:
-				slog.Debug("emitter suspend requested", slog.Any("cat", cat))
+			case sack := <-ctl:
 				for range len(snd) {
 					emit(<-snd)
 				}
-				sack <- struct{}{}
+				func() {
+					defer func() {
+						recover() // Ignore panic if ackCh is closed due to timeout
+					}()
+					sack <- struct{}{}
+				}()
 			case obj := <-snd:
 				emit(obj)
 			}

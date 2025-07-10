@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/fogfish/swarm"
+	"github.com/fogfish/swarm/kernel/broadcast"
 )
 
 var (
@@ -33,7 +34,7 @@ type factory struct {
 	// messaging kernel is running in the externally preemptable mode
 	isExternallyPreemptable bool
 
-	ctrlPreempt chan chan struct{}
+	ctrlPreempt *broadcast.Broadcaster
 }
 
 func (b *factory) setup() {
@@ -44,7 +45,7 @@ func (b *factory) setup() {
 
 func (b *factory) enableExternalPreemption() {
 	b.isExternallyPreemptable = true
-	b.ctrlPreempt = make(chan chan struct{}, 1)
+	b.ctrlPreempt = broadcast.New()
 }
 
 func (b *factory) Bridge(cfg swarm.Config) *Bridge {
