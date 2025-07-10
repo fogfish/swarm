@@ -11,8 +11,6 @@ package broadcast
 import (
 	"context"
 	"sync"
-
-	"github.com/fogfish/swarm"
 )
 
 type Broadcaster struct {
@@ -74,14 +72,15 @@ func (b *Broadcaster) Cast(ctx context.Context) error {
 	for _, ch := range b.ch {
 		select {
 		case <-ctx.Done():
-			return swarm.ErrServiceIO
+			return ctx.Err()
 		default:
 		}
 
 		select {
-		case ch <- ackCh:
 		case <-ctx.Done():
 			return ctx.Err()
+		case ch <- ackCh:
+		default:
 		}
 	}
 

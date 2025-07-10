@@ -102,7 +102,10 @@ func Enqueue[T any](k *Enqueuer, cat string, codec Encoder[T]) ( /*snd*/ chan<- 
 		}
 
 		bag := swarm.Bag{Category: cat, Object: msg}
-		if err := k.Emitter.Enq(context.Background(), bag); err != nil {
+		err = k.Config.Backoff.Retry(func() error {
+			return k.Emitter.Enq(context.Background(), bag)
+		})
+		if err != nil {
 			dlq <- obj
 			if k.Config.StdErr != nil {
 				k.Config.StdErr <- swarm.ErrEnqueue.With(err)
@@ -144,7 +147,7 @@ func Enqueue[T any](k *Enqueuer, cat string, codec Encoder[T]) ( /*snd*/ chan<- 
 				}
 				func() {
 					defer func() {
-						recover() // Ignore panic if ackCh is closed due to timeout
+						recover() // Ignore panic if ackCh is closed due to timeout (preemption)
 					}()
 					sack <- struct{}{}
 				}()
@@ -162,6 +165,9 @@ func Enqueue[T any](k *Enqueuer, cat string, codec Encoder[T]) ( /*snd*/ chan<- 
 			}
 		}
 
+		if k.ctrlPreempt != nil {
+			k.ctrlPreempt.Unregister(ctl)
+		}
 		k.WaitGroup.Done()
 	}()
 

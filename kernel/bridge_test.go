@@ -241,6 +241,7 @@ func TestBridgeWait(t *testing.T) {
 			ack <- x
 		}()
 		deq.Await()
+		enq.Await()
 
 		it.Then(t).Should(
 			it.Nil(bridge.Status()),
@@ -270,6 +271,7 @@ func TestBridgeWait(t *testing.T) {
 			ack <- x
 		}()
 		deq.Await()
+		enq.Await()
 
 		it.Then(t).Should(
 			it.Nil(bridge.Status()),
@@ -306,6 +308,7 @@ func TestBridgeWaitTimeout(t *testing.T) {
 		ack <- x
 	}()
 	deq.Await()
+	enq.Await()
 
 	it.Then(t).Should(
 		it.Fail(bridge.Status).Contain("deadline"),

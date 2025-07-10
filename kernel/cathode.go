@@ -96,7 +96,13 @@ func (k *Dequeuer) Await() {
 // waiting for message from event buses and queues and schedules it for delivery.
 func (k *Dequeuer) receive() {
 	asker := func() {
-		seq, err := k.Cathode.Ask(k.context)
+		var seq []swarm.Bag
+		err := k.Config.Backoff.Retry(
+			func() (exx error) {
+				seq, exx = k.Cathode.Ask(k.context)
+				return
+			},
+		)
 		if k.Config.StdErr != nil && err != nil {
 			k.Config.StdErr <- swarm.ErrDequeue.With(err)
 			return
@@ -171,12 +177,20 @@ func Dequeue[T any](k *Dequeuer, cat string, codec Decoder[T]) ( /*rcv*/ <-chan 
 	// emitter routine
 	acks := func(msg swarm.Msg[T]) {
 		if msg.Error == nil {
-			err := k.Cathode.Ack(k.context, msg.Digest)
+			err := k.Config.Backoff.Retry(
+				func() error {
+					return k.Cathode.Ack(k.context, msg.Digest)
+				},
+			)
 			if k.Config.StdErr != nil && err != nil {
 				k.Config.StdErr <- swarm.ErrDequeue.With(err)
 			}
 		} else {
-			err := k.Cathode.Err(k.context, msg.Digest, msg.Error)
+			err := k.Config.Backoff.Retry(
+				func() error {
+					return k.Cathode.Err(k.context, msg.Digest, msg.Error)
+				},
+			)
 			if k.Config.StdErr != nil && err != nil {
 				k.Config.StdErr <- swarm.ErrDequeue.With(err)
 			}
