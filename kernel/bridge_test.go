@@ -17,9 +17,6 @@ import (
 	"github.com/fogfish/swarm/kernel/encoding"
 )
 
-// controls yield time before kernel is closed
-const yield_before_close = 50 * time.Millisecond
-
 func TestBridge(t *testing.T) {
 	cfg := newConfig()
 	// Config Kernel for extreme thresholds

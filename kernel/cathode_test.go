@@ -18,41 +18,37 @@ import (
 )
 
 func TestDequeuer(t *testing.T) {
+	cfg := newConfig()
+
 	codec := encoding.ForTyped[string]()
 	mock := mockFactory{}
 	none := mock.Cathode(nil, nil)
 	pass := mock.Cathode(make(chan string), mock.Bag(1))
 
 	t.Run("Kernel", func(t *testing.T) {
-		k := New(nil, NewDequeuer(newMockCathode(nil, nil), swarm.NewConfig()))
+		k := New(nil, NewDequeuer(newMockCathode(nil, nil), cfg.kernel))
 		go func() {
-			time.Sleep(yield_before_close)
+			time.Sleep(cfg.yieldBeforeClose)
 			k.Close()
 		}()
 		k.Await()
 	})
 
 	t.Run("None", func(t *testing.T) {
-		cfg := swarm.NewConfig()
-		cfg.PollFrequency = 1 * time.Second
-		k := NewDequeuer(none, cfg)
+		k := NewDequeuer(none, cfg.kernel)
 		go k.Await()
 		k.Close()
 	})
 
 	t.Run("Idle", func(t *testing.T) {
-		cfg := swarm.NewConfig()
-		cfg.PollFrequency = 1 * time.Second
-		k := NewDequeuer(none, cfg)
+		k := NewDequeuer(none, cfg.kernel)
 		Dequeue(k, "test", codec)
 		go k.Await()
 		k.Close()
 	})
 
 	t.Run("Dequeue.1", func(t *testing.T) {
-		cfg := swarm.NewConfig()
-		cfg.PollFrequency = 10 * time.Millisecond
-		k := NewDequeuer(pass, cfg)
+		k := NewDequeuer(pass, cfg.kernel)
 		rcv, ack := Dequeue(k, "test", codec)
 		go k.Await()
 
@@ -65,9 +61,7 @@ func TestDequeuer(t *testing.T) {
 	})
 
 	t.Run("Dequeue.1.Context", func(t *testing.T) {
-		cfg := swarm.NewConfig()
-		cfg.PollFrequency = 10 * time.Millisecond
-		k := NewDequeuer(pass, cfg)
+		k := NewDequeuer(pass, cfg.kernel)
 		rcv, ack := Dequeue(k, "test", codec)
 		go k.Await()
 
