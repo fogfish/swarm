@@ -13,35 +13,38 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fogfish/it"
+	"github.com/fogfish/it/v2"
 	"github.com/fogfish/swarm/kernel/backoff"
 )
 
 func TestConst(t *testing.T) {
 	seq := backoff.Const(1*time.Millisecond, 3).Seq()
 
-	it.Ok(t).
-		If(len(seq)).Equal(3).
-		IfTrue(seq[0] == seq[1]).
-		IfTrue(seq[1] == seq[2])
+	it.Then(t).Should(
+		it.Equal(len(seq), 3),
+		it.Equal(seq[0], seq[1]),
+		it.Equal(seq[1], seq[2]),
+	)
 }
 
 func TestLinera(t *testing.T) {
 	seq := backoff.Linear(1*time.Millisecond, 3).Seq()
 
-	it.Ok(t).
-		If(len(seq)).Equal(3).
-		IfTrue(seq[0] < seq[1]).
-		IfTrue(seq[1] < seq[2])
+	it.Then(t).Should(
+		it.Equal(len(seq), 3),
+		it.Less(seq[0], seq[1]),
+		it.Less(seq[1], seq[2]),
+	)
 }
 
 func TestExp(t *testing.T) {
 	seq := backoff.Exp(1*time.Millisecond, 3, 0.5).Seq()
 
-	it.Ok(t).
-		If(len(seq)).Equal(3).
-		IfTrue(seq[0] < seq[1]).
-		IfTrue(seq[1] < seq[2])
+	it.Then(t).Should(
+		it.Equal(len(seq), 3),
+		it.Less(seq[0], seq[1]),
+		it.Less(seq[1], seq[2]),
+	)
 }
 
 func TestDeadline(t *testing.T) {
@@ -50,8 +53,9 @@ func TestDeadline(t *testing.T) {
 		Deadline(5 * time.Millisecond).
 		Seq()
 
-	it.Ok(t).
-		If(len(seq)).Equal(5)
+	it.Then(t).Should(
+		it.Equal(len(seq), 5),
+	)
 }
 
 func TestRetrySuccess(t *testing.T) {
@@ -64,9 +68,10 @@ func TestRetrySuccess(t *testing.T) {
 		},
 	)
 
-	it.Ok(t).
-		IfNil(err).
-		If(n).Equal(1)
+	it.Then(t).Should(
+		it.Nil(err),
+		it.Equal(n, 1),
+	)
 }
 
 func TestRetryFail(t *testing.T) {
@@ -79,7 +84,9 @@ func TestRetryFail(t *testing.T) {
 		},
 	)
 
-	it.Ok(t).
-		IfNotNil(err).
-		If(n).Equal(3)
+	it.Then(t).ShouldNot(
+		it.Nil(err),
+	).Should(
+		it.Equal(n, 3),
+	)
 }
