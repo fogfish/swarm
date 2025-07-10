@@ -32,9 +32,12 @@ type User struct {
 type Evt = swarm.Event[swarm.Meta, User]
 
 func TestDequeueType(t *testing.T) {
+	cfg := swarm.NewConfig()
+	cfg.PollFrequency = 1 * time.Millisecond
+
 	user := User{ID: "id", Text: "user"}
 
-	k := kernel.NewDequeuer(mockCathode("User", user), swarm.Config{})
+	k := kernel.NewDequeuer(mockCathode("User", user), cfg)
 	go func() {
 		time.Sleep(yield_before_close)
 		k.Close()
@@ -58,12 +61,15 @@ func TestDequeueType(t *testing.T) {
 }
 
 func TestDequeueEvent(t *testing.T) {
+	cfg := swarm.NewConfig()
+	cfg.PollFrequency = 1 * time.Millisecond
+
 	obj := Evt{
 		Meta: &swarm.Meta{Type: "User"},
 		Data: &User{ID: "id", Text: "user"},
 	}
 
-	k := kernel.NewDequeuer(mockCathode("User", obj), swarm.Config{})
+	k := kernel.NewDequeuer(mockCathode("User", obj), cfg)
 	go func() {
 		time.Sleep(yield_before_close)
 		k.Close()
@@ -88,9 +94,12 @@ func TestDequeueEvent(t *testing.T) {
 }
 
 func TestDequeueBytes(t *testing.T) {
+	cfg := swarm.NewConfig()
+	cfg.PollFrequency = 1 * time.Millisecond
+
 	user := User{ID: "id", Text: "user"}
 
-	k := kernel.NewDequeuer(mockCathode("User", user), swarm.Config{})
+	k := kernel.NewDequeuer(mockCathode("User", user), cfg)
 	go func() {
 		time.Sleep(yield_before_close)
 		k.Close()

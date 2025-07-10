@@ -20,8 +20,8 @@ import (
 )
 
 func TestNewTyped(t *testing.T) {
-	mock := mockEmitter(10)
-	k := kernel.NewEnqueuer(mock, swarm.Config{})
+	mock := mockEmitter()
+	k := kernel.NewEnqueuer(mock, swarm.NewConfig())
 
 	for _, q := range []*enqueue.EmitterTyped[User]{
 		enqueue.NewTyped[User](k),
@@ -38,8 +38,8 @@ func TestNewTyped(t *testing.T) {
 }
 
 func TestNewEvent(t *testing.T) {
-	mock := mockEmitter(10)
-	k := kernel.NewEnqueuer(mock, swarm.Config{})
+	mock := mockEmitter()
+	k := kernel.NewEnqueuer(mock, swarm.NewConfig())
 
 	t.Run("DefaultCodec", func(t *testing.T) {
 		q := enqueue.NewEvent[Evt](k)
@@ -86,8 +86,8 @@ func TestNewEvent(t *testing.T) {
 //
 
 func TestNewBytes(t *testing.T) {
-	mock := mockEmitter(10)
-	k := kernel.NewEnqueuer(mock, swarm.Config{})
+	mock := mockEmitter()
+	k := kernel.NewEnqueuer(mock, swarm.NewConfig())
 
 	for _, q := range []*enqueue.EmitterBytes{
 		enqueue.NewBytes(k, encoding.ForBytes("User")),
