@@ -209,8 +209,8 @@ go get -u github.com/fogfish/swarm
 - [Inspiration](#inspiration)
 - [Getting started](#getting-started)
   - [Quick example](#quick-example)
-  - [Produce (enqueue) messages](#produce-enqueue-messages)
-  - [Consume (dequeue) messages](#consume-dequeue-messages)
+  - [Produce (emit) messages](#produce-emit-messages)
+  - [Consume (listen) messages](#consume-listen-messages)
   - [Configure library behavior](#configure-library-behavior)
   - [Message Delivery Guarantees](#message-delivery-guarantees)
   - [Delayed Guarantee vs Guarantee](#delayed-guarantee-vs-guarantee)
@@ -240,8 +240,8 @@ import (
 
   "github.com/fogfish/swarm"
   "github.com/fogfish/swarm/broker/sqs"
-  "github.com/fogfish/swarm/enqueue"
-  "github.com/fogfish/swarm/dequeue"
+  "github.com/fogfish/swarm/emit"
+  "github.com/fogfish/swarm/listen"
 )
 
 func main() {
@@ -253,8 +253,8 @@ func main() {
 	}
 
   // create Golang channels
-  rcv, ack := dequeue.Typed[string](q)
-  out := swarm.LogDeadLetters(enqueue.Typed[string](q))
+  rcv, ack := listen.Typed[string](q)
+  out := swarm.LogDeadLetters(emit.Typed[string](q))
 
   // use Golang channels for I/O
   go func() {
@@ -271,14 +271,14 @@ func main() {
 Check the design pattern [Distributed event-driven Golang channels](./doc/pattern.md) for deep-dive into library philosophy. Also note, each supported broker comes with runnable examples that shows the library. 
 
 
-### Produce (enqueue) messages
+### Produce (emit) messages
 
 The following code snippet shows a typical flow of producing the messages using the library.
 
 ```go
 import (
   "github.com/fogfish/swarm/broker/sqs"
-  "github.com/fogfish/swarm/enqueue"
+  "github.com/fogfish/swarm/emit"
 )
 
 // Use pure Golang struct to define semantic of messages and events
@@ -294,7 +294,7 @@ q, err := sqs.New("name-of-the-queue"), /* config options */)
 // messages of type [Note] through the messaging broker. The first channel
 // is dedicated to emit messages. The second one is the dead letter queue that
 // contains failed transmissions. 
-enq, dlq := enqueue.Typed[Note](q)
+enq, dlq := emit.Typed[Note](q)
 
 // Enqueue message of type Note
 enq <- Note{ID: "note", Text: "some text"}
@@ -303,14 +303,14 @@ enq <- Note{ID: "note", Text: "some text"}
 q.Close()
 ```
 
-### Consume (dequeue) messages
+### Consume (listen) messages
 
 The following code snippet shows a typical flow of consuming the messages using the library.
 
 ```go
 import (
   "github.com/fogfish/swarm/broker/sqs"
-  "github.com/fogfish/swarm/dequeue"
+  "github.com/fogfish/swarm/listen"
 )
 
 // Use pure Golang struct to define semantic of messages and events
@@ -326,7 +326,7 @@ q, err := sqs.New("name-of-the-queue", /* config options */)
 // messages of type Note from the messaging broker. The first channel
 // is dedicated to receive messages. The second one is the channel to
 // acknowledge consumption  
-deq, ack := dequeue.Typed[Note](q)
+deq, ack := listen.Typed[Note](q)
 
 // consume messages and then acknowledge it
 go func() {
@@ -365,7 +365,7 @@ Usage of Golang channels as an abstraction raises a concern about grade of servi
 
 **At Most Once** is best effort policy, where a message is published without any formal acknowledgement of receipt, and it isn't replayed. Some messages can be lost as subscribers are not required to acknowledge receipt.  
 
-The library implements asymmetric approaches for message handling. In the **enqueue** path, buffered Golang channels are used for both message emission and managing dead-letter queues. Similarly, the **dequeue** path uses buffered Golang channels to deliver messages to the consumer.   
+The library implements asymmetric approaches for message handling. In the **emit** path, buffered Golang channels are used for both message emission and managing dead-letter queues. Similarly, the **listen** path uses buffered Golang channels to deliver messages to the consumer.   
 
 ```go
 // Spawn a new instance of the messaging broker using At Most Once policy.
@@ -374,35 +374,35 @@ q, err := sqs.New("name-of-the-queue",
   swarm.WithPolicyAtMostOnce(1000),
 )
 
-// for compatibility reasons two channels are returned on the enqueue path but
+// for compatibility reasons two channels are returned on the emit path but
 // dead-letter-queue is nil
-enq, dlq := enqueue.Typed[Note](q)
+enq, dlq := emit.Typed[Note](q)
 
-// for compatibility reasons two channels are returned on the dequeue path but
+// for compatibility reasons two channels are returned on the listen path but
 // ack channel acts as /dev/null discards any sent message
-deq, ack := dequeue.Typed[Note](q)
+deq, ack := listen.Typed[Note](q)
 ```
 
 **At Least Once** is the default policy used by the library. The policy assume usage of "acknowledgement" protocol, which guarantees a message will be re-sent until it is formally acknowledged by a recipient. Messages should never be lost but it might be delivered more than once causing duplicate work to consumer.  
 
-The library also implements asymmetric approaches for message handling. In the **enqueue** path, unbuffered Golang channels are used to emit messages and manage the dead-letter queue, resulting in a delayed guarantee. This means that enqueuing additional messages is blocked until the dead-letter queue is fully resolved. Alternatively, the application can opt for a synchronous protocol to enqueue messages.
+The library also implements asymmetric approaches for message handling. In the **emit** path, unbuffered Golang channels are used to emit messages and manage the dead-letter queue, resulting in a delayed guarantee. This means that emitting additional messages is blocked until the dead-letter queue is fully resolved. Alternatively, the application can opt for a synchronous protocol to emit messages.
 
-In the **dequeue** path, buffered Golang channels are used to deliver messages to the consumer and acknowledge their processing. While consumer acknowledgment ensures reliable message delivery, it may lead to message duplication.
+In the **listen** path, buffered Golang channels are used to deliver messages to the consumer and acknowledge their processing. While consumer acknowledgment ensures reliable message delivery, it may lead to message duplication.
 
 ```go
 // Spawn a new instance of the messaging broker using At Least Once policy.
 // At Least Once policy is the default one, no needs to explicitly declare it.
-// Use it only if you need to define other capacity for dequeue channel than
+// Use it only if you need to define other capacity for listen channel than
 // the default one, which creates unbuffered channel
 q, err := sqs.New("name-of-the-queue",
   swarm.WithPolicyAtLeastOnce(1000),
 )
 
 // both channels are unbuffered
-enq, dlq := enqueue.Typed[Note](q)
+enq, dlq := emit.Typed[Note](q)
 
 // buffered channels of capacity n
-deq, ack := dequeue.Typed[Note](q)
+deq, ack := listen.Typed[Note](q)
 ```
 
 **Exactly Once** is not supported by the library yet.
@@ -413,7 +413,7 @@ deq, ack := dequeue.Typed[Note](q)
 Usage of **At Least Once** policy (unbuffered channels) provides the delayed guarantee for producers. Let's consider the following example. If queue broker fails to send message `A` then the channel `enq` is blocked at sending message `B` until the program consumes message `A` from the dead-letter queue channel.
 
 ```go
-enq, dlq := enqueue.Typed[User](q)
+enq, dlq := emit.Typed[User](q)
 
 enq <- User{ID: "A", Text: "some text by A"} // failed to send
 enq <- User{ID: "B", Text: "some text by B"} // blocked until dlq is processed 
@@ -424,9 +424,9 @@ The delayed guarantee is efficient on batch processing, pipelining but might cau
 
 ```go
 // Creates "synchronous" variant of the queue
-user := enqueue.NewTyped[User](q)
+user := emit.NewTyped[User](q)
 
-// Synchronously enqueue the message. It ensure that message is scheduled for
+// Synchronously emit the message. It ensure that message is scheduled for
 // delivery to remote peer once function successfully returns.
 if err := user.Enq(context.Background(), &User{ID: "A", Text: "some text by A"}); err != nil {
   // handle error
@@ -438,8 +438,8 @@ if err := user.Enq(context.Background(), &User{ID: "A", Text: "some text by A"})
 The library guarantee ordering of the messages when they are produced over same Golang channel. Let's consider a following example:
 
 ```go
-user, _ := enqueue.Typed[User](q)
-note, _ := enqueue.Typed[Note](q)
+user, _ := emit.Typed[User](q)
+note, _ := emit.Typed[Note](q)
 
 user <- &User{ID: "A", Text: "some text by A"}
 note <- &Note{ID: "B", Text: "some note A"}
@@ -457,14 +457,15 @@ The library support slices of bytes `[]byte` as message type. It opens an opport
 
 ```go
 import (
-  queue "github.com/fogfish/swarm/queue/bytes"
+  "github.com/fogfish/swarm/emit"
+  "github.com/fogfish/swarm/listen"
 )
 
-enq, dlq := enqueue.Bytes(q, "Note")
-deq, ack := enqueue.Bytes(q, "Note")
+enq, dlq := emit.Bytes(q, codec)
+deq, ack := listen.Bytes(q, codec)
 ```
 
-Please see example about binary [producer](./broker/sqs/examples/enqueue/bytes/sqs.go) and [consumer](./broker/sqs/examples/dequeue/bytes/sqs.go).
+Please see example about binary [producer](./broker/sqs/examples/emit/bytes/sqs.go) and [consumer](./broker/sqs/examples/listen/bytes/sqs.go).
 
 
 ### Generic events
@@ -490,16 +491,16 @@ type User struct {
 }
 
 // creates Golang channels to produce / consume messages
-enq, dlq := enqueue.Event[Meta, User](q)
-deq, ack := enqueue.Event[Meta, User](q)
+enq, dlq := emit.Event[Meta, User](q)
+deq, ack := listen.Event[Meta, User](q)
 ```
 
-Please see example about event [producer](./broker/sqs/examples/enqueue/event/sqs.go) and [consumer](./broker/sqs/examples/dequeue/event/sqs.go).
+Please see example about event [producer](./broker/sqs/examples/emit/event/sqs.go) and [consumer](./broker/sqs/examples/listen/event/sqs.go).
 
 
 ### Error Handling
 
-The error handling on channel level is governed either by [dead-letter queue](#message-delivery-guarantees) or [acknowledge protocol](#consume-dequeue-messages). The library provides `swarm.WithStdErr` configuration option to pass the side channel to consume global errors. Use it as top level error handler. 
+The error handling on channel level is governed either by [dead-letter queue](#message-delivery-guarantees) or [acknowledge protocol](#consume-listen-messages). The library provides `swarm.WithStdErr` configuration option to pass the side channel to consume global errors. Use it as top level error handler. 
 
 ```go
 stderr := make(chan error)
@@ -522,7 +523,7 @@ The existing message routing architecture assumes that a micro-batch of messages
 Send negative acknowledgement to `ack` channel to indicate error on message processing.
 
 ```go
-deq, ack := dequeue.Typed[Note](q)
+deq, ack := listen.Typed[Note](q)
 
 // consume messages and then acknowledge it
 for msg := range deq {
@@ -538,7 +539,7 @@ for msg := range deq {
 
 ### Serverless 
 
-The library primarily support development of serverless event-driven application using AWS service. The library provides AWS CDK Golang constructs to spawn consumers. See example of [serverless consumer](./broker/eventbridge/examples/dequeue/typed/eventbridge.go) and corresponding AWS CDK [application](./broker/eventbridge/examples/serverless/eventbridge.go).
+The library primarily support development of serverless event-driven application using AWS service. The library provides AWS CDK Golang constructs to spawn consumers. See example of [serverless consumer](./broker/eventbridge/examples/listen/typed/eventbridge.go) and corresponding AWS CDK [application](./broker/eventbridge/examples/serverless/eventbridge.go).
 
 It consistently implements a pattern - "create Broker, attach Sinks".  
 
@@ -583,23 +584,24 @@ func main() {
 
 ### Race condition in Serverless
 
-In a serverless environment, performing dequeue and enqueue operations can lead to race conditions. Specifically, the dequeue loop may complete before other emitted messages are processed.
+In a serverless environment, performing listen and emit operations can lead to race conditions. Specifically, the listen loop may complete before other emitted messages are processed.
 
 ```go
-rcv, ack := dequeue.Typed[/* .. */](broker1)
-snd, dlq := enqueue.Typed[/* .. */](broker2)
+rcv, ack := listen.Typed[/* .. */](broker1)
+snd, dlq := emit.Typed[/* .. */](broker2)
 
 for msg := range rcv {
   snd <- // ...
 
   // The ack would cause sleep of function in serverless.
   // snd channel might not be flushed before function sleep.
-  // The library does not provide yet ultimate solution.  
+  // This issue has been resolved with the emission flush mechanism
+  // that ensures all pending messages are sent before Lambda suspension.
   ack <- msg   
 }
 ```
 
-Unfortunately, the library does not provide yet ultimate solution. Either sleep of sync senders are required. 
+**Note**: This race condition has been resolved in the current version. The library now implements an automatic emission flush mechanism in serverless environments that ensures all pending messages are sent to the broker before the Lambda function suspends execution. 
 
 
 
