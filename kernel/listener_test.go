@@ -26,7 +26,7 @@ func TestDequeuer(t *testing.T) {
 	pass := mock.Cathode(make(chan string), mock.Bag(1))
 
 	t.Run("Kernel", func(t *testing.T) {
-		k := New(nil, NewDequeuer(newMockCathode(nil, nil), cfg.kernel))
+		k := New(nil, NewListener(newMockCathode(nil, nil), cfg.kernel))
 		go func() {
 			time.Sleep(cfg.yieldBeforeClose)
 			k.Close()
@@ -35,21 +35,21 @@ func TestDequeuer(t *testing.T) {
 	})
 
 	t.Run("None", func(t *testing.T) {
-		k := NewDequeuer(none, cfg.kernel)
+		k := NewListener(none, cfg.kernel)
 		go k.Await()
 		k.Close()
 	})
 
 	t.Run("Idle", func(t *testing.T) {
-		k := NewDequeuer(none, cfg.kernel)
-		Dequeue(k, "test", codec)
+		k := NewListener(none, cfg.kernel)
+		RecvChan(k, "test", codec)
 		go k.Await()
 		k.Close()
 	})
 
 	t.Run("Dequeue.1", func(t *testing.T) {
-		k := NewDequeuer(pass, cfg.kernel)
-		rcv, ack := Dequeue(k, "test", codec)
+		k := NewListener(pass, cfg.kernel)
+		rcv, ack := RecvChan(k, "test", codec)
 		go k.Await()
 
 		ack <- <-rcv
@@ -61,8 +61,8 @@ func TestDequeuer(t *testing.T) {
 	})
 
 	t.Run("Dequeue.1.Context", func(t *testing.T) {
-		k := NewDequeuer(pass, cfg.kernel)
-		rcv, ack := Dequeue(k, "test", codec)
+		k := NewListener(pass, cfg.kernel)
+		rcv, ack := RecvChan(k, "test", codec)
 		go k.Await()
 
 		msg := <-rcv
@@ -79,8 +79,8 @@ func TestDequeuer(t *testing.T) {
 		cfg := swarm.NewConfig()
 		cfg.CapAck = 4
 		cfg.PollFrequency = 1 * time.Millisecond
-		k := NewDequeuer(pass, cfg)
-		rcv, ack := Dequeue(k, "test", codec)
+		k := NewListener(pass, cfg)
+		rcv, ack := RecvChan(k, "test", codec)
 		go k.Await()
 
 		ack <- <-rcv

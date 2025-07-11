@@ -16,9 +16,9 @@ import (
 
 	"github.com/fogfish/it/v2"
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/dequeue"
 	"github.com/fogfish/swarm/kernel"
 	"github.com/fogfish/swarm/kernel/encoding"
+	dequeue "github.com/fogfish/swarm/listen"
 )
 
 // controls yield time before kernel is closed
@@ -37,7 +37,7 @@ func TestDequeueType(t *testing.T) {
 
 	user := User{ID: "id", Text: "user"}
 
-	k := kernel.NewDequeuer(mockCathode("User", user), cfg)
+	k := kernel.NewListener(mockCathode("User", user), cfg)
 	go func() {
 		time.Sleep(yield_before_close)
 		k.Close()
@@ -69,7 +69,7 @@ func TestDequeueEvent(t *testing.T) {
 		Data: &User{ID: "id", Text: "user"},
 	}
 
-	k := kernel.NewDequeuer(mockCathode("User", obj), cfg)
+	k := kernel.NewListener(mockCathode("User", obj), cfg)
 	go func() {
 		time.Sleep(yield_before_close)
 		k.Close()
@@ -99,7 +99,7 @@ func TestDequeueBytes(t *testing.T) {
 
 	user := User{ID: "id", Text: "user"}
 
-	k := kernel.NewDequeuer(mockCathode("User", user), cfg)
+	k := kernel.NewListener(mockCathode("User", user), cfg)
 	go func() {
 		time.Sleep(yield_before_close)
 		k.Close()

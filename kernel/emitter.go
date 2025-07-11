@@ -17,7 +17,7 @@ import (
 	"github.com/fogfish/swarm/kernel/broadcast"
 )
 
-// Emitter defines on-the-wire protocol for [swarm.Bag], covering egress.
+// Emitter defines on-the-wire protocol for [swarm.Bag], covering egress use-cases
 type Emitter interface {
 	Enq(context.Context, swarm.Bag) error
 }
@@ -28,8 +28,8 @@ type Encoder[T any] interface {
 	Encode(T) ([]byte, error)
 }
 
-// Messaging Egress port
-type Enqueuer struct {
+// The egress part of the kernel is used to enqueue messages into message broker.
+type EmitterKernel struct {
 	sync.WaitGroup
 
 	// Control-plane stop channel used by go routines to stop I/O on data channels
@@ -47,15 +47,16 @@ type Enqueuer struct {
 	Emitter Emitter
 }
 
-func NewEnqueuer(emitter Emitter, config swarm.Config) *Enqueuer {
+// Creates a new emitter kernel with the given emitter and configuration.
+func NewEmitter(emitter Emitter, config swarm.Config) *EmitterKernel {
 	return builder().Enqueuer(emitter, config)
 }
 
-// Creates instance of broker writer
-func newEnqueuer(emitter Emitter, config swarm.Config) *Enqueuer {
+// Creates a new emitter kernel with the given emitter and configuration.
+func newEmitter(emitter Emitter, config swarm.Config) *EmitterKernel {
 	ctx, can := context.WithCancel(context.Background())
 
-	return &Enqueuer{
+	return &EmitterKernel{
 		Config:  config,
 		context: ctx,
 		cancel:  can,
@@ -63,20 +64,20 @@ func newEnqueuer(emitter Emitter, config swarm.Config) *Enqueuer {
 	}
 }
 
-// Close enqueuer
-func (k *Enqueuer) Close() {
+// Close emitter
+func (k *EmitterKernel) Close() {
 	k.cancel()
 	k.WaitGroup.Wait()
 }
 
 // Await enqueue
-func (k *Enqueuer) Await() {
+func (k *EmitterKernel) Await() {
 	<-k.context.Done()
 	k.WaitGroup.Wait()
 }
 
-// Enqueue creates pair of channels within kernel to enqueue messages
-func Enqueue[T any](k *Enqueuer, cat string, codec Encoder[T]) ( /*snd*/ chan<- T /*dlq*/, <-chan T) {
+// Creates pair of channels within kernel to emit messages to broker.
+func EmitChan[T any](k *EmitterKernel, cat string, codec Encoder[T]) ( /*snd*/ chan<- T /*dlq*/, <-chan T) {
 	snd := make(chan T, k.Config.CapOut)
 	dlq := make(chan T, k.Config.CapDlq)
 

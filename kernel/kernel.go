@@ -9,33 +9,33 @@
 package kernel
 
 type Kernel struct {
-	*Enqueuer
-	*Dequeuer
+	*EmitterKernel
+	*ListenerKernel
 }
 
-func New(enqueuer *Enqueuer, dequeuer *Dequeuer) *Kernel {
+func New(enqueuer *EmitterKernel, dequeuer *ListenerKernel) *Kernel {
 	return &Kernel{
-		Enqueuer: enqueuer,
-		Dequeuer: dequeuer,
+		EmitterKernel:  enqueuer,
+		ListenerKernel: dequeuer,
 	}
 }
 
 func (k *Kernel) Close() {
-	if k.Dequeuer != nil {
-		k.Dequeuer.Close()
+	if k.ListenerKernel != nil {
+		k.ListenerKernel.Close()
 	}
 
-	if k.Enqueuer != nil {
-		k.Enqueuer.Close()
+	if k.EmitterKernel != nil {
+		k.EmitterKernel.Close()
 	}
 }
 
 func (k *Kernel) Await() {
-	if k.Dequeuer != nil {
-		k.Dequeuer.Await()
+	if k.ListenerKernel != nil {
+		k.ListenerKernel.Await()
 	}
 
-	if k.Enqueuer != nil {
-		k.Enqueuer.Await()
+	if k.EmitterKernel != nil {
+		k.EmitterKernel.Await()
 	}
 }

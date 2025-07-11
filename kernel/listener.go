@@ -17,8 +17,8 @@ import (
 	"github.com/fogfish/swarm"
 )
 
-// Cathode defines on-the-wire protocol for [swarm.Bag], covering the ingress.
-type Cathode interface {
+// Listener defines on-the-wire protocol for [swarm.Bag], covering the ingress use-cases.
+type Listener interface {
 	Ack(ctx context.Context, digest string) error
 	Err(ctx context.Context, digest string, err error) error
 	Ask(ctx context.Context) ([]swarm.Bag, error)
@@ -30,11 +30,12 @@ type Decoder[T any] interface {
 	Decode([]byte) (T, error)
 }
 
+// Routes messages from the ingress to the destination channel.
 type Router = interface {
 	Route(context.Context, swarm.Bag) error
 }
 
-type Dequeuer struct {
+type ListenerKernel struct {
 	sync.WaitGroup
 	sync.RWMutex
 
@@ -48,16 +49,16 @@ type Dequeuer struct {
 	// event router, binds category with destination channel
 	router map[string]Router
 
-	// Cathode is the reader port on message broker
-	Cathode Cathode
+	// Listener is the reader port on message broker
+	Listener Listener
 }
 
-func NewDequeuer(cathode Cathode, config swarm.Config) *Dequeuer {
-	return builder().Dequeuer(cathode, config)
+func NewListener(listener Listener, config swarm.Config) *ListenerKernel {
+	return builder().Dequeuer(listener, config)
 }
 
 // Creates instance of broker reader
-func newDequeuer(cathode Cathode, config swarm.Config) *Dequeuer {
+func newListener(listener Listener, config swarm.Config) *ListenerKernel {
 	ctx, can := context.WithCancel(context.Background())
 
 	// Must not be 0
@@ -65,24 +66,24 @@ func newDequeuer(cathode Cathode, config swarm.Config) *Dequeuer {
 		config.PollerPool = 1
 	}
 
-	return &Dequeuer{
-		Config:  config,
-		context: ctx,
-		cancel:  can,
-		router:  make(map[string]Router),
-		Cathode: cathode,
+	return &ListenerKernel{
+		Config:   config,
+		context:  ctx,
+		cancel:   can,
+		router:   make(map[string]Router),
+		Listener: listener,
 	}
 }
 
 // Closes broker reader, gracefully shutdowns all I/O
-func (k *Dequeuer) Close() {
+func (k *ListenerKernel) Close() {
 	k.cancel()
 	k.WaitGroup.Wait()
 }
 
 // Await reader to complete
-func (k *Dequeuer) Await() {
-	if spawner, ok := k.Cathode.(interface{ Run(context.Context) }); ok {
+func (k *ListenerKernel) Await() {
+	if spawner, ok := k.Listener.(interface{ Run(context.Context) }); ok {
 		go spawner.Run(k.context)
 	}
 
@@ -94,12 +95,12 @@ func (k *Dequeuer) Await() {
 
 // internal infinite receive loop.
 // waiting for message from event buses and queues and schedules it for delivery.
-func (k *Dequeuer) receive() {
+func (k *ListenerKernel) receive() {
 	asker := func() {
 		var seq []swarm.Bag
 		err := k.Config.Backoff.Retry(
 			func() (exx error) {
-				seq, exx = k.Cathode.Ask(k.context)
+				seq, exx = k.Listener.Ask(k.context)
 				return
 			},
 		)
@@ -132,7 +133,7 @@ func (k *Dequeuer) receive() {
 					slog.Any("bag", bag),
 				)
 				if k.Config.FailOnUnknownCategory {
-					k.Cathode.Err(k.context, bag.Digest, swarm.ErrDequeue.With(swarm.ErrCatUnknown.With(nil, bag.Category)))
+					k.Listener.Err(k.context, bag.Digest, swarm.ErrDequeue.With(swarm.ErrCatUnknown.With(nil, bag.Category)))
 				}
 			}
 		}
@@ -165,8 +166,8 @@ func (k *Dequeuer) receive() {
 	}
 }
 
-// Dequeue creates pair of channels within kernel to enqueue messages
-func Dequeue[T any](k *Dequeuer, cat string, codec Decoder[T]) ( /*rcv*/ <-chan swarm.Msg[T] /*ack*/, chan<- swarm.Msg[T]) {
+// RecvChan creates pair of channels within kernel to enqueue messages
+func RecvChan[T any](k *ListenerKernel, cat string, codec Decoder[T]) ( /*rcv*/ <-chan swarm.Msg[T] /*ack*/, chan<- swarm.Msg[T]) {
 	rcv := make(chan swarm.Msg[T], k.Config.CapRcv)
 	ack := make(chan swarm.Msg[T], k.Config.CapAck)
 
@@ -179,7 +180,7 @@ func Dequeue[T any](k *Dequeuer, cat string, codec Decoder[T]) ( /*rcv*/ <-chan 
 		if msg.Error == nil {
 			err := k.Config.Backoff.Retry(
 				func() error {
-					return k.Cathode.Ack(k.context, msg.Digest)
+					return k.Listener.Ack(k.context, msg.Digest)
 				},
 			)
 			if k.Config.StdErr != nil && err != nil {
@@ -188,7 +189,7 @@ func Dequeue[T any](k *Dequeuer, cat string, codec Decoder[T]) ( /*rcv*/ <-chan 
 		} else {
 			err := k.Config.Backoff.Retry(
 				func() error {
-					return k.Cathode.Err(k.context, msg.Digest, msg.Error)
+					return k.Listener.Err(k.context, msg.Digest, msg.Error)
 				},
 			)
 			if k.Config.StdErr != nil && err != nil {

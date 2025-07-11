@@ -14,14 +14,14 @@ import (
 
 	"github.com/fogfish/it/v2"
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/enqueue"
+	enqueue "github.com/fogfish/swarm/emit"
 	"github.com/fogfish/swarm/kernel"
 	"github.com/fogfish/swarm/kernel/encoding"
 )
 
 func TestNewTyped(t *testing.T) {
 	mock := mockEmitter()
-	k := kernel.NewEnqueuer(mock, swarm.NewConfig())
+	k := kernel.NewEmitter(mock, swarm.NewConfig())
 
 	for _, q := range []*enqueue.EmitterTyped[User]{
 		enqueue.NewTyped[User](k),
@@ -39,7 +39,7 @@ func TestNewTyped(t *testing.T) {
 
 func TestNewEvent(t *testing.T) {
 	mock := mockEmitter()
-	k := kernel.NewEnqueuer(mock, swarm.NewConfig())
+	k := kernel.NewEmitter(mock, swarm.NewConfig())
 
 	t.Run("DefaultCodec", func(t *testing.T) {
 		q := enqueue.NewEvent[Evt](k)
@@ -87,7 +87,7 @@ func TestNewEvent(t *testing.T) {
 
 func TestNewBytes(t *testing.T) {
 	mock := mockEmitter()
-	k := kernel.NewEnqueuer(mock, swarm.NewConfig())
+	k := kernel.NewEmitter(mock, swarm.NewConfig())
 
 	for _, q := range []*enqueue.EmitterBytes{
 		enqueue.NewBytes(k, encoding.ForBytes("User")),

@@ -16,7 +16,7 @@ import (
 	"github.com/fogfish/swarm/kernel/broadcast"
 )
 
-// Bridge Lambda's main function to [Cathode] interface
+// Bridge Lambda's main function to [Listener] interface
 // Bridge is single threaded and should be used in the context of Lambda handler only.
 //
 // Bridge implements Ask interface for the Lambda handler to receive messages.

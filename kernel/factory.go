@@ -55,15 +55,15 @@ func (b *factory) Bridge(cfg swarm.Config) *Bridge {
 	return bridge
 }
 
-func (b *factory) Enqueuer(emitter Emitter, cfg swarm.Config) *Enqueuer {
-	enqueuer := newEnqueuer(emitter, cfg)
+func (b *factory) Enqueuer(emitter Emitter, cfg swarm.Config) *EmitterKernel {
+	enqueuer := newEmitter(emitter, cfg)
 	enqueuer.ctrlPreempt = b.ctrlPreempt
 
 	return enqueuer
 }
 
-func (b *factory) Dequeuer(cathode Cathode, config swarm.Config) *Dequeuer {
-	dequeuer := newDequeuer(cathode, config)
+func (b *factory) Dequeuer(cathode Listener, config swarm.Config) *ListenerKernel {
+	dequeuer := newListener(cathode, config)
 
 	return dequeuer
 }

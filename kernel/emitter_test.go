@@ -27,7 +27,7 @@ func TestEnqueuer(t *testing.T) {
 
 	t.Run("Kernel", func(t *testing.T) {
 		emit := mock.Emitter(cfg)
-		k := New(NewEnqueuer(emit, cfg.kernel), nil)
+		k := New(NewEmitter(emit, cfg.kernel), nil)
 
 		go func() {
 			time.Sleep(cfg.yieldBeforeClose)
@@ -40,7 +40,7 @@ func TestEnqueuer(t *testing.T) {
 		emit := mock.Emitter(cfg)
 		k := mock.Enqueuer(emit, cfg)
 
-		Enqueue(k, "test", codec)
+		EmitChan(k, "test", codec)
 		k.Await()
 	})
 
@@ -48,7 +48,7 @@ func TestEnqueuer(t *testing.T) {
 		emit := mock.Emitter(cfg)
 		k := mock.Enqueuer(emit, cfg)
 
-		snd, _ := Enqueue(k, "test", codec)
+		snd, _ := EmitChan(k, "test", codec)
 
 		snd <- "1"
 		it.Then(t).Should(
@@ -62,7 +62,7 @@ func TestEnqueuer(t *testing.T) {
 		emit := mock.Emitter(cfg)
 		k := mock.Enqueuer(emit, cfg)
 
-		snd, _ := Enqueue(k, "test", codec)
+		snd, _ := EmitChan(k, "test", codec)
 
 		snd <- "1"
 		k.Await()
@@ -78,7 +78,7 @@ func TestEnqueuer(t *testing.T) {
 		cfg.kernel.StdErr = err
 		k := mock.Enqueuer(looser{}, cfg)
 
-		snd, dlq := Enqueue(k, "test", codec)
+		snd, dlq := EmitChan(k, "test", codec)
 
 		snd <- "1"
 		it.Then(t).Should(
@@ -95,7 +95,7 @@ func TestEnqueuer(t *testing.T) {
 		cfg.kernel.StdErr = err
 		k := mock.Enqueuer(looser{}, cfg)
 
-		snd, dlq := Enqueue(k, "test", looser{})
+		snd, dlq := EmitChan(k, "test", looser{})
 
 		snd <- "1"
 		it.Then(t).Should(
@@ -110,7 +110,7 @@ func TestEnqueuer(t *testing.T) {
 		emit := mock.Emitter(cfg)
 		k := mock.Enqueuer(emit, cfg)
 
-		snd, _ := Enqueue(k, "test", codec)
+		snd, _ := EmitChan(k, "test", codec)
 
 		snd <- "1"
 		it.Then(t).Should(
@@ -134,7 +134,7 @@ func TestEnqueuer(t *testing.T) {
 		emit := mock.Emitter(cfg)
 		k := mock.Enqueuer(emit, cfg)
 
-		snd, _ := Enqueue(k, "test", codec)
+		snd, _ := EmitChan(k, "test", codec)
 
 		snd <- "1"
 		snd <- "2"
@@ -154,7 +154,7 @@ func TestEnqueuer(t *testing.T) {
 		emit := mock.Emitter(cfg)
 		k := mock.Enqueuer(emit, cfg)
 
-		snd, _ := Enqueue(k, "test", codec)
+		snd, _ := EmitChan(k, "test", codec)
 
 		snd <- "1"
 		snd <- "2"
@@ -176,7 +176,7 @@ func TestEnqueuer(t *testing.T) {
 
 		k := mock.Enqueuer(looser{}, cfg)
 
-		snd, dlq := Enqueue(k, "test", codec)
+		snd, dlq := EmitChan(k, "test", codec)
 
 		snd <- "1"
 		snd <- "2"
