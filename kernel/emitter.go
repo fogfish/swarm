@@ -29,7 +29,7 @@ type Encoder[T any] interface {
 }
 
 // The egress part of the kernel is used to enqueue messages into message broker.
-type EmitterKernel struct {
+type EmitterCore struct {
 	sync.WaitGroup
 
 	// Control-plane stop channel used by go routines to stop I/O on data channels
@@ -48,15 +48,15 @@ type EmitterKernel struct {
 }
 
 // Creates a new emitter kernel with the given emitter and configuration.
-func NewEmitter(emitter Emitter, config swarm.Config) *EmitterKernel {
+func NewEmitter(emitter Emitter, config swarm.Config) *EmitterCore {
 	return builder().Enqueuer(emitter, config)
 }
 
 // Creates a new emitter kernel with the given emitter and configuration.
-func newEmitter(emitter Emitter, config swarm.Config) *EmitterKernel {
+func newEmitter(emitter Emitter, config swarm.Config) *EmitterCore {
 	ctx, can := context.WithCancel(context.Background())
 
-	return &EmitterKernel{
+	return &EmitterCore{
 		Config:  config,
 		context: ctx,
 		cancel:  can,
@@ -65,19 +65,19 @@ func newEmitter(emitter Emitter, config swarm.Config) *EmitterKernel {
 }
 
 // Close emitter
-func (k *EmitterKernel) Close() {
+func (k *EmitterCore) Close() {
 	k.cancel()
 	k.WaitGroup.Wait()
 }
 
 // Await enqueue
-func (k *EmitterKernel) Await() {
+func (k *EmitterCore) Await() {
 	<-k.context.Done()
 	k.WaitGroup.Wait()
 }
 
 // Creates pair of channels within kernel to emit messages to broker.
-func EmitChan[T any](k *EmitterKernel, cat string, codec Encoder[T]) ( /*snd*/ chan<- T /*dlq*/, <-chan T) {
+func EmitChan[T any](k *EmitterCore, cat string, codec Encoder[T]) ( /*snd*/ chan<- T /*dlq*/, <-chan T) {
 	snd := make(chan T, k.Config.CapOut)
 	dlq := make(chan T, k.Config.CapDlq)
 

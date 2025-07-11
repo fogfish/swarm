@@ -15,7 +15,7 @@ import (
 )
 
 // Creates pair of channels to receive and acknowledge messages of type T
-func Typed[T any](q *kernel.ListenerKernel, codec ...kernel.Decoder[T]) (rcv <-chan swarm.Msg[T], ack chan<- swarm.Msg[T]) {
+func Typed[T any](q *kernel.ListenerCore, codec ...kernel.Decoder[T]) (rcv <-chan swarm.Msg[T], ack chan<- swarm.Msg[T]) {
 	var c kernel.Decoder[T]
 	if len(codec) == 0 {
 		c = encoding.ForTyped[T]()
@@ -27,7 +27,7 @@ func Typed[T any](q *kernel.ListenerKernel, codec ...kernel.Decoder[T]) (rcv <-c
 }
 
 // Creates pair of channels to receive and acknowledge events of type T
-func Event[E swarm.Event[M, T], M, T any](q *kernel.ListenerKernel, codec ...kernel.Decoder[swarm.Event[M, T]]) (<-chan swarm.Msg[swarm.Event[M, T]], chan<- swarm.Msg[swarm.Event[M, T]]) {
+func Event[E swarm.Event[M, T], M, T any](q *kernel.ListenerCore, codec ...kernel.Decoder[swarm.Event[M, T]]) (<-chan swarm.Msg[swarm.Event[M, T]], chan<- swarm.Msg[swarm.Event[M, T]]) {
 	var c kernel.Decoder[swarm.Event[M, T]]
 	if len(codec) == 0 {
 		c = encoding.ForEvent[E, M, T](q.Config.Realm, q.Config.Agent)
@@ -39,6 +39,6 @@ func Event[E swarm.Event[M, T], M, T any](q *kernel.ListenerKernel, codec ...ker
 }
 
 // Create pair of channels to receive and acknowledge pure binary
-func Bytes(q *kernel.ListenerKernel, codec kernel.Decoder[[]byte]) (<-chan swarm.Msg[[]byte], chan<- swarm.Msg[[]byte]) {
+func Bytes(q *kernel.ListenerCore, codec kernel.Decoder[[]byte]) (<-chan swarm.Msg[[]byte], chan<- swarm.Msg[[]byte]) {
 	return kernel.RecvChan(q, codec.Category(), codec)
 }

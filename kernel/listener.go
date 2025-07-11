@@ -35,7 +35,8 @@ type Router = interface {
 	Route(context.Context, swarm.Bag) error
 }
 
-type ListenerKernel struct {
+// The ingress part of the kernel is used to dequeue messages from message broker.
+type ListenerCore struct {
 	sync.WaitGroup
 	sync.RWMutex
 
@@ -53,12 +54,12 @@ type ListenerKernel struct {
 	Listener Listener
 }
 
-func NewListener(listener Listener, config swarm.Config) *ListenerKernel {
+func NewListener(listener Listener, config swarm.Config) *ListenerCore {
 	return builder().Dequeuer(listener, config)
 }
 
 // Creates instance of broker reader
-func newListener(listener Listener, config swarm.Config) *ListenerKernel {
+func newListener(listener Listener, config swarm.Config) *ListenerCore {
 	ctx, can := context.WithCancel(context.Background())
 
 	// Must not be 0
@@ -66,7 +67,7 @@ func newListener(listener Listener, config swarm.Config) *ListenerKernel {
 		config.PollerPool = 1
 	}
 
-	return &ListenerKernel{
+	return &ListenerCore{
 		Config:   config,
 		context:  ctx,
 		cancel:   can,
@@ -76,13 +77,13 @@ func newListener(listener Listener, config swarm.Config) *ListenerKernel {
 }
 
 // Closes broker reader, gracefully shutdowns all I/O
-func (k *ListenerKernel) Close() {
+func (k *ListenerCore) Close() {
 	k.cancel()
 	k.WaitGroup.Wait()
 }
 
 // Await reader to complete
-func (k *ListenerKernel) Await() {
+func (k *ListenerCore) Await() {
 	if spawner, ok := k.Listener.(interface{ Run(context.Context) }); ok {
 		go spawner.Run(k.context)
 	}
@@ -95,7 +96,7 @@ func (k *ListenerKernel) Await() {
 
 // internal infinite receive loop.
 // waiting for message from event buses and queues and schedules it for delivery.
-func (k *ListenerKernel) receive() {
+func (k *ListenerCore) receive() {
 	asker := func() {
 		var seq []swarm.Bag
 		err := k.Config.Backoff.Retry(
@@ -167,7 +168,7 @@ func (k *ListenerKernel) receive() {
 }
 
 // RecvChan creates pair of channels within kernel to enqueue messages
-func RecvChan[T any](k *ListenerKernel, cat string, codec Decoder[T]) ( /*rcv*/ <-chan swarm.Msg[T] /*ack*/, chan<- swarm.Msg[T]) {
+func RecvChan[T any](k *ListenerCore, cat string, codec Decoder[T]) ( /*rcv*/ <-chan swarm.Msg[T] /*ack*/, chan<- swarm.Msg[T]) {
 	rcv := make(chan swarm.Msg[T], k.Config.CapRcv)
 	ack := make(chan swarm.Msg[T], k.Config.CapAck)
 
