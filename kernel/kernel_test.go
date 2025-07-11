@@ -52,15 +52,15 @@ func (b *mockFactory) Bridge(cfg config, seq []swarm.Bag) *mockBridge {
 	return bridge
 }
 
-func (b *mockFactory) Emitter(cfg config) *mockEmitter {
+func (b *mockFactory) EmitterCore(cfg config) *mockEmitter {
 	return newMockEmitter(cfg)
 }
 
-func (b *mockFactory) Cathode(ack chan string, seq []swarm.Bag) *mockCathode {
+func (b *mockFactory) ListenerCore(ack chan string, seq []swarm.Bag) *mockListener {
 	return newMockCathode(ack, seq)
 }
 
-func (b *mockFactory) Enqueuer(emitter Emitter, cfg config) *EmitterCore {
+func (b *mockFactory) Emitter(emitter Emitter, cfg config) *EmitterCore {
 	enqueuer := newEmitter(emitter, cfg.kernel)
 	enqueuer.ctrlPreempt = b.ctrlPreempt
 
@@ -72,7 +72,7 @@ func (b *mockFactory) Enqueuer(emitter Emitter, cfg config) *EmitterCore {
 	return enqueuer
 }
 
-func (b *mockFactory) Dequeuer(cathode Listener, cfg config) *ListenerCore {
+func (b *mockFactory) Listener(cathode Listener, cfg config) *ListenerCore {
 	dequeuer := newListener(cathode, cfg.kernel)
 	// auto close is essential for testing
 	go func() {
@@ -171,25 +171,25 @@ func (e *mockEmitter) Enq(ctx context.Context, bag swarm.Bag) error {
 
 //------------------------------------------------------------------------------
 
-type mockCathode struct {
+type mockListener struct {
 	seq []swarm.Bag
 	ack chan string
 }
 
-func newMockCathode(ack chan string, seq []swarm.Bag) *mockCathode {
-	return &mockCathode{seq: seq, ack: ack}
+func newMockCathode(ack chan string, seq []swarm.Bag) *mockListener {
+	return &mockListener{seq: seq, ack: ack}
 }
 
-func (c *mockCathode) Ack(ctx context.Context, digest string) error {
+func (c *mockListener) Ack(ctx context.Context, digest string) error {
 	c.ack <- digest
 	return nil
 }
 
-func (c *mockCathode) Err(ctx context.Context, digest string, err error) error {
+func (c *mockListener) Err(ctx context.Context, digest string, err error) error {
 	c.ack <- digest
 	return nil
 }
 
-func (c *mockCathode) Ask(context.Context) ([]swarm.Bag, error) {
+func (c *mockListener) Ask(context.Context) ([]swarm.Bag, error) {
 	return c.seq, nil
 }

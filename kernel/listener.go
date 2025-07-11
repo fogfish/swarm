@@ -55,7 +55,7 @@ type ListenerCore struct {
 }
 
 func NewListener(listener Listener, config swarm.Config) *ListenerCore {
-	return builder().Dequeuer(listener, config)
+	return builder().Listener(listener, config)
 }
 
 // Creates instance of broker reader

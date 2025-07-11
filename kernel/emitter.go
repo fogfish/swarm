@@ -49,7 +49,7 @@ type EmitterCore struct {
 
 // Creates a new emitter kernel with the given emitter and configuration.
 func NewEmitter(emitter Emitter, config swarm.Config) *EmitterCore {
-	return builder().Enqueuer(emitter, config)
+	return builder().Emitter(emitter, config)
 }
 
 // Creates a new emitter kernel with the given emitter and configuration.

@@ -22,8 +22,8 @@ func TestDequeuer(t *testing.T) {
 
 	codec := encoding.ForTyped[string]()
 	mock := mockFactory{}
-	none := mock.Cathode(nil, nil)
-	pass := mock.Cathode(make(chan string), mock.Bag(1))
+	none := mock.ListenerCore(nil, nil)
+	pass := mock.ListenerCore(make(chan string), mock.Bag(1))
 
 	t.Run("Kernel", func(t *testing.T) {
 		k := New(nil, NewListener(newMockCathode(nil, nil), cfg.kernel))

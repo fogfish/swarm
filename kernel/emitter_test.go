@@ -26,7 +26,7 @@ func TestEnqueuer(t *testing.T) {
 	mock := mockFactory{}
 
 	t.Run("Kernel", func(t *testing.T) {
-		emit := mock.Emitter(cfg)
+		emit := mock.EmitterCore(cfg)
 		k := New(NewEmitter(emit, cfg.kernel), nil)
 
 		go func() {
@@ -37,16 +37,16 @@ func TestEnqueuer(t *testing.T) {
 	})
 
 	t.Run("None", func(t *testing.T) {
-		emit := mock.Emitter(cfg)
-		k := mock.Enqueuer(emit, cfg)
+		emit := mock.EmitterCore(cfg)
+		k := mock.Emitter(emit, cfg)
 
 		EmitChan(k, "test", codec)
 		k.Await()
 	})
 
 	t.Run("Enqueue.1", func(t *testing.T) {
-		emit := mock.Emitter(cfg)
-		k := mock.Enqueuer(emit, cfg)
+		emit := mock.EmitterCore(cfg)
+		k := mock.Emitter(emit, cfg)
 
 		snd, _ := EmitChan(k, "test", codec)
 
@@ -59,8 +59,8 @@ func TestEnqueuer(t *testing.T) {
 	})
 
 	t.Run("Enqueue.1.Shut", func(t *testing.T) {
-		emit := mock.Emitter(cfg)
-		k := mock.Enqueuer(emit, cfg)
+		emit := mock.EmitterCore(cfg)
+		k := mock.Emitter(emit, cfg)
 
 		snd, _ := EmitChan(k, "test", codec)
 
@@ -76,7 +76,7 @@ func TestEnqueuer(t *testing.T) {
 		cfg := newConfig()
 		err := make(chan error)
 		cfg.kernel.StdErr = err
-		k := mock.Enqueuer(looser{}, cfg)
+		k := mock.Emitter(looser{}, cfg)
 
 		snd, dlq := EmitChan(k, "test", codec)
 
@@ -93,7 +93,7 @@ func TestEnqueuer(t *testing.T) {
 		cfg := newConfig()
 		err := make(chan error)
 		cfg.kernel.StdErr = err
-		k := mock.Enqueuer(looser{}, cfg)
+		k := mock.Emitter(looser{}, cfg)
 
 		snd, dlq := EmitChan(k, "test", looser{})
 
@@ -107,8 +107,8 @@ func TestEnqueuer(t *testing.T) {
 	})
 
 	t.Run("Enqueue.N", func(t *testing.T) {
-		emit := mock.Emitter(cfg)
-		k := mock.Enqueuer(emit, cfg)
+		emit := mock.EmitterCore(cfg)
+		k := mock.Emitter(emit, cfg)
 
 		snd, _ := EmitChan(k, "test", codec)
 
@@ -131,8 +131,8 @@ func TestEnqueuer(t *testing.T) {
 	})
 
 	t.Run("Enqueue.N.Shut", func(t *testing.T) {
-		emit := mock.Emitter(cfg)
-		k := mock.Enqueuer(emit, cfg)
+		emit := mock.EmitterCore(cfg)
+		k := mock.Emitter(emit, cfg)
 
 		snd, _ := EmitChan(k, "test", codec)
 
@@ -151,8 +151,8 @@ func TestEnqueuer(t *testing.T) {
 		cfg := newConfig()
 		cfg.kernel.CapOut = 4
 
-		emit := mock.Emitter(cfg)
-		k := mock.Enqueuer(emit, cfg)
+		emit := mock.EmitterCore(cfg)
+		k := mock.Emitter(emit, cfg)
 
 		snd, _ := EmitChan(k, "test", codec)
 
@@ -174,7 +174,7 @@ func TestEnqueuer(t *testing.T) {
 		cfg.kernel.CapDlq = 4
 		cfg.kernel.StdErr = err
 
-		k := mock.Enqueuer(looser{}, cfg)
+		k := mock.Emitter(looser{}, cfg)
 
 		snd, dlq := EmitChan(k, "test", codec)
 

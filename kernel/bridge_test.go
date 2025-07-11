@@ -27,14 +27,14 @@ func TestBridge(t *testing.T) {
 	mock := mockFactory{}
 
 	t.Run("None", func(t *testing.T) {
-		k := mock.Dequeuer(mock.Bridge(cfg, mock.Bag(1)), cfg)
+		k := mock.Listener(mock.Bridge(cfg, mock.Bag(1)), cfg)
 		RecvChan(k, "test", codec)
 		k.Await()
 	})
 
 	t.Run("Dequeue.1", func(t *testing.T) {
 		bridge := mock.Bridge(cfg, mock.Bag(1))
-		k := mock.Dequeuer(bridge, cfg)
+		k := mock.Listener(bridge, cfg)
 
 		rcv, ack := RecvChan(k, "test", codec)
 
@@ -49,7 +49,7 @@ func TestBridge(t *testing.T) {
 
 	t.Run("Dequeue.N", func(t *testing.T) {
 		bridge := mock.Bridge(cfg, mock.Bag(3))
-		k := mock.Dequeuer(bridge, cfg)
+		k := mock.Listener(bridge, cfg)
 
 		rcv, ack := RecvChan(k, "test", codec)
 
@@ -68,7 +68,7 @@ func TestBridge(t *testing.T) {
 
 	t.Run("Error.1", func(t *testing.T) {
 		bridge := mock.Bridge(cfg, mock.Bag(1))
-		k := mock.Dequeuer(bridge, cfg)
+		k := mock.Listener(bridge, cfg)
 
 		rcv, ack := RecvChan(k, "test", codec)
 
@@ -86,7 +86,7 @@ func TestBridge(t *testing.T) {
 
 	t.Run("Error.N.1", func(t *testing.T) {
 		bridge := mock.Bridge(cfg, mock.Bag(3))
-		k := mock.Dequeuer(bridge, cfg)
+		k := mock.Listener(bridge, cfg)
 
 		rcv, ack := RecvChan(k, "test", codec)
 
@@ -104,7 +104,7 @@ func TestBridge(t *testing.T) {
 
 	t.Run("Error.N.2", func(t *testing.T) {
 		bridge := mock.Bridge(cfg, mock.Bag(3))
-		k := mock.Dequeuer(bridge, cfg)
+		k := mock.Listener(bridge, cfg)
 
 		rcv, ack := RecvChan(k, "test", codec)
 
@@ -123,7 +123,7 @@ func TestBridge(t *testing.T) {
 
 	t.Run("Error.N.3", func(t *testing.T) {
 		bridge := mock.Bridge(cfg, mock.Bag(3))
-		k := mock.Dequeuer(bridge, cfg)
+		k := mock.Listener(bridge, cfg)
 
 		rcv, ack := RecvChan(k, "test", codec)
 
@@ -143,7 +143,7 @@ func TestBridge(t *testing.T) {
 
 	t.Run("Timeout.1", func(t *testing.T) {
 		bridge := mock.Bridge(cfg, mock.Bag(1))
-		k := mock.Dequeuer(bridge, cfg)
+		k := mock.Listener(bridge, cfg)
 
 		rcv, _ := RecvChan(k, "test", codec)
 
@@ -158,7 +158,7 @@ func TestBridge(t *testing.T) {
 
 	t.Run("Timeout.N.1", func(t *testing.T) {
 		bridge := mock.Bridge(cfg, mock.Bag(3))
-		k := mock.Dequeuer(bridge, cfg)
+		k := mock.Listener(bridge, cfg)
 
 		rcv, _ := RecvChan(k, "test", codec)
 
@@ -175,7 +175,7 @@ func TestBridge(t *testing.T) {
 
 	t.Run("Timeout.N.2", func(t *testing.T) {
 		bridge := mock.Bridge(cfg, mock.Bag(3))
-		k := mock.Dequeuer(bridge, cfg)
+		k := mock.Listener(bridge, cfg)
 
 		rcv, ack := RecvChan(k, "test", codec)
 
@@ -193,7 +193,7 @@ func TestBridge(t *testing.T) {
 
 	t.Run("Timeout.N.3", func(t *testing.T) {
 		bridge := mock.Bridge(cfg, mock.Bag(3))
-		k := mock.Dequeuer(bridge, cfg)
+		k := mock.Listener(bridge, cfg)
 
 		rcv, ack := RecvChan(k, "test", codec)
 
@@ -223,10 +223,10 @@ func TestBridgeWait(t *testing.T) {
 
 	t.Run("Enqueue.After.Dequeue.1", func(t *testing.T) {
 		bridge := mock.Bridge(cfg, mock.Bag(1))
-		deq := mock.Dequeuer(bridge, cfg)
+		deq := mock.Listener(bridge, cfg)
 
-		emit := mock.Emitter(cfg)
-		enq := mock.Enqueuer(emit, cfg)
+		emit := mock.EmitterCore(cfg)
+		enq := mock.Emitter(emit, cfg)
 
 		rcv, ack := RecvChan(deq, "test", codec)
 		snd, _ := EmitChan(enq, "test", codec)
@@ -250,10 +250,10 @@ func TestBridgeWait(t *testing.T) {
 
 	t.Run("Enqueue.After.Dequeue.N", func(t *testing.T) {
 		bridge := mock.Bridge(cfg, mock.Bag(1))
-		deq := mock.Dequeuer(bridge, cfg)
+		deq := mock.Listener(bridge, cfg)
 
-		emit := mock.Emitter(cfg)
-		enq := mock.Enqueuer(emit, cfg)
+		emit := mock.EmitterCore(cfg)
+		enq := mock.Emitter(emit, cfg)
 
 		rcv, ack := RecvChan(deq, "test", codec)
 		snd, _ := EmitChan(enq, "test", codec)
@@ -290,10 +290,10 @@ func TestBridgeWaitTimeout(t *testing.T) {
 	mock.enableExternalPreemption()
 
 	bridge := mock.Bridge(cfg, mock.Bag(1))
-	deq := mock.Dequeuer(bridge, cfg)
+	deq := mock.Listener(bridge, cfg)
 
-	emit := mock.Emitter(cfg)
-	enq := mock.Enqueuer(emit, cfg)
+	emit := mock.EmitterCore(cfg)
+	enq := mock.Emitter(emit, cfg)
 
 	rcv, ack := RecvChan(deq, "test", codec)
 	snd, _ := EmitChan(enq, "test", codec)
