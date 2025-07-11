@@ -13,6 +13,12 @@ import (
 	"sync"
 )
 
+// Broadcaster is fan-out pattern for the control flow. It broadcasts a request
+// to all subscribers and waits for their acknowledgment. It is useful for
+// scenarios where multiple components need to be notified of an event or a
+// change in state, and they need to acknowledge that they have received the
+// event before proceeding. The broadcaster owns a list of channels that
+// are used to communicate with the subscribers.
 type Broadcaster struct {
 	mu sync.RWMutex
 	ch []chan chan struct{}

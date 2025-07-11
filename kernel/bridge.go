@@ -18,11 +18,18 @@ import (
 
 // Bridge Lambda's main function to [Cathode] interface
 // Bridge is single threaded and should be used in the context of Lambda handler only.
+//
+// Bridge implements Ask interface for the Lambda handler to receive messages.
+// Dispatch and Ask & Ack are corner stones for this adapter. Dispatch blocks until
+// all messages are Asked and Acked by the kernel.
 type Bridge struct {
 	timeToFlight time.Duration
 	inflight     map[string]struct{}
 
-	// I/O channels
+	// I/O channels coordinating the flow of messages between Dispatch & Ask.
+	// inputCh is used by Dispatch to send messages to Ask,
+	// inputCx is the context to prevent blocking of lambda, it expirese after timeToFlight.
+	// replyCh is used to deliver a final acknowledgement to lambda function.
 	inputCh chan []swarm.Bag
 	inputCx context.Context
 	replyCh chan error
@@ -60,6 +67,7 @@ func (s *Bridge) Dispatch(ctx context.Context, seq []swarm.Bag) error {
 	reqctx, cancel := context.WithTimeout(ctx, s.timeToFlight)
 	defer cancel()
 
+	// Creates a new request to "cathode".
 	s.inputCx = reqctx
 	s.inputCh <- seq
 
