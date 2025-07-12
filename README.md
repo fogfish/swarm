@@ -243,6 +243,8 @@ Continue reading to understand the purpose of the library and why it exists.
 
 `swarm` is a Go library that solves the complexity of distributed, event-driven systems by abstracting external messaging queues (like AWS SQS, AWS EventBrdige, RabbitMQ, Kafka, etc.) behind **type-safe Go channels**. 
 
+By aligning with Go’s native concurrency model, `swarm` encourages developers to think in terms of **message flows rather than request-response cycles**, which reflects the asynchronous and unreliable reality of distributed systems. This mindset shift leads to more resilient, scalable, and maintainable architectures — where complexity is not hidden, but made explicit and manageable.  
+
 * **Immediate Productivity**: Use Go channel patterns you already know, no need to learn new APIs.
 * **Smooth Testing**: Write unit tests with in-memory channels; switch to real systems for integration.
 * **Future-Proof**: Swap messaging technologies without changing your business logic.
@@ -254,7 +256,7 @@ Think of `swarm` as net.Conn **for distributed messaging**: a universal, idiomat
 Below we discussed why `swarm` exists and what problems it solves.
 
 
-## Why `swarm`?
+## Why is `swarm`?
 
 Traditional messaging libraries have fundamental issues:
 * **Mismatch**: Most libraries use synchronous APIs to represent asynchronous systems, creating cognitive and maintenance overhead.
@@ -262,7 +264,7 @@ Traditional messaging libraries have fundamental issues:
 * **Testing Pain**: Hard to unit-test without spinning up brokers or writing brittle mocks.
 * **Scaling Complexity**: Each broker has unique patterns for delivery guarantees, retries, acknowledgments — increasing operational complexity.
 
-`swarm` addresses these by providing a universal, idiomatic interface built on Go's concurrency model.
+`swarm` addresses these by providing a universal, idiomatic interface built on Go's concurrency model — making the asynchronous nature of distributed systems explicit while hiding vendor-specific details.
 
 See practical scenarios for `swarm` in [Storytelling](#storytelling---why-we-built-swarm).
 
