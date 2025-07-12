@@ -20,6 +20,10 @@
     <a href="https://goreportcard.com/report/github.com/fogfish/swarm">
       <img src="https://goreportcard.com/badge/github.com/fogfish/swarm" />
     </a>
+    <!-- Go Version -->
+    <a href="https://golang.org/dl/">
+      <img src="https://img.shields.io/badge/go-1.24+-blue.svg" />
+    </a>
   </p>
 
   <table align="center">
@@ -184,6 +188,8 @@
 
 # From Chaos to Channels
 
+> *"Finally, messaging that feels like Go!"* — Distributed systems, done right.
+
 Writing distributed, event-driven systems in Go today is harder than it should be - a lesson learned from a decade building such systems in Erlang. Vendor APIs are clunky, non-idiomatic, and tightly coupled to specific messaging brokers.
 
 `swarm` makes asynchronous, distributed messaging in Go **idiomatic, testable, and portable** by expressing queueing/event-driven systems through Go channels instead of vendor-specific APIs.
@@ -191,7 +197,7 @@ Writing distributed, event-driven systems in Go today is harder than it should b
 [User Guide](./doc/user-guide.md) |
 [Playground](https://goplay.tools/snippet/RLxmdLZ49SC) |
 [Getting started](#getting-started) | 
-[Examples](./example/) |
+[Examples](./broker/) |
 [Philosophy](./doc/pattern.md)
 
 
@@ -209,6 +215,12 @@ import (
   "github.com/fogfish/swarm/listen"
 )
 
+// Example message
+type Order struct {
+  ID     string  `json:"id"`
+  Amount float64 `json:"amount"`
+}
+
 func main() {
   // create broker for AWS SQS
   q := sqs.Channels().MustClient("aws-sqs-queue-name")
@@ -218,7 +230,7 @@ func main() {
   out := swarm.LogDeadLetters(emit.Typed[Order](q))
 
   // Send messages
-  emit <- Order{ID: "123", Amount: 100.0}
+  out <- Order{ID: "123", Amount: 100.0}
 
   // use Golang channels for I/O
   go func() {
@@ -230,17 +242,24 @@ func main() {
 
   q.Await()
 }
+
+func processOrder(order Order) {
+  // Your business logic here
+}
 ```
-
-See [Getting Started](#getting-started) for full details.
-
-Check the design pattern [Distributed event-driven Golang channels](./doc/pattern.md) for deep-dive into library philosophy. Also note, each supported [broker](./broker/) comes with runnable examples that shows the library. 
+**That's it!** You're now using distributed messaging with native Go channels.
+- Try it by coping the code above and run `go mod init test && go get github.com/fogfish/swarm`
+- Continue to [Getting Started](#getting-started) for advanced configuration
+- See more examples by browsing [/broker/*/examples/](./broker/)
+- Check the design pattern [Distributed event-driven Golang channels](./doc/pattern.md) for deep-dive into library philosophy. 
 
 Continue reading to understand the purpose of the library and why it exists.
 
+<!--
 ### How it Works
 
 tbd.
+-->
 
 ## What is `swarm`?
 
@@ -259,15 +278,19 @@ Think of `swarm` as net.Conn **for distributed messaging**: a universal, idiomat
 Below we discussed why `swarm` exists and what problems it solves.
 
 
-## Why is `swarm`?
+## Why Choose `swarm`?
 
-Traditional messaging libraries have fundamental issues:
-* **Mismatch**: Most libraries use synchronous APIs to represent asynchronous systems, creating cognitive and maintenance overhead.
-* **Vendor Lock-in**: Every broker has its own SDK, forcing you to learn their quirks and making it costly to switch.
-* **Testing Pain**: Hard to unit-test without spinning up brokers or writing brittle mocks.
-* **Scaling Complexity**: Each broker has unique patterns for delivery guarantees, retries, acknowledgments — increasing operational complexity.
+Traditional messaging libraries have fundamental issues
 
-`swarm` addresses these by providing a universal, idiomatic interface built on Go's concurrency model — making the asynchronous nature of distributed systems explicit while hiding vendor-specific details.
+| Traditional libraries         | With `swarm`                    |
+| ----------------------------- | ------------------------------- |
+| Different SDK for each broker | One API for all brokers         |
+| Complex mocks for testing     | In-memory channels for tests    |
+| Vendor lock-in                | Portable across technologies    |
+| Sync APIs for async systems   | Native async with Go channels   |
+| Manual error handling         | Built-in retries & dead letters |
+
+`swarm` solves these problems by providing a universal, idiomatic interface built on Go's concurrency model — embracing the asynchronous nature of distributed systems, making message flows explicit, and hiding vendor-specific complexity behind familiar Go channels.
 
 See practical scenarios for `swarm` in [Storytelling](#storytelling---why-we-built-swarm).
 
@@ -284,19 +307,20 @@ Use `go get` to retrieve the library and add it as dependency to your applicatio
 go get -u github.com/fogfish/swarm
 ```
 
-### When to use it? Who should use it?
-* Asynchronous Semantics
-  - channels naturally represent the flow of messages between independent processes;
-* Type Safety and Generic Programming
-  - type-safe messaging without reflection or runtime type checking;  
-* Hexagon & Onion architecture
-  - use `chan<- T` and `<-chan T` as ports and adapaters; 
-* Serverless event-driven architectures
-  - zero boilerplate to establish serverless event consumer;
-  - portable solution across queues;
-  - portable to pods and servers;
-* Scale-out Go channels horizontally
-  - Horizontal scalability  of Go channel patterns like fan-in, fan-out, and pipeline processing;
+### When to Use `swarm`
+
+**Perfect for:**
+- **Event-driven architectures** - Decouple services with async messaging
+- **Serverless applications** - Zero-boilerplate event consumers on AWS Lambda
+- **Microservices** - Replace fragile HTTP calls with resilient messaging
+- **High-throughput systems** - Scale message processing horizontally
+- **Multi-cloud applications** - Abstract away broker differences
+
+**You'll love it if you:**
+- Want type-safe messaging without vendor lock-in
+- Need to unit test message-driven code easily  
+- Prefer Go channels over learning broker-specific APIs
+- Value clean, testable architecture patterns
 
 ## Advanced Usage and Next steps
 
@@ -305,7 +329,9 @@ go get -u github.com/fogfish/swarm
 * The library supports a variety of brokers out of the box. See the table at the beginning of this document for details. If you need to implement a broker that isn’t supported yet, refer to [Bring Your Own Broker](./doc/bring-your-own-broker.md) for guidance.
 
 
-## Storytelling - Why We Built `swarm`?
+## Real-World Success Stories
+
+Here's how `swarm` solves actual production problems that teams face every day.
 
 ### E-commerce Order Processing: The Cascading Failure Problem
 
@@ -488,6 +514,13 @@ The commit message helps us to write a good release note, speed-up review proces
 ### bugs
 
 If you experience any issues with the library, please let us know via [GitHub issues](https://github.com/fogfish/swarm/issues). We appreciate detailed and accurate reports that help us to identity and replicate the issue. 
+
+## Community & Support
+
+- **Documentation**: [User Guide](./doc/user-guide.md) • [API Reference](https://pkg.go.dev/github.com/fogfish/swarm)
+- **Questions**: [GitHub Discussions](https://github.com/fogfish/swarm/discussions) for Q&A and ideas
+- **Issues**: [GitHub Issues](https://github.com/fogfish/swarm/issues) for bug reports and feature requests
+- **Examples**: [Live examples](./broker/) for all supported brokers 
 
 
 ## License
