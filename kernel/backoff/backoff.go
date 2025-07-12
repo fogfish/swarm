@@ -13,16 +13,10 @@ import (
 	"time"
 )
 
-/*
-
-Seq is a sequence of delays
-*/
+// Seq is a sequence of delays
 type Seq func() []time.Duration
 
-/*
-
-Const is a sequence of constant delays
-*/
+// Const is a sequence of constant delays
 func Const(delay time.Duration, n int) Seq {
 	return func() []time.Duration {
 
@@ -37,10 +31,7 @@ func Const(delay time.Duration, n int) Seq {
 	}
 }
 
-/*
-
-Linear is a sequence of constant delays
-*/
+// Linear is a sequence of constant delays
 func Linear(delay time.Duration, n int) Seq {
 	return func() []time.Duration {
 		seq := make([]time.Duration, n)
@@ -54,10 +45,7 @@ func Linear(delay time.Duration, n int) Seq {
 	}
 }
 
-/*
-
-Exp is a sequence of exponential delays
-*/
+// Exp is a sequence of exponential delays
 func Exp(delay time.Duration, n int, factor float64) Seq {
 	return func() []time.Duration {
 		seq := make([]time.Duration, n)
@@ -80,18 +68,12 @@ func interval(randomizationFactor, random float64, currentInterval time.Duration
 	return time.Duration(minInterval + (random * (maxInterval - minInterval + 1)))
 }
 
-/*
-
-Seq of time delays
-*/
+// Seq of time delays
 func (seq Seq) Seq() []time.Duration {
 	return seq()
 }
 
-/*
-
-Deadline defines a total time for the delay
-*/
+// Deadline defines a total time for the delay
 func (seq Seq) Deadline(t time.Duration) Seq {
 	return func() []time.Duration {
 		var sum time.Duration
@@ -108,10 +90,7 @@ func (seq Seq) Deadline(t time.Duration) Seq {
 	}
 }
 
-/*
-
-Retry function
-*/
+// Retry function
 func (seq Seq) Retry(f func() error) (err error) {
 	for _, t := range seq() {
 		if err = f(); err == nil {
@@ -122,10 +101,7 @@ func (seq Seq) Retry(f func() error) (err error) {
 	return
 }
 
-/*
-
-None is empty delay sequence
-*/
+// None is empty delay sequence
 type None int
 
 func Empty() None { return None(0) }

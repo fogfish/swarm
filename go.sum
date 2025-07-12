@@ -1,5 +1,5 @@
-github.com/fogfish/curie/v2 v2.1.1 h1:tkR0McUwwtwpRyDKL1e3GIB8S7xdiPzLK6+6oFQQE3w=
-github.com/fogfish/curie/v2 v2.1.1/go.mod h1:MIL/V8UaM+gY/KyGXMXUM4QXc5TynJS0rwrVwNvV51o=
+github.com/fogfish/curie/v2 v2.1.2 h1:AbVEzgUiaLCQxo8YTr2TRbrlbs5veulgx7FywAquIu0=
+github.com/fogfish/curie/v2 v2.1.2/go.mod h1:MIL/V8UaM+gY/KyGXMXUM4QXc5TynJS0rwrVwNvV51o=
 github.com/fogfish/faults v0.3.2 h1:kQai2/VyXJxfd6SD/jYLHiqu0qDl/KXT48q1ppLMAnY=
 github.com/fogfish/faults v0.3.2/go.mod h1:y8zvZN2pQUe9vDS7rzz0mAnbdfYMorPOeqxpy83YOCk=
 github.com/fogfish/golem/hseq v1.3.0 h1:WIJViOF7vsPHvqVLzFrIz4QrBI4EPTC34esrQnjqUvk=
@@ -8,9 +8,7 @@ github.com/fogfish/golem/optics v0.14.0 h1:8XFZ6rlr6GlwDPB/jUtEcPbFngbpY9DfArDXc
 github.com/fogfish/golem/optics v0.14.0/go.mod h1:aTXUA/VC6yu3zbUN1Tmy4Z4IW0jxfDFF4c2UB5MuwkA=
 github.com/fogfish/guid/v2 v2.1.0 h1:oEJHKM4yFOOCmKZdh0oH7eD3mL32n2+1YCc27lXB5rE=
 github.com/fogfish/guid/v2 v2.1.0/go.mod h1:KkZ5T4EE3BqWQJFZBPLSHV/tBe23Xq4KvuPfwtNtepU=
-github.com/fogfish/it v1.0.0 h1:kiwFHZcrkRLUydZoIoY0gTuMfj38trwvLo0YRyIkeG8=
-github.com/fogfish/it v1.0.0/go.mod h1:NQJG4Ygvek85y7zGj0Gny8+6ygAnHjfBORhI7TdQhp4=
-github.com/fogfish/it/v2 v2.2.1 h1:NuuaENAZka8XiJkEj2Q6THRsHSwleC/BLDux82NvkII=
-github.com/fogfish/it/v2 v2.2.1/go.mod h1:HHwufnTaZTvlRVnSesPl49HzzlMrQtweKbf+8Co/ll4=
+github.com/fogfish/it/v2 v2.2.2 h1:0Ynx60xjYn4HvmvdKtPqqthAJ2w0PSHdKPpi+69ik/8=
+github.com/fogfish/it/v2 v2.2.2/go.mod h1:HHwufnTaZTvlRVnSesPl49HzzlMrQtweKbf+8Co/ll4=
 github.com/fogfish/opts v0.0.5 h1:Bh3Nucr1kx7G1F0Tq3DxO14/qYgmR6C2GjWr2k6O+Oc=
 github.com/fogfish/opts v0.0.5/go.mod h1:+HM1YrMsTzfouZRoHfPOsGT9VZw+0ZBKZ36PMqoNFqM=

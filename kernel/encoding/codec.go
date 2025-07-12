@@ -43,24 +43,29 @@ func ForTyped[T any](category ...string) Typed[T] {
 
 // JSON encoding for events
 type Event[M, T any] struct {
-	source string
-	cat    string
-	shape  optics.Lens4[M, string, curie.IRI, curie.IRI, time.Time]
+	realm curie.IRI
+	agent curie.IRI
+	cat   curie.IRI
+	shape optics.Lens5[M, string, curie.IRI, curie.IRI, curie.IRI, time.Time]
 }
 
-func (c Event[M, T]) Category() string { return c.cat }
+func (c Event[M, T]) Category() string { return string(c.cat) }
 
 func (c Event[M, T]) Encode(obj swarm.Event[M, T]) ([]byte, error) {
-	_, knd, src, _ := c.shape.Get(obj.Meta)
-	if knd == "" {
-		knd = curie.IRI(c.cat)
+	_, cat, rlm, agt, _ := c.shape.Get(obj.Meta)
+	if cat == "" {
+		cat = c.cat
 	}
 
-	if src == "" {
-		src = curie.IRI(c.source)
+	if agt == "" {
+		agt = c.agent
 	}
 
-	c.shape.Put(obj.Meta, guid.G(guid.Clock).String(), knd, src, time.Now())
+	if rlm == "" {
+		rlm = c.realm
+	}
+
+	c.shape.Put(obj.Meta, guid.G(guid.Clock).String(), cat, rlm, agt, time.Now())
 
 	return json.Marshal(obj)
 }
@@ -73,11 +78,12 @@ func (c Event[M, T]) Decode(b []byte) (swarm.Event[M, T], error) {
 }
 
 // Creates JSON codec for events
-func ForEvent[E swarm.Event[M, T], M, T any](source string, category ...string) Event[M, T] {
+func ForEvent[E swarm.Event[M, T], M, T any](realm, agent string, category ...string) Event[M, T] {
 	return Event[M, T]{
-		source: source,
-		cat:    swarm.TypeOf[T](category...),
-		shape:  optics.ForShape4[M, string, curie.IRI, curie.IRI, time.Time]("ID", "Type", "Agent", "Created"),
+		realm: curie.IRI(realm),
+		agent: curie.IRI(agent),
+		cat:   curie.IRI(swarm.TypeOf[T](category...)),
+		shape: optics.ForShape5[M, string, curie.IRI, curie.IRI, curie.IRI, time.Time]("ID", "Type", "Realm", "Agent", "Created"),
 	}
 }
 

@@ -6,7 +6,7 @@
 // https://github.com/fogfish/swarm
 //
 
-package enqueue_test
+package emit_test
 
 import (
 	"context"
@@ -14,14 +14,14 @@ import (
 
 	"github.com/fogfish/it/v2"
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/enqueue"
+	enqueue "github.com/fogfish/swarm/emit"
 	"github.com/fogfish/swarm/kernel"
 	"github.com/fogfish/swarm/kernel/encoding"
 )
 
 func TestNewTyped(t *testing.T) {
-	mock := mockEmitter(10)
-	k := kernel.NewEnqueuer(mock, swarm.Config{})
+	mock := mockEmitter()
+	k := kernel.NewEmitter(mock, swarm.NewConfig())
 
 	for _, q := range []*enqueue.EmitterTyped[User]{
 		enqueue.NewTyped[User](k),
@@ -38,13 +38,12 @@ func TestNewTyped(t *testing.T) {
 }
 
 func TestNewEvent(t *testing.T) {
-	mock := mockEmitter(10)
-	k := kernel.NewEnqueuer(mock, swarm.Config{})
+	mock := mockEmitter()
+	k := kernel.NewEmitter(mock, swarm.NewConfig())
 
-	for _, q := range []*enqueue.EmitterEvent[swarm.Meta, User]{
-		enqueue.NewEvent[Evt](k),
-		enqueue.NewEvent(k, encoding.ForEvent[Evt]("test")),
-	} {
+	t.Run("DefaultCodec", func(t *testing.T) {
+		q := enqueue.NewEvent[Evt](k)
+
 		q.Enq(context.Background(),
 			Evt{
 				Meta: &swarm.Meta{},
@@ -60,14 +59,35 @@ func TestNewEvent(t *testing.T) {
 			}
 		`),
 		)
-	}
+	})
+
+	t.Run("CustomCodec", func(t *testing.T) {
+		q := enqueue.NewEvent(k, encoding.ForEvent[Evt]("realm", "test"))
+		q.Enq(context.Background(),
+			Evt{
+				Meta: &swarm.Meta{},
+				Data: &User{ID: "id", Text: "user"},
+			},
+		)
+
+		it.Then(t).Should(
+			it.Json(mock.val).Equiv(`
+			{
+				"meta": {"type": "User", "realm": "realm", "agent": "test", "id": "_", "created": "_"},
+				"data": {"id":"id","text":"user"}
+			}
+		`),
+		)
+	})
 
 	k.Close()
 }
 
+//
+
 func TestNewBytes(t *testing.T) {
-	mock := mockEmitter(10)
-	k := kernel.NewEnqueuer(mock, swarm.Config{})
+	mock := mockEmitter()
+	k := kernel.NewEmitter(mock, swarm.NewConfig())
 
 	for _, q := range []*enqueue.EmitterBytes{
 		enqueue.NewBytes(k, encoding.ForBytes("User")),

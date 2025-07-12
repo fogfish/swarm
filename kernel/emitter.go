@@ -14,9 +14,10 @@ import (
 	"sync"
 
 	"github.com/fogfish/swarm"
+	"github.com/fogfish/swarm/kernel/broadcast"
 )
 
-// Emitter defines on-the-wire protocol for [swarm.Bag], covering egress.
+// Emitter defines on-the-wire protocol for [swarm.Bag], covering egress use-cases
 type Emitter interface {
 	Enq(context.Context, swarm.Bag) error
 }
@@ -27,13 +28,17 @@ type Encoder[T any] interface {
 	Encode(T) ([]byte, error)
 }
 
-// Messaging Egress port
-type Enqueuer struct {
+// The egress part of the kernel is used to enqueue messages into message broker.
+type EmitterCore struct {
 	sync.WaitGroup
 
 	// Control-plane stop channel used by go routines to stop I/O on data channels
 	context context.Context
 	cancel  context.CancelFunc
+
+	// Control-plane to preempt emitter loop. It is used in externally scheduled
+	// environment to guarantee that all emitted messages are sent to broker before application is preempted.
+	ctrlPreempt *broadcast.Broadcaster
 
 	// Kernel configuration
 	Config swarm.Config
@@ -42,11 +47,16 @@ type Enqueuer struct {
 	Emitter Emitter
 }
 
-// Creates instance of broker writer
-func NewEnqueuer(emitter Emitter, config swarm.Config) *Enqueuer {
+// Creates a new emitter kernel with the given emitter and configuration.
+func NewEmitter(emitter Emitter, config swarm.Config) *EmitterCore {
+	return builder().Emitter(emitter, config)
+}
+
+// Creates a new emitter kernel with the given emitter and configuration.
+func newEmitter(emitter Emitter, config swarm.Config) *EmitterCore {
 	ctx, can := context.WithCancel(context.Background())
 
-	return &Enqueuer{
+	return &EmitterCore{
 		Config:  config,
 		context: ctx,
 		cancel:  can,
@@ -54,22 +64,27 @@ func NewEnqueuer(emitter Emitter, config swarm.Config) *Enqueuer {
 	}
 }
 
-// Close enqueuer
-func (k *Enqueuer) Close() {
+// Close emitter
+func (k *EmitterCore) Close() {
 	k.cancel()
 	k.WaitGroup.Wait()
 }
 
 // Await enqueue
-func (k *Enqueuer) Await() {
+func (k *EmitterCore) Await() {
 	<-k.context.Done()
 	k.WaitGroup.Wait()
 }
 
-// Enqueue creates pair of channels within kernel to enqueue messages
-func Enqueue[T any](k *Enqueuer, cat string, codec Encoder[T]) ( /*snd*/ chan<- T /*dlq*/, <-chan T) {
+// Creates pair of channels within kernel to emit messages to broker.
+func EmitChan[T any](k *EmitterCore, cat string, codec Encoder[T]) ( /*snd*/ chan<- T /*dlq*/, <-chan T) {
 	snd := make(chan T, k.Config.CapOut)
 	dlq := make(chan T, k.Config.CapDlq)
+
+	var ctl chan chan struct{}
+	if k.ctrlPreempt != nil {
+		ctl = k.ctrlPreempt.Register()
+	}
 
 	// emitter routine
 	emit := func(obj T) {
@@ -88,7 +103,10 @@ func Enqueue[T any](k *Enqueuer, cat string, codec Encoder[T]) ( /*snd*/ chan<- 
 		}
 
 		bag := swarm.Bag{Category: cat, Object: msg}
-		if err := k.Emitter.Enq(context.Background(), bag); err != nil {
+		err = k.Config.Backoff.Retry(func() error {
+			return k.Emitter.Enq(context.Background(), bag)
+		})
+		if err != nil {
 			dlq <- obj
 			if k.Config.StdErr != nil {
 				k.Config.StdErr <- swarm.ErrEnqueue.With(err)
@@ -124,6 +142,16 @@ func Enqueue[T any](k *Enqueuer, cat string, codec Encoder[T]) ( /*snd*/ chan<- 
 			select {
 			case <-k.context.Done():
 				break exit
+			case sack := <-ctl:
+				for range len(snd) {
+					emit(<-snd)
+				}
+				func() {
+					defer func() {
+						recover() // Ignore panic if ackCh is closed due to timeout (preemption)
+					}()
+					sack <- struct{}{}
+				}()
 			case obj := <-snd:
 				emit(obj)
 			}
@@ -138,6 +166,9 @@ func Enqueue[T any](k *Enqueuer, cat string, codec Encoder[T]) ( /*snd*/ chan<- 
 			}
 		}
 
+		if k.ctrlPreempt != nil {
+			k.ctrlPreempt.Unregister(ctl)
+		}
 		k.WaitGroup.Done()
 	}()
 

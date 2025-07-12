@@ -20,6 +20,8 @@ import (
 
 // Environment variable to config kernel
 const (
+	EnvConfigRealm          = "CONFIG_SWARM_REALM"
+	EnvConfigAgent          = "CONFIG_SWARM_AGENT"
 	EnvConfigPollFrequency  = "CONFIG_SWARM_POLL_FREQUENCY"
 	EnvConfigTimeToFlight   = "CONFIG_SWARM_TIME_TO_FLIGHT"
 	EnvConfigNetworkTimeout = "CONFIG_SWARM_NETWORK_TIMEOUT"
@@ -37,9 +39,13 @@ const (
 type Retry interface{ Retry(f func() error) error }
 
 type Config struct {
-	// Source is a direct performer of the event.
-	// A software service that emits action to the stream.
-	Source string
+	// Unique identity of the realm (logical environment or world) where the event was created.
+	// Useful to support deployment isolation (e.g., green/blue, canary) in event-driven systems.
+	Realm string
+
+	// Agent is a direct performer of the event.
+	// It is a software service that consumes/emits events from/to the stream.
+	Agent string
 
 	// Quality of Service Policy
 	Policy Policy
@@ -74,13 +80,13 @@ type Config struct {
 
 func NewConfig() Config {
 	return Config{
-		Source:                "github.com/fogfish/swarm",
+		Agent:                 "github.com/fogfish/swarm",
 		Policy:                PolicyAtLeastOnce,
 		CapOut:                0,
 		CapDlq:                0,
 		CapRcv:                0,
 		CapAck:                0,
-		Backoff:               backoff.Exp(10*time.Millisecond, 10, 0.5),
+		Backoff:               backoff.Empty(),
 		PollerPool:            1,
 		PollFrequency:         10 * time.Millisecond,
 		TimeToFlight:          5 * time.Second,
@@ -90,9 +96,18 @@ func NewConfig() Config {
 }
 
 var (
+	// Unique identity of the realm (logical environment or world) where the event was created.
+	// Useful to support deployment isolation (e.g., green/blue, canary) in event-driven systems.
+	WithRealm = opts.ForName[Config, string]("Realm")
+
 	// Source is a direct performer of the event.
 	// A software service that emits action to the stream.
-	WithSource = opts.ForName[Config, string]("Source")
+	//
+	// Deprecated: use WithAgent instead.
+	WithSource = opts.ForName[Config, string]("Agent")
+
+	// Agent is a software service that consumes/emits events from/to the stream.
+	WithAgent = opts.ForName[Config, string]("Agent")
 
 	// Define I/O backoff strategy
 	// * backoff.Const(t, n) retry operation for N times, with T wait time in between
@@ -168,12 +183,20 @@ func WithLogStdErr() opts.Option[Config] {
 }
 
 // Configure from Environment, (all timers in seconds)
+// - CONFIG_SWARM_REALM
+// - CONFIG_SWARM_AGENT
 // - CONFIG_SWARM_POLL_FREQUENCY
 // - CONFIG_SWARM_TIME_TO_FLIGHT
 // - CONFIG_SWARM_NETWORK_TIMEOUT
 func WithConfigFromEnv() opts.Option[Config] {
 	return opts.Type[Config](
 		func(c *Config) error {
+			if v := os.Getenv(EnvConfigRealm); v != "" {
+				c.Realm = v
+			}
+			if v := os.Getenv(EnvConfigAgent); v != "" {
+				c.Agent = v
+			}
 			c.PollFrequency = durationFromEnv(EnvConfigPollFrequency, c.PollFrequency)
 			c.TimeToFlight = durationFromEnv(EnvConfigTimeToFlight, c.TimeToFlight)
 			c.NetworkTimeout = durationFromEnv(EnvConfigNetworkTimeout, c.NetworkTimeout)

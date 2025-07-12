@@ -20,6 +20,10 @@
     <a href="https://goreportcard.com/report/github.com/fogfish/swarm">
       <img src="https://goreportcard.com/badge/github.com/fogfish/swarm" />
     </a>
+    <!-- Go Version -->
+    <a href="https://golang.org/dl/">
+      <img src="https://img.shields.io/badge/go-1.24+-blue.svg" />
+    </a>
   </p>
 
   <table align="center">
@@ -182,17 +186,114 @@
 
 ---
 
-Today's wrong abstractions lead to complexity on maintainability in the future. Usage of synchronous interfaces to reflect asynchronous nature of messaging queues is a good example of inaccurate abstraction. Usage of pure Go channels is a proper solution to distills asynchronous semantic of queueing systems into the idiomatic native Golang code. The library adapts Go channels for various systems and interface. Please let us know via [GitHub issues](https://github.com/fogfish/swarm/issue) your needs about queuing technologies.
+# From Chaos to Channels
+
+> *"Finally, messaging that feels like Go!"* — Distributed systems, done right.
+
+Writing distributed, event-driven systems in Go today is harder than it should be - a lesson learned from a decade building such systems in Erlang. Vendor APIs are clunky, non-idiomatic, and tightly coupled to specific messaging brokers.
+
+`swarm` makes asynchronous, distributed messaging in Go **idiomatic, testable, and portable** by expressing queueing/event-driven systems through Go channels instead of vendor-specific APIs.
+
+[User Guide](./doc/user-guide.md) |
+[Playground](https://goplay.tools/snippet/RLxmdLZ49SC) |
+[Getting started](#getting-started) | 
+[Examples](./broker/) |
+[Philosophy](./doc/pattern.md)
 
 
-## Inspiration
+## Quick Start
 
-The library encourages developers to use Golang struct for asynchronous communication with peers. It helps engineers to define domain models, write correct, maintainable code. This library (`swarm`) uses generic programming style to abstract queueing systems into the idiomatic Golang channels `chan<- T` and `<-chan T`. See the design pattern [Golang channels for distributed event-driven architecture](./doc/pattern.md) to learn philosophy and use-cases:
-1. **readability**: application uses pure Go code instead of vendor specific interfaces (learning time) 
-2. **portability**: application is portable between various queuing systems or event brokers in same manner as sockets abstracts networking stacks (exchange queueing transport "on-the-fly" to resolve evolution of requirements)  
-3. **testability**: unit testing focuses on pure biz logic, simplify dependency injections and mocking (pure unit tests).  
-4. **distribution**: idiomatic architecture to build distributed topologies and scale-out Golang applications (clustering).
-5. **serverless**: of-the-shelf portable patterns for serverless applications (infrastructure as a code, aws cdk).
+The example below shows the simplest way to enqueue and dequeue messages using AWS SQS.
+
+```go
+package main
+
+import (
+  "github.com/fogfish/swarm"
+  "github.com/fogfish/swarm/broker/sqs"
+  "github.com/fogfish/swarm/emit"
+  "github.com/fogfish/swarm/listen"
+)
+
+// Example message
+type Order struct {
+  ID     string  `json:"id"`
+  Amount float64 `json:"amount"`
+}
+
+func main() {
+  // create broker for AWS SQS
+  q := sqs.Channels().MustClient("aws-sqs-queue-name")
+
+  // create Golang channels
+  rcv, ack := listen.Typed[Order](q)
+  out := swarm.LogDeadLetters(emit.Typed[Order](q))
+
+  // Send messages
+  out <- Order{ID: "123", Amount: 100.0}
+
+  // use Golang channels for I/O
+  go func() {
+    for order := range rcv {
+      processOrder(order.Object)
+      ack <- order  // acknowledge processing
+    }
+  }()
+
+  q.Await()
+}
+
+func processOrder(order Order) {
+  // Your business logic here
+}
+```
+**That's it!** You're now using distributed messaging with native Go channels.
+- Try it by coping the code above and run `go mod init test && go get github.com/fogfish/swarm`
+- Continue to [Getting Started](#getting-started) for advanced configuration
+- See more examples by browsing [/broker/*/examples/](./broker/)
+- Check the design pattern [Distributed event-driven Golang channels](./doc/pattern.md) for deep-dive into library philosophy. 
+
+Continue reading to understand the purpose of the library and why it exists.
+
+<!--
+### How it Works
+
+tbd.
+-->
+
+## What is `swarm`?
+
+`swarm` is a Go library that solves the complexity of distributed, event-driven systems by abstracting external messaging queues (like AWS SQS, AWS EventBridge, RabbitMQ, Kafka, etc.) behind **type-safe Go channels**. 
+
+By aligning with Go’s native concurrency model, `swarm` encourages developers to think in terms of **message flows rather than request-response cycles**, which reflects the asynchronous and unreliable reality of distributed systems. This mindset shift leads to more resilient, scalable, and maintainable architectures — where complexity is not hidden, but made explicit and manageable.  
+
+* **Immediate Productivity**: Use Go channel patterns you already know, no need to learn new APIs.
+* **Smooth Testing**: Write unit tests with in-memory channels; switch to real systems for integration.
+* **Future-Proof**: Swap messaging technologies without changing your business logic.
+* **Serverless-Ready**: Designed for both long-running services and ephemeral serverless functions.
+* **Scale-Out**: Idiomatic architecture to build distributed topologies and scale-out Golang applications.
+
+Think of `swarm` as net.Conn **for distributed messaging**: a universal, idiomatic interface you can depend on, regardless of the underlying transport.
+
+Below we discussed why `swarm` exists and what problems it solves.
+
+
+## Why Choose `swarm`?
+
+Traditional messaging libraries have fundamental issues
+
+| Traditional libraries         | With `swarm`                    |
+| ----------------------------- | ------------------------------- |
+| Different SDK for each broker | One API for all brokers         |
+| Complex mocks for testing     | In-memory channels for tests    |
+| Vendor lock-in                | Portable across technologies    |
+| Sync APIs for async systems   | Native async with Go channels   |
+| Manual error handling         | Built-in retries & dead letters |
+
+`swarm` solves these problems by providing a universal, idiomatic interface built on Go's concurrency model — embracing the asynchronous nature of distributed systems, making message flows explicit, and hiding vendor-specific complexity behind familiar Go channels.
+
+See practical scenarios for `swarm` in [Storytelling](#storytelling---why-we-built-swarm).
+
 
 ## Getting started
 
@@ -206,402 +307,185 @@ Use `go get` to retrieve the library and add it as dependency to your applicatio
 go get -u github.com/fogfish/swarm
 ```
 
-- [Inspiration](#inspiration)
-- [Getting started](#getting-started)
-  - [Quick example](#quick-example)
-  - [Produce (enqueue) messages](#produce-enqueue-messages)
-  - [Consume (dequeue) messages](#consume-dequeue-messages)
-  - [Configure library behavior](#configure-library-behavior)
-  - [Message Delivery Guarantees](#message-delivery-guarantees)
-  - [Delayed Guarantee vs Guarantee](#delayed-guarantee-vs-guarantee)
-  - [Order of Messages](#order-of-messages)
-  - [Octet Streams](#octet-streams)
-  - [Generic events](#generic-events)
-  - [Error Handling](#error-handling)
-  - [Fail Fast](#fail-fast)
-  - [Serverless](#serverless)
-  - [Race condition in Serverless](#race-condition-in-serverless)
-- [How To Contribute](#how-to-contribute)
-  - [commit message](#commit-message)
-  - [bugs](#bugs)
-- [Bring Your Own Queue](#bring-your-own-queue)
-- [License](#license)
+### When to Use `swarm`
 
-### Quick example
+**Perfect for:**
+- **Event-driven architectures** - Decouple services with async messaging
+- **Serverless applications** - Zero-boilerplate event consumers on AWS Lambda
+- **Microservices** - Replace fragile HTTP calls with resilient messaging
+- **High-throughput systems** - Scale message processing horizontally
+- **Multi-cloud applications** - Abstract away broker differences
 
-Example below is most simplest illustration of enqueuing and dequeuing message
-from AWS SQS.
+**You'll love it if you:**
+- Want type-safe messaging without vendor lock-in
+- Need to unit test message-driven code easily  
+- Prefer Go channels over learning broker-specific APIs
+- Value clean, testable architecture patterns
+
+## Advanced Usage and Next steps
+
+* Learn [why we built `swarm`](#storytelling---why-we-built-swarm).
+* [User guide](./doc/user-guide.md) help you with adopting the library.
+* The library supports a variety of brokers out of the box. See the table at the beginning of this document for details. If you need to implement a broker that isn’t supported yet, refer to [Bring Your Own Broker](./doc/bring-your-own-broker.md) for guidance.
+
+
+## Real-World Success Stories
+
+Here's how `swarm` solves actual production problems that teams face every day.
+
+### E-commerce Order Processing: The Cascading Failure Problem
+
+Imagine you're building an e-commerce platform that processes thousands of orders per minute during Black Friday sales. Your order processing system needs to:
+* Validate payment information
+* Update inventory levels
+* Send confirmation emails
+* Update analytics systems
+* Trigger fulfillment processes
+
+What are problems with the traditional approach:
+* Blocking Operations: Each service call blocks until completion, making the system slow during peak loads
+* Cascading Failures: If the email service is down, the entire order process fails, even though the core business logic succeeded
+* Poor Scalability: Cannot scale individual components independently
 
 ```go
-package main
-
-import (
-  "log/slog"
-
-  "github.com/fogfish/swarm"
-  "github.com/fogfish/swarm/broker/sqs"
-  "github.com/fogfish/swarm/enqueue"
-  "github.com/fogfish/swarm/dequeue"
-)
-
-func main() {
-  // create broker for AWS SQS
-  q, err := sqs.New("aws-sqs-queue-name")
-	if err != nil {
-		slog.Error("sqs broker has failed", "err", err)
-		return
-	}
-
-  // create Golang channels
-  rcv, ack := dequeue.Typed[string](q)
-  out := swarm.LogDeadLetters(enqueue.Typed[string](q))
-
-  // use Golang channels for I/O
-  go func() {
-    for msg := range rcv {
-      out <- msg.Object
-      ack <- msg
-    }
-  }()
-
-  q.Await()
+func ProcessOrder(order *Order) error {
+  // Synchronous calls create cascading failures
+  if err := paymentService.Charge(order.Payment); err != nil {
+    return err // Customer sees error immediately
+  }
+    
+  if err := inventoryService.Reserve(order.Items); err != nil {
+    return err // Payment charged but inventory failed
+  }
+    
+  if err := emailService.SendConfirmation(order); err != nil {
+    return err // Everything fails if email is slow
+  }
+    
+  return nil
 }
 ```
 
-Check the design pattern [Distributed event-driven Golang channels](./doc/pattern.md) for deep-dive into library philosophy. Also note, each supported broker comes with runnable examples that shows the library. 
-
-
-### Produce (enqueue) messages
-
-The following code snippet shows a typical flow of producing the messages using the library.
+Using the `swarm` library, we benefit from
+* Immediate Response: Customers get instant order confirmation
+* Fault Tolerance: If email service is down, orders still process successfully
+* Independent Scaling: Each service can scale based on its own load patterns
 
 ```go
-import (
-  "github.com/fogfish/swarm/broker/sqs"
-  "github.com/fogfish/swarm/enqueue"
-)
+func ProcessOrder(order *Order) error {
+  // Immediate response to customer
+  if err := validateOrder(order); err != nil {
+    return err
+  }
 
-// Use pure Golang struct to define semantic of messages and events
-type Note struct {
-  ID   string `json:"id"`
-  Text string `json:"text"`
+  // Async processing via channels
+  orderEvents <- OrderCreated{Order: order}
+    
+  return nil // Customer gets immediate confirmation
 }
 
-// Spawn a new instance of the messaging broker
-q, err := sqs.New("name-of-the-queue"), /* config options */)
-
-// creates pair Golang channels dedicated for publishing
-// messages of type [Note] through the messaging broker. The first channel
-// is dedicated to emit messages. The second one is the dead letter queue that
-// contains failed transmissions. 
-enq, dlq := enqueue.Typed[Note](q)
-
-// Enqueue message of type Note
-enq <- Note{ID: "note", Text: "some text"}
-
-// Close the broker and release all resources
-q.Close()
-```
-
-### Consume (dequeue) messages
-
-The following code snippet shows a typical flow of consuming the messages using the library.
-
-```go
-import (
-  "github.com/fogfish/swarm/broker/sqs"
-  "github.com/fogfish/swarm/dequeue"
-)
-
-// Use pure Golang struct to define semantic of messages and events
-type Note struct {
-  ID   string `json:"id"`
-  Text string `json:"text"`
-}
-
-// Spawn a new instance of the messaging broker
-q, err := sqs.New("name-of-the-queue", /* config options */)
-
-// Create pair Golang channels dedicated for consuming
-// messages of type Note from the messaging broker. The first channel
-// is dedicated to receive messages. The second one is the channel to
-// acknowledge consumption  
-deq, ack := dequeue.Typed[Note](q)
-
-// consume messages and then acknowledge it
+// Background processing
 go func() {
-  for msg := range deq {
-    /* ... do something with msg.Object and ack the message ...*/
-    ack <- msg
+  for event := range orderEvents {
+    paymentQueue <- PaymentRequest{Order: event.Order}
+    inventoryQueue <- InventoryUpdate{Order: event.Order}
+    emailQueue <- EmailNotification{Order: event.Order}
   }
 }()
-
-// Await messages from the broker
-q.Await()
 ```
 
-### Configure library behavior
+### Serverless Event Processing: The SDK Complexity Problem
 
-The library uses "option pattern" for the configuration, which is divided into two parts: a generic I/O kernel configuration and a broker-specific configuration. Please note that each configuration option is prefixed with `With` and implemented in [config.go](./config.go) files.
-
-
-```go
-q, err := sqs.New("name-of-the-queue",
-  // WithXXX performs broker configuration
-  sqs.WithBatchSize(5),
-  // WithConfig performs generic kernel configuration
-  sqs.WithConfig(
-    swarm.WithSource("name-of-my-component"),
-    swarm.WithRetryConstant(10 * time.Millisecond, 3),
-    swarm.WithPollFrequency(10 * time.Second),
-    /* ... */
-  ),
-)
-```
-
-### Message Delivery Guarantees
-
-Usage of Golang channels as an abstraction raises a concern about grade of service on the message delivery guarantees. The library ensures exactly same grade of service as the underlying queueing system or event broker. Messages are delivered according to the promise once they are accepted by the remote side of queuing system. The library's built-in retry logic protects losses from temporary unavailability of the remote peer. However, Golang channels function as sophisticated "in-memory buffers," which can introduce a delay of a few milliseconds between scheduling a message to the channel and dispatching it to the remote peer. To handle catastrophic failures, choose one of the following policies to either accept or safeguard in-flight messages from potential loss.
-
-**At Most Once** is best effort policy, where a message is published without any formal acknowledgement of receipt, and it isn't replayed. Some messages can be lost as subscribers are not required to acknowledge receipt.  
-
-The library implements asymmetric approaches for message handling. In the **enqueue** path, buffered Golang channels are used for both message emission and managing dead-letter queues. Similarly, the **dequeue** path uses buffered Golang channels to deliver messages to the consumer.   
+You're building a serverless application on AWS that needs to process events from multiple sources - SQS queues, S3 bucket notifications, EventBridge events, and DynamoDB streams. Each service has its own SDK with different patterns.
 
 ```go
-// Spawn a new instance of the messaging broker using At Most Once policy.
-// The policy defines the capacity of Golang channel.
-q, err := sqs.New("name-of-the-queue",
-  swarm.WithPolicyAtMostOnce(1000),
-)
+// Different patterns for each service
+func handleSQSEvent(event events.SQSEvent) error {
+  for _, record := range event.Records {
+    // SQS-specific parsing and acknowledgment
+    body := record.Body
+    receiptHandle := record.ReceiptHandle
+    // ... SQS-specific error handling
+  }
+}
 
-// for compatibility reasons two channels are returned on the enqueue path but
-// dead-letter-queue is nil
-enq, dlq := enqueue.Typed[Note](q)
-
-// for compatibility reasons two channels are returned on the dequeue path but
-// ack channel acts as /dev/null discards any sent message
-deq, ack := dequeue.Typed[Note](q)
-```
-
-**At Least Once** is the default policy used by the library. The policy assume usage of "acknowledgement" protocol, which guarantees a message will be re-sent until it is formally acknowledged by a recipient. Messages should never be lost but it might be delivered more than once causing duplicate work to consumer.  
-
-The library also implements asymmetric approaches for message handling. In the **enqueue** path, unbuffered Golang channels are used to emit messages and manage the dead-letter queue, resulting in a delayed guarantee. This means that enqueuing additional messages is blocked until the dead-letter queue is fully resolved. Alternatively, the application can opt for a synchronous protocol to enqueue messages.
-
-In the **dequeue** path, buffered Golang channels are used to deliver messages to the consumer and acknowledge their processing. While consumer acknowledgment ensures reliable message delivery, it may lead to message duplication.
-
-```go
-// Spawn a new instance of the messaging broker using At Least Once policy.
-// At Least Once policy is the default one, no needs to explicitly declare it.
-// Use it only if you need to define other capacity for dequeue channel than
-// the default one, which creates unbuffered channel
-q, err := sqs.New("name-of-the-queue",
-  swarm.WithPolicyAtLeastOnce(1000),
-)
-
-// both channels are unbuffered
-enq, dlq := enqueue.Typed[Note](q)
-
-// buffered channels of capacity n
-deq, ack := dequeue.Typed[Note](q)
-```
-
-**Exactly Once** is not supported by the library yet.
-
-
-### Delayed Guarantee vs Guarantee
-
-Usage of **At Least Once** policy (unbuffered channels) provides the delayed guarantee for producers. Let's consider the following example. If queue broker fails to send message `A` then the channel `enq` is blocked at sending message `B` until the program consumes message `A` from the dead-letter queue channel.
-
-```go
-enq, dlq := enqueue.Typed[User](q)
-
-enq <- User{ID: "A", Text: "some text by A"} // failed to send
-enq <- User{ID: "B", Text: "some text by B"} // blocked until dlq is processed 
-enq <- User{ID: "C", Text: "some text by C"}
-```
-
-The delayed guarantee is efficient on batch processing, pipelining but might cause complication at transactional processing. Therefore, the library also support a synchronous variant to producing a message:
-
-```go
-// Creates "synchronous" variant of the queue
-user := enqueue.NewTyped[User](q)
-
-// Synchronously enqueue the message. It ensure that message is scheduled for
-// delivery to remote peer once function successfully returns.
-if err := user.Enq(context.Background(), &User{ID: "A", Text: "some text by A"}); err != nil {
-  // handle error
+func handleS3Event(event events.S3Event) error {
+  for _, record := range event.Records {
+    // S3-specific parsing
+    bucket := record.S3.Bucket.Name
+    key := record.S3.Object.Key
+    // ... S3-specific error handling
+  }
 }
 ```
 
-### Order of Messages
-
-The library guarantee ordering of the messages when they are produced over same Golang channel. Let's consider a following example:
+Using the `swarm` library, we benefit from
+* Unified Interface: Same code patterns work across all AWS services
+* Easy Testing: Mock implementations for local development
+* Technology Agnostic: Can switch from SQS to EventBridge without code changes
 
 ```go
-user, _ := enqueue.Typed[User](q)
-note, _ := enqueue.Typed[Note](q)
+lEvents := eventbridge.Channels().MustListener()
+lS3 := s3.Channels().MustListener()
+lSqs := sqs.Channels().MustListener()
 
-user <- &User{ID: "A", Text: "some text by A"}
-note <- &Note{ID: "B", Text: "some note A"}
-user <- &User{ID: "C", Text: "some text by A"}
+listen.Typed[UserEvent](lEvents)
+listen.Typed[DataUploaded](lS3)
+listen.Typed[Order](lSqs)
 ```
 
-The library guarantees following clauses `A before C` and `C after A` because both messages are produced to single channel `user`. It do not guarantee clauses `A before B`, `B before C` or `C after B` because multiple channels are used.
+### Microservices Communication: The Synchronous Trap
 
-The library does not provide any higher guarantee than underlying message broker. For example, using SQS would not guarantee any ordering while SQS FIFO makes sure that messages of same type is ordered.
-
-
-### Octet Streams
-
-The library support slices of bytes `[]byte` as message type. It opens an opportunity for the many encoding options like JSON, Gob, etc.  
+You have a microservices architecture where the user service, notification service, and analytics service need to communicate. Traditional REST APIs create tight coupling and cascading failures.
 
 ```go
-import (
-  queue "github.com/fogfish/swarm/queue/bytes"
-)
+// Synchronous REST calls create brittleness
+func CreateUser(user *User) error {
+  // Save user
+  if err := userDB.Save(user); err != nil {
+    return err
+  }
 
-enq, dlq := enqueue.Bytes(q, "Note")
-deq, ack := enqueue.Bytes(q, "Note")
-```
+  // Synchronous calls to other services
+  if err := notificationService.SendWelcomeEmail(user); err != nil {
+    return err // User creation fails if email fails
+  }
 
-Please see example about binary [producer](./broker/sqs/examples/enqueue/bytes/sqs.go) and [consumer](./broker/sqs/examples/dequeue/bytes/sqs.go).
+  if err := analyticsService.TrackUserCreated(user); err != nil {
+    return err // User creation fails if analytics fails
+  }
 
-
-### Generic events
-
-An event represents an immutable fact placed into the queuing system. It is conceptually similar to the [Action](https://schema.org/Action) defined by schema.org.
-
-> An action performed by a direct agent and indirect participants upon a direct object.
-
-This type facilitates the development of event-driven solutions that treat data as a collection of immutable facts, which can be queried and processed in real-time. These applications process a logical event log, where each event represents a change to the current state of an object, such as which attributes were inserted, updated, or deleted (essentially a diff). Each event uniquely identifies the affected object using a unique identifier.
-
-Unlike other solutions, this approach does not use an envelope for events. Instead, it pairs metadata and data side by side, making it more extendable.
-
-```go
-
-type Meta struct {
-  swarm.Meta
-  About string `json:"about"`
-}
-
-type User struct {
-	ID   string `json:"id"`
-	Text string `json:"text"`
-}
-
-// creates Golang channels to produce / consume messages
-enq, dlq := enqueue.Event[Meta, User](q)
-deq, ack := enqueue.Event[Meta, User](q)
-```
-
-Please see example about event [producer](./broker/sqs/examples/enqueue/event/sqs.go) and [consumer](./broker/sqs/examples/dequeue/event/sqs.go).
-
-
-### Error Handling
-
-The error handling on channel level is governed either by [dead-letter queue](#message-delivery-guarantees) or [acknowledge protocol](#consume-dequeue-messages). The library provides `swarm.WithStdErr` configuration option to pass the side channel to consume global errors. Use it as top level error handler. 
-
-```go
-stderr := make(chan error)
-q, err := sqs.New("swarm-test",
-  sqs.WithConfig(
-    swarm.WithStdErr(stderr),
-  ),
-)
-
-for err := range stderr {
-  // error handling loop
+  return nil
 }
 ```
 
-
-### Fail Fast
-
-The existing message routing architecture assumes that a micro-batch of messages is read from the broker, dispatched to channels, and then waits for acknowledgments. A new micro-batch is not read until all messages are acknowledged, or the `TimeToFlight` timer expires. In time-critical systems or serverless applications, a "fail fast" strategy is more effective (e.g., a Lambda function doesn't need to idle until the timeout).
-
-Send negative acknowledgement to `ack` channel to indicate error on message processing.
+Using the `swarm` library, we benefit from
+* Resilient: Core functionality works even if downstream services are down
+* Scalable: Services can process at their own pace
+* Evolvable: Easy to add new services without changing existing code
 
 ```go
-deq, ack := dequeue.Typed[Note](q)
+// Async communication via channels
+func CreateUser(user *User) error {
+  // Core business logic
+  if err := userDB.Save(user); err != nil {
+      return err
+  }
 
-// consume messages and then acknowledge it
-for msg := range deq {
-  // negative ack on the error
-  if err := doSomething(msg.Object); err != nil {
-    ack <- msg.Fail(err)
-    continue
-  } 
-  ack <- msg
+  // Async notifications
+  userEvents <- UserCreated{User: user}
+
+  return nil // Immediate success
 }
+
+// Services consume events independently
+go func() {
+  for event := range userEvents {
+    notificationQueue <- WelcomeEmail{User: event.User}
+    analyticsQueue <- UserCreatedEvent{User: event.User}
+  }
+}()
 ```
-
-
-### Serverless 
-
-The library primarily support development of serverless event-driven application using AWS service. The library provides AWS CDK Golang constructs to spawn consumers. See example of [serverless consumer](./broker/eventbridge/examples/dequeue/typed/eventbridge.go) and corresponding AWS CDK [application](./broker/eventbridge/examples/serverless/eventbridge.go).
-
-It consistently implements a pattern - "create Broker, attach Sinks".  
-
-```go
-package main
-
-import (
-  "github.com/fogfish/scud"
-  "github.com/fogfish/swarm/broker/eventbridge"
-)
-
-func main() {
-  app := awscdk.NewApp(nil)
-  stack := awscdk.NewStack(app, jsii.String("swarm-example-eventbridge"),
-    &awscdk.StackProps{
-      Env: &awscdk.Environment{
-        Account: jsii.String(os.Getenv("CDK_DEFAULT_ACCOUNT")),
-        Region:  jsii.String(os.Getenv("CDK_DEFAULT_REGION")),
-      },
-    },
- )
-
-  // create broker
-  broker := eventbridge.NewBroker(stack, jsii.String("Broker"), nil)
-  broker.NewEventBus(nil)
-
-  broker.NewSink(
-    &eventbridge.SinkProps{
-      Source: []string{"swarm-example-eventbridge"},
-      Function: &scud.FunctionGoProps{
-        SourceCodeModule: "github.com/fogfish/swarm/broker/eventbridge",
-        SourceCodeLambda:  "examples/dequeue/typed",
-      },
-    },
-  )
-
-  app.Synth(nil)
-}
-```
-
-
-
-### Race condition in Serverless
-
-In a serverless environment, performing dequeue and enqueue operations can lead to race conditions. Specifically, the dequeue loop may complete before other emitted messages are processed.
-
-```go
-rcv, ack := dequeue.Typed[/* .. */](broker1)
-snd, dlq := enqueue.Typed[/* .. */](broker2)
-
-for msg := range rcv {
-  snd <- // ...
-
-  // The ack would cause sleep of function in serverless.
-  // snd channel might not be flushed before function sleep.
-  // The library does not provide yet ultimate solution.  
-  ack <- msg   
-}
-```
-
-Unfortunately, the library does not provide yet ultimate solution. Either sleep of sync senders are required. 
-
-
 
 ## How To Contribute
 
@@ -613,7 +497,7 @@ The library is [Apache Version 2.0](LICENSE) licensed and accepts contributions 
 4. Push to the branch (`git push origin my-new-feature`)
 5. Create new Pull Request
 
-The build and testing process requires [Go](https://golang.org) version 1.16 or later.
+The build and testing process requires [Go](https://golang.org) version 1.24 or later.
 
 **build** and **test** library.
 
@@ -629,13 +513,15 @@ The commit message helps us to write a good release note, speed-up review proces
 
 ### bugs
 
-If you experience any issues with the library, please let us know via [GitHub issues](https://github.com/fogfish/swarm/issue). We appreciate detailed and accurate reports that help us to identity and replicate the issue. 
+If you experience any issues with the library, please let us know via [GitHub issues](https://github.com/fogfish/swarm/issues). We appreciate detailed and accurate reports that help us to identity and replicate the issue. 
 
+## Community & Support
 
+- **Documentation**: [User Guide](./doc/user-guide.md) • [API Reference](https://pkg.go.dev/github.com/fogfish/swarm)
+- **Questions**: [GitHub Discussions](https://github.com/fogfish/swarm/discussions) for Q&A and ideas
+- **Issues**: [GitHub Issues](https://github.com/fogfish/swarm/issues) for bug reports and feature requests
+- **Examples**: [Live examples](./broker/) for all supported brokers 
 
-## Bring Your Own Queue
-
-TBD
 
 ## License
 

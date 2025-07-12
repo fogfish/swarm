@@ -6,7 +6,7 @@
 // https://github.com/fogfish/swarm
 //
 
-package enqueue_test
+package emit_test
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 
 	"github.com/fogfish/it/v2"
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/enqueue"
+	enqueue "github.com/fogfish/swarm/emit"
 	"github.com/fogfish/swarm/kernel"
 	"github.com/fogfish/swarm/kernel/encoding"
 )
@@ -32,8 +32,8 @@ type User struct {
 type Evt = swarm.Event[swarm.Meta, User]
 
 func TestType(t *testing.T) {
-	mock := mockEmitter(10)
-	k := kernel.NewEnqueuer(mock, swarm.Config{})
+	mock := mockEmitter()
+	k := kernel.NewEmitter(mock, swarm.NewConfig())
 	go func() {
 		time.Sleep(yield_before_close)
 		k.Close()
@@ -50,8 +50,8 @@ func TestType(t *testing.T) {
 }
 
 func TestEvent(t *testing.T) {
-	mock := mockEmitter(10)
-	k := kernel.NewEnqueuer(mock, swarm.Config{})
+	mock := mockEmitter()
+	k := kernel.NewEmitter(mock, swarm.NewConfig())
 	go func() {
 		time.Sleep(yield_before_close)
 		k.Close()
@@ -76,8 +76,8 @@ func TestEvent(t *testing.T) {
 }
 
 func TestBytes(t *testing.T) {
-	mock := mockEmitter(10)
-	k := kernel.NewEnqueuer(mock, swarm.Config{})
+	mock := mockEmitter()
+	k := kernel.NewEmitter(mock, swarm.NewConfig())
 	go func() {
 		time.Sleep(yield_before_close)
 		k.Close()
@@ -99,7 +99,7 @@ type emitter struct {
 	val any
 }
 
-func mockEmitter(wait int) *emitter {
+func mockEmitter() *emitter {
 	return &emitter{}
 }
 

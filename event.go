@@ -48,6 +48,10 @@ type Meta struct {
 	// defined by sender.
 	Type curie.IRI `json:"type,omitempty"`
 
+	// Unique identity of the realm (logical environment or world) where the event was created.
+	// Useful to support deployment isolation (e.g., green/blue, canary) in event-driven systems.
+	Realm curie.IRI `json:"realm,omitempty"`
+
 	//
 	// Direct performer of the event, a software service that emits action to
 	// the stream. It is automatically defined by the library upon the transmission

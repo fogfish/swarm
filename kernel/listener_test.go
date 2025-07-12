@@ -1,0 +1,99 @@
+//
+// Copyright (C) 2021 - 2024 Dmitry Kolesnikov
+//
+// This file may be modified and distributed under the terms
+// of the Apache License Version 2.0. See the LICENSE file for details.
+// https://github.com/fogfish/swarm
+//
+
+package kernel
+
+import (
+	"testing"
+	"time"
+
+	"github.com/fogfish/it/v2"
+	"github.com/fogfish/swarm"
+	"github.com/fogfish/swarm/kernel/encoding"
+)
+
+func TestDequeuer(t *testing.T) {
+	cfg := newConfig()
+
+	codec := encoding.ForTyped[string]()
+	mock := mockFactory{}
+	none := mock.ListenerCore(nil, nil)
+	pass := mock.ListenerCore(make(chan string), mock.Bag(1))
+
+	t.Run("Kernel", func(t *testing.T) {
+		k := New(nil, NewListener(newMockCathode(nil, nil), cfg.kernel))
+		go func() {
+			time.Sleep(cfg.yieldBeforeClose)
+			k.Close()
+		}()
+		k.Await()
+	})
+
+	t.Run("None", func(t *testing.T) {
+		k := NewListener(none, cfg.kernel)
+		go k.Await()
+		k.Close()
+	})
+
+	t.Run("Idle", func(t *testing.T) {
+		k := NewListener(none, cfg.kernel)
+		RecvChan(k, "test", codec)
+		go k.Await()
+		k.Close()
+	})
+
+	t.Run("Dequeue.1", func(t *testing.T) {
+		k := NewListener(pass, cfg.kernel)
+		rcv, ack := RecvChan(k, "test", codec)
+		go k.Await()
+
+		ack <- <-rcv
+		it.Then(t).Should(
+			it.Equal(string(<-pass.ack), `1`),
+		)
+
+		k.Close()
+	})
+
+	t.Run("Dequeue.1.Context", func(t *testing.T) {
+		k := NewListener(pass, cfg.kernel)
+		rcv, ack := RecvChan(k, "test", codec)
+		go k.Await()
+
+		msg := <-rcv
+		ack <- msg
+		it.Then(t).Should(
+			it.Equal(string(<-pass.ack), `1`),
+			it.Equal(msg.IOContext.(string), "context"),
+		)
+
+		k.Close()
+	})
+
+	t.Run("Backlog", func(t *testing.T) {
+		cfg := swarm.NewConfig()
+		cfg.CapAck = 4
+		cfg.PollFrequency = 1 * time.Millisecond
+		k := NewListener(pass, cfg)
+		rcv, ack := RecvChan(k, "test", codec)
+		go k.Await()
+
+		ack <- <-rcv
+		ack <- <-rcv
+		ack <- <-rcv
+		ack <- <-rcv
+		go k.Close()
+
+		it.Then(t).Should(
+			it.Equal(string(<-pass.ack), `1`),
+			it.Equal(string(<-pass.ack), `1`),
+			it.Equal(string(<-pass.ack), `1`),
+			it.Equal(string(<-pass.ack), `1`),
+		)
+	})
+}

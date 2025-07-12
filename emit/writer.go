@@ -6,7 +6,7 @@
 // https://github.com/fogfish/swarm
 //
 
-package enqueue
+package emit
 
 import (
 	"context"
@@ -21,11 +21,11 @@ import (
 type EmitterTyped[T any] struct {
 	cat    string
 	codec  kernel.Encoder[T]
-	kernel *kernel.Enqueuer
+	kernel *kernel.EmitterCore
 }
 
 // Creates synchronous typed emitter
-func NewTyped[T any](q *kernel.Enqueuer, codec ...kernel.Encoder[T]) *EmitterTyped[T] {
+func NewTyped[T any](q *kernel.EmitterCore, codec ...kernel.Encoder[T]) *EmitterTyped[T] {
 	var c kernel.Encoder[T]
 	if len(codec) == 0 {
 		c = encoding.ForTyped[T]()
@@ -73,14 +73,14 @@ func (q *EmitterTyped[T]) Enq(ctx context.Context, object T, cat ...string) erro
 type EmitterEvent[M, T any] struct {
 	cat    string
 	codec  kernel.Encoder[swarm.Event[M, T]]
-	kernel *kernel.Enqueuer
+	kernel *kernel.EmitterCore
 }
 
 // Creates synchronous event emitter
-func NewEvent[E swarm.Event[M, T], M, T any](q *kernel.Enqueuer, codec ...kernel.Encoder[swarm.Event[M, T]]) *EmitterEvent[M, T] {
+func NewEvent[E swarm.Event[M, T], M, T any](q *kernel.EmitterCore, codec ...kernel.Encoder[swarm.Event[M, T]]) *EmitterEvent[M, T] {
 	var c kernel.Encoder[swarm.Event[M, T]]
 	if len(codec) == 0 {
-		c = encoding.ForEvent[E](q.Config.Source)
+		c = encoding.ForEvent[E](q.Config.Realm, q.Config.Agent)
 	} else {
 		c = codec[0]
 	}
@@ -125,11 +125,11 @@ func (q *EmitterEvent[M, T]) Enq(ctx context.Context, object swarm.Event[M, T], 
 type EmitterBytes struct {
 	cat    string
 	codec  kernel.Encoder[[]byte]
-	kernel *kernel.Enqueuer
+	kernel *kernel.EmitterCore
 }
 
 // Creates synchronous emitter
-func NewBytes(q *kernel.Enqueuer, codec kernel.Encoder[[]byte]) *EmitterBytes {
+func NewBytes(q *kernel.EmitterCore, codec kernel.Encoder[[]byte]) *EmitterBytes {
 	return &EmitterBytes{
 		cat:    codec.Category(),
 		codec:  codec,
