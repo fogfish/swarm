@@ -13,20 +13,12 @@ import (
 
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/sqs"
-	"github.com/fogfish/swarm/dequeue"
 	"github.com/fogfish/swarm/kernel/encoding"
+	dequeue "github.com/fogfish/swarm/listen"
 )
 
 func main() {
-	q, err := sqs.NewDequeuer("swarm-test",
-		sqs.WithConfig(
-			swarm.WithLogStdErr(),
-		),
-	)
-	if err != nil {
-		slog.Error("sqs reader has failed", "err", err)
-		return
-	}
+	q := sqs.Must(sqs.Listener().Build("swarm-test"))
 
 	go actor("user").handle(dequeue.Bytes(q, encoding.ForBytes("User")))
 	go actor("note").handle(dequeue.Bytes(q, encoding.ForBytes("Note")))

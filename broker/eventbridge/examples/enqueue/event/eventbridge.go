@@ -11,7 +11,7 @@ package main
 import (
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/eventbridge"
-	"github.com/fogfish/swarm/enqueue"
+	"github.com/fogfish/swarm/emit"
 )
 
 type Event = swarm.Event[swarm.Meta, EventNote]
@@ -22,15 +22,9 @@ type EventNote struct {
 }
 
 func main() {
-	q := eventbridge.MustEnqueuer(
-		eventbridge.WithEventBus("swarm-example-eventbridge"),
-		eventbridge.WithConfig(
-			swarm.WithSource("swarm-example-eventbridge"),
-			swarm.WithLogStdErr(),
-		),
-	)
+	q := eventbridge.Must(eventbridge.Emitter().Build("swarm-example-eventbridge"))
 
-	bus := swarm.LogDeadLetters(enqueue.Event[Event](q))
+	bus := swarm.LogDeadLetters(emit.Event[Event](q))
 
 	bus <- Event{
 		Meta: &swarm.Meta{

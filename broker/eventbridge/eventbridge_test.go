@@ -26,10 +26,12 @@ import (
 
 func TestReader(t *testing.T) {
 	var bag []swarm.Bag
-	bridge := &bridge{kernel.NewBridge(100 * time.Millisecond)}
+	cfg := swarm.NewConfig()
+	cfg.TimeToFlight = 100 * time.Millisecond
+	bridge := &bridge{kernel.NewBridge(cfg)}
 
 	t.Run("New", func(t *testing.T) {
-		_, err := NewDequeuer()
+		_, err := Listener().Build()
 		it.Then(t).Should(it.Nil(err))
 	})
 
@@ -41,7 +43,7 @@ func TestReader(t *testing.T) {
 			}
 		}()
 
-		err := bridge.run(
+		err := bridge.run(context.Background(),
 			events.CloudWatchEvent{
 				ID:         "abc-def",
 				DetailType: "category",
@@ -62,7 +64,7 @@ func TestReader(t *testing.T) {
 			bag, _ = bridge.Ask(context.Background())
 		}()
 
-		err := bridge.run(
+		err := bridge.run(context.Background(),
 			events.CloudWatchEvent{
 				ID:         "abc-def",
 				DetailType: "category",
@@ -83,7 +85,7 @@ func TestReader(t *testing.T) {
 			}
 		}()
 
-		err := bridge.run(
+		err := bridge.run(context.Background(),
 			events.CloudWatchEvent{
 				ID:         "abc-def",
 				DetailType: "category",
@@ -107,7 +109,7 @@ func TestReader(t *testing.T) {
 			}
 		}()
 
-		err := bridge.run(
+		err := bridge.run(context.Background(),
 			events.CloudWatchEvent{
 				ID:         "test-error",
 				DetailType: "category",
@@ -123,20 +125,15 @@ func TestReader(t *testing.T) {
 
 func TestWriter(t *testing.T) {
 	t.Run("New", func(t *testing.T) {
-		q, err := NewEnqueuer(WithEventBus("test"))
+		q, err := Emitter().Build("test")
 		it.Then(t).Should(it.Nil(err))
 		q.Close()
-	})
-
-	t.Run("New.NoEventBus", func(t *testing.T) {
-		_, err := NewEnqueuer()
-		it.Then(t).ShouldNot(it.Nil(err))
 	})
 
 	t.Run("Enqueue", func(t *testing.T) {
 		mock := &mockEventBridge{}
 
-		q, err := NewEnqueuer(WithEventBus("test"), WithService(mock))
+		q, err := Emitter().WithService(mock).Build("test")
 		it.Then(t).Should(it.Nil(err))
 
 		err = q.Emitter.Enq(context.Background(),
@@ -157,7 +154,7 @@ func TestWriter(t *testing.T) {
 	t.Run("Enqueue.ServiceError", func(t *testing.T) {
 		mock := &mockEventBridgeError{}
 
-		q, err := NewEnqueuer(WithEventBus("test"), WithService(mock))
+		q, err := Emitter().WithService(mock).Build("test")
 		it.Then(t).Should(it.Nil(err))
 
 		err = q.Emitter.Enq(context.Background(),
@@ -174,7 +171,7 @@ func TestWriter(t *testing.T) {
 	t.Run("Enqueue.FailedEntry", func(t *testing.T) {
 		mock := &mockEventBridgeFailedEntry{}
 
-		q, err := NewEnqueuer(WithEventBus("test"), WithService(mock))
+		q, err := Emitter().WithService(mock).Build("test")
 		it.Then(t).Should(it.Nil(err))
 
 		err = q.Emitter.Enq(context.Background(),
@@ -191,7 +188,7 @@ func TestWriter(t *testing.T) {
 	t.Run("Enqueue.ContextCancel", func(t *testing.T) {
 		mock := &mockEventBridgeTimeout{}
 
-		q, err := NewEnqueuer(WithEventBus("test"), WithService(mock))
+		q, err := Emitter().WithService(mock).Build("test")
 		it.Then(t).Should(it.Nil(err))
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -211,42 +208,63 @@ func TestWriter(t *testing.T) {
 
 func TestBroker(t *testing.T) {
 	t.Run("New", func(t *testing.T) {
-		q, err := New(WithEventBus("test"))
+		q, err := Endpoint().Build("test")
 		it.Then(t).Should(it.Nil(err))
 		q.Close()
 	})
 
-	t.Run("New.NoEventBus", func(t *testing.T) {
-		// EventBus is now mandatory - should return an error
-		_, err := New()
-		it.Then(t).ShouldNot(it.Nil(err))
-	})
 }
 
 func TestConfig(t *testing.T) {
 	t.Run("WithEventBus", func(t *testing.T) {
-		q, err := NewEnqueuer(WithEventBus("test-bus"))
+		q, err := Emitter().Build("test-bus")
 		it.Then(t).Should(it.Nil(err))
 		q.Close()
 	})
 
 	t.Run("WithService", func(t *testing.T) {
 		mock := &mockEventBridge{}
-		q, err := NewEnqueuer(WithEventBus("test"), WithService(mock))
+		q, err := Emitter().WithService(mock).Build("test-bus")
 		it.Then(t).Should(it.Nil(err))
 		q.Close()
 	})
 
 	t.Run("MustEnqueuer.Success", func(t *testing.T) {
-		q := MustEnqueuer(WithEventBus("test"))
+		q := Must(Emitter().Build("test"))
 		it.Then(t).ShouldNot(it.Nil(q))
 		q.Close()
 	})
 
 	t.Run("MustDequeuer.Success", func(t *testing.T) {
-		q := MustDequeuer(WithEventBus("test-bus"))
+		q := Must(Listener().Build())
 		it.Then(t).ShouldNot(it.Nil(q))
 		q.Close()
+	})
+}
+
+func TestBuilder(t *testing.T) {
+	t.Run("Simple case with event bus", func(t *testing.T) {
+		mock := &mockEventBridge{}
+		client, err := Endpoint().
+			WithService(mock).
+			Build("production-events")
+
+		it.Then(t).Should(it.Nil(err))
+		client.Close()
+	})
+
+	t.Run("Enqueuer with kernel options", func(t *testing.T) {
+		mock := &mockEventBridge{}
+		enqueuer, err := Emitter().
+			WithKernel(swarm.WithAgent("test-service")).
+			WithService(mock).
+			Build("production-events")
+
+		it.Then(t).Should(
+			it.Nil(err),
+			it.Equal(enqueuer.Config.Agent, "test-service"),
+		)
+		enqueuer.Close()
 	})
 }
 

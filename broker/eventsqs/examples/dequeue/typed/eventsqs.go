@@ -32,15 +32,7 @@ type Like struct {
 }
 
 func main() {
-	q, err := eventsqs.NewDequeuer(
-		eventsqs.WithConfig(
-			swarm.WithLogStdErr(),
-		),
-	)
-	if err != nil {
-		slog.Error("eventsqs reader has failed", "err", err)
-		return
-	}
+	q := eventsqs.Channels().MustDequeuer()
 
 	go actor[User]("user").handle(dequeue.Typed[User](q))
 	go actor[Note]("note").handle(dequeue.Typed[Note](q))

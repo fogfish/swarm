@@ -18,7 +18,7 @@ import (
 const Category = "S3EventRecord"
 
 // The broker produces only [events.S3EventRecord], the function is helper.
-func Source(q *kernel.Dequeuer) (
+func Source(q *kernel.ListenerCore) (
 	<-chan swarm.Msg[*events.S3EventRecord],
 	chan<- swarm.Msg[*events.S3EventRecord],
 ) {

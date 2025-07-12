@@ -24,12 +24,17 @@ func TestReader(t *testing.T) {
 	var bag []swarm.Bag
 	bridge := &bridge{kernel.NewBridge(100 * time.Millisecond)}
 
-	t.Run("New", func(t *testing.T) {
-		q, err := NewDequeuer(
-			WithConfig(
-				swarm.WithLogStdErr(),
-			),
-		)
+	// Test new builder pattern
+	t.Run("Builder.NewDequeuer", func(t *testing.T) {
+		q, err := Channels().NewDequeuer()
+		it.Then(t).Should(it.Nil(err))
+		q.Close()
+	})
+
+	t.Run("Builder.WithKernel", func(t *testing.T) {
+		q, err := Channels().
+			WithKernel(swarm.WithLogStdErr()).
+			NewDequeuer()
 		it.Then(t).Should(it.Nil(err))
 		q.Close()
 	})

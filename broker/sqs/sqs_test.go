@@ -20,19 +20,16 @@ import (
 	"github.com/fogfish/it/v2"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/sqs"
-	"github.com/fogfish/swarm/dequeue"
 	"github.com/fogfish/swarm/kernel/encoding"
+	dequeue "github.com/fogfish/swarm/listen"
 )
 
 func TestNew(t *testing.T) {
 	mock := &mockEnqueue{}
-	q, err := sqs.NewEnqueuer("test",
-		sqs.WithService(mock),
-		sqs.WithConfig(
-			swarm.WithLogStdErr(),
-		),
-		sqs.WithBatchSize(100),
-	)
+	q, err := sqs.Emitter().
+		WithService(mock).
+		WithBatchSize(100).
+		Build("test")
 
 	it.Then(t).Should(
 		it.Nil(err),
@@ -44,20 +41,20 @@ func TestNew(t *testing.T) {
 func TestEnqueuer(t *testing.T) {
 	t.Run("NewEnqueuer", func(t *testing.T) {
 		mock := &mockEnqueue{}
-		q, err := sqs.NewEnqueuer("test",
-			sqs.WithService(mock),
-			sqs.WithConfig(
-				swarm.WithLogStdErr(),
-			),
-		)
+		q, err := sqs.Emitter().
+			WithService(mock).
+			Build("test")
+
 		it.Then(t).Should(it.Nil(err))
 		q.Close()
 	})
 
 	t.Run("Enqueue", func(t *testing.T) {
 		mock := &mockEnqueue{}
+		q, err := sqs.Emitter().
+			WithService(mock).
+			Build("test")
 
-		q, err := sqs.NewEnqueuer("test", sqs.WithService(mock))
 		it.Then(t).Should(it.Nil(err))
 
 		err = q.Emitter.Enq(context.Background(),
@@ -79,26 +76,22 @@ func TestEnqueuer(t *testing.T) {
 func TestDequeuer(t *testing.T) {
 	t.Run("NewDequeuer", func(t *testing.T) {
 		mock := &mockDequeue{}
-		q, err := sqs.NewDequeuer("test",
-			sqs.WithService(mock),
-			sqs.WithBatchSize(10),
-			sqs.WithConfig(
-				swarm.WithLogStdErr(),
-			),
-		)
+		q, err := sqs.Listener().
+			WithService(mock).
+			WithBatchSize(10).
+			Build("test")
+
 		it.Then(t).Should(it.Nil(err))
 		q.Close()
 	})
 
 	t.Run("New", func(t *testing.T) {
 		mock := &mockDequeue{}
-		q, err := sqs.New("test",
-			sqs.WithService(mock),
-			sqs.WithBatchSize(10),
-			sqs.WithConfig(
-				swarm.WithLogStdErr(),
-			),
-		)
+		q, err := sqs.Listener().
+			WithService(mock).
+			WithBatchSize(10).
+			Build("test")
+
 		it.Then(t).Should(it.Nil(err))
 		q.Close()
 	})
@@ -106,7 +99,10 @@ func TestDequeuer(t *testing.T) {
 	t.Run("Dequeue", func(t *testing.T) {
 		mock := &mockDequeue{}
 
-		q, err := sqs.NewDequeuer("test", sqs.WithService(mock))
+		q, err := sqs.Listener().
+			WithService(mock).
+			Build("test")
+
 		it.Then(t).Should(it.Nil(err))
 
 		rcv, ack := dequeue.Bytes(q, encoding.ForBytes("test"))
@@ -127,7 +123,7 @@ func TestDequeuer(t *testing.T) {
 	t.Run("Dequeue.Error", func(t *testing.T) {
 		mock := &mockDequeue{}
 
-		q, err := sqs.NewDequeuer("test", sqs.WithService(mock))
+		q, err := sqs.Listener().WithService(mock).Build("test")
 		it.Then(t).Should(it.Nil(err))
 
 		rcv, ack := dequeue.Bytes(q, encoding.ForBytes("test"))
@@ -144,6 +140,113 @@ func TestDequeuer(t *testing.T) {
 		it.Then(t).Should(
 			it.True(mock.req == nil),
 		)
+	})
+}
+
+func TestBuilder(t *testing.T) {
+	t.Run("Simple case with sensible defaults", func(t *testing.T) {
+		mock := &mockEnqueue{}
+		client, err := sqs.Endpoint().
+			WithService(mock).
+			Build("test")
+
+		it.Then(t).Should(
+			it.Nil(err),
+			it.Equal(client.EmitterCore.Config.Agent, "github.com/fogfish/swarm"), // Default source
+			it.Equal(client.EmitterCore.Config.PollerPool, 1),                     // Default poller pool
+		)
+		client.Close()
+	})
+
+	t.Run("Broker customization", func(t *testing.T) {
+		mock := &mockEnqueue{}
+		enqueuer, err := sqs.Emitter().
+			WithBatchSize(5).
+			WithService(mock).
+			Build("test")
+
+		it.Then(t).Should(
+			it.Nil(err),
+			it.Equal(enqueuer.Config.PollerPool, 1), // Batch size <= 10
+		)
+		enqueuer.Close()
+	})
+
+	t.Run("Large batch size adjusts poller pool", func(t *testing.T) {
+		mock := &mockEnqueue{}
+		dequeuer, err := sqs.Listener().
+			WithBatchSize(25).
+			WithService(mock).
+			Build("test")
+
+		it.Then(t).Should(
+			it.Nil(err),
+			it.Equal(dequeuer.Config.PollerPool, 3), // 25/10 + 1 = 3
+		)
+		dequeuer.Close()
+	})
+
+	t.Run("Advanced kernel configuration", func(t *testing.T) {
+		mock := &mockEnqueue{}
+		client, err := sqs.Endpoint().
+			WithKernel(
+				swarm.WithAgent("advanced-service"),
+				swarm.WithPollFrequency(500*time.Millisecond),
+			).
+			WithBatchSize(10).
+			WithService(mock).
+			Build("test")
+
+		it.Then(t).Should(
+			it.Nil(err),
+			it.Equal(client.EmitterCore.Config.Agent, "advanced-service"),
+			it.Equal(client.EmitterCore.Config.PollFrequency, 500*time.Millisecond),
+			it.Equal(client.EmitterCore.Config.PollerPool, 1),
+		)
+		client.Close()
+	})
+
+	t.Run("Method chaining maintains fluent API", func(t *testing.T) {
+		mock := &mockEnqueue{}
+
+		// Should be able to chain methods in any order
+		client1, err1 := sqs.Endpoint().
+			WithBatchSize(5).
+			WithKernel(swarm.WithAgent("test1")).
+			WithService(mock).
+			Build("test")
+
+		client2, err2 := sqs.Endpoint().
+			WithService(mock).
+			WithKernel(swarm.WithAgent("test2")).
+			WithBatchSize(5).
+			Build("test")
+
+		it.Then(t).Should(
+			it.Nil(err1),
+			it.Nil(err2),
+			it.Equal(client1.EmitterCore.Config.Agent, "test1"),
+			it.Equal(client2.EmitterCore.Config.Agent, "test2"),
+		)
+
+		client1.Close()
+		client2.Close()
+	})
+
+	t.Run("Multiple kernel options", func(t *testing.T) {
+		mock := &mockEnqueue{}
+		enqueuer, err := sqs.Emitter().
+			WithKernel(swarm.WithAgent("service1")).
+			WithKernel(swarm.WithPollFrequency(100 * time.Millisecond)).
+			WithService(mock).
+			Build("test")
+
+		it.Then(t).Should(
+			it.Nil(err),
+			it.Equal(enqueuer.Config.Agent, "service1"),
+			it.Equal(enqueuer.Config.PollFrequency, 100*time.Millisecond),
+		)
+		enqueuer.Close()
 	})
 }
 

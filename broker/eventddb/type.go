@@ -18,7 +18,7 @@ import (
 const Category = "DynamoDBEventRecord"
 
 // The broker produces only [events.DynamoDBEventRecord], the function is helper.
-func Source(q *kernel.Dequeuer) (
+func Source(q *kernel.ListenerCore) (
 	<-chan swarm.Msg[*events.DynamoDBEventRecord],
 	chan<- swarm.Msg[*events.DynamoDBEventRecord],
 ) {

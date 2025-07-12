@@ -35,7 +35,7 @@ const stage = "ws"
 
 type Sink struct {
 	constructs.Construct
-	Handler awslambda.IFunction
+	Handler awslambda.Function
 }
 
 type SinkProps struct {
@@ -47,10 +47,17 @@ type SinkProps struct {
 func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	sink := &Sink{Construct: constructs.NewConstruct(scope, id)}
 
-	props.Function.Setenv(EnvConfigEventType, props.Route)
-	props.Function.Setenv(EnvConfigSourceWebSocket, aws.ToString(props.Gateway.ApiEndpoint())+"/"+stage)
-
 	sink.Handler = scud.NewFunction(sink.Construct, jsii.String("Func"), props.Function)
+	sink.Handler.AddEnvironment(
+		jsii.String(EnvConfigEventType),
+		jsii.String(props.Route),
+		nil,
+	)
+	sink.Handler.AddEnvironment(
+		jsii.String(EnvConfigSourceWebSocket),
+		jsii.String(aws.ToString(props.Gateway.ApiEndpoint())+"/"+stage),
+		nil,
+	)
 
 	it := integrations.NewWebSocketLambdaIntegration(jsii.String(props.Route), sink.Handler,
 		&integrations.WebSocketLambdaIntegrationProps{},

@@ -26,7 +26,7 @@ import (
 
 type Sink struct {
 	constructs.Construct
-	Handler awslambda.IFunction
+	Handler awslambda.Function
 }
 
 type SinkProps struct {
@@ -38,9 +38,12 @@ type SinkProps struct {
 func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	sink := &Sink{Construct: constructs.NewConstruct(scope, id)}
 
-	props.Function.Setenv(EnvConfigSourceDynamoDB, *props.Table.TableName())
-
 	sink.Handler = scud.NewFunction(sink.Construct, jsii.String("Func"), props.Function)
+	sink.Handler.AddEnvironment(
+		jsii.String(EnvConfigSourceDynamoDB),
+		props.Table.TableName(),
+		nil,
+	)
 
 	eventsource := &awslambdaeventsources.DynamoEventSourceProps{
 		StartingPosition: awslambda.StartingPosition_LATEST,

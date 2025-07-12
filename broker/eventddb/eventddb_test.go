@@ -24,11 +24,8 @@ func TestReader(t *testing.T) {
 	bridge := &bridge{kernel.NewBridge(100 * time.Millisecond)}
 
 	t.Run("NewReader", func(t *testing.T) {
-		q, err := NewReader(
-			WithConfig(
-				swarm.WithLogStdErr(),
-			),
-		)
+		q, err := Channels().NewDequeuer()
+
 		it.Then(t).Should(it.Nil(err))
 		q.Close()
 	})
@@ -68,6 +65,74 @@ func TestReader(t *testing.T) {
 
 		it.Then(t).ShouldNot(
 			it.Nil(err),
+		)
+	})
+}
+
+func TestBuilder(t *testing.T) {
+	t.Run("Simple case with sensible defaults", func(t *testing.T) {
+		dequeuer, err := Channels().NewDequeuer()
+
+		it.Then(t).Should(
+			it.Nil(err),
+			it.Equal(dequeuer.Config.PollFrequency, 5*time.Microsecond), // EventDDB override
+		)
+		dequeuer.Close()
+	})
+
+	t.Run("Advanced kernel configuration", func(t *testing.T) {
+		dequeuer, err := Channels().
+			WithKernel(
+				swarm.WithSource("ddb-stream-service"),
+				swarm.WithTimeToFlight(30*time.Second),
+			).
+			NewDequeuer()
+
+		it.Then(t).Should(
+			it.Nil(err),
+			it.Equal(dequeuer.Config.Agent, "ddb-stream-service"),
+			it.Equal(dequeuer.Config.TimeToFlight, 30*time.Second),
+			it.Equal(dequeuer.Config.PollFrequency, 5*time.Microsecond), // EventDDB override
+		)
+		dequeuer.Close()
+	})
+
+	t.Run("Multiple kernel options", func(t *testing.T) {
+		dequeuer, err := Channels().
+			WithKernel(swarm.WithSource("service1")).
+			WithKernel(swarm.WithTimeToFlight(60 * time.Second)).
+			NewDequeuer()
+
+		it.Then(t).Should(
+			it.Nil(err),
+			it.Equal(dequeuer.Config.Agent, "service1"),
+			it.Equal(dequeuer.Config.TimeToFlight, 60*time.Second),
+		)
+		dequeuer.Close()
+	})
+
+	t.Run("Builder works with dequeue operation", func(t *testing.T) {
+		var bag []swarm.Bag
+		bridge := &bridge{kernel.NewBridge(100 * time.Millisecond)}
+
+		go func() {
+			bag, _ = bridge.Ask(context.Background())
+			for _, m := range bag {
+				bridge.Ack(context.Background(), m.Digest)
+			}
+		}()
+
+		err := bridge.run(
+			DynamoDBEvent{
+				Records: []json.RawMessage{[]byte(`{"test":"data"}`)},
+			},
+		)
+
+		it.Then(t).Should(
+			it.Nil(err),
+			it.Equal(len(bag), 1),
+			it.Equal(bag[0].Category, Category),
+			it.Equiv(bag[0].Object, []byte(`{"test":"data"}`)),
 		)
 	})
 }

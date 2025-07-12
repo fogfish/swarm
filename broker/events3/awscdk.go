@@ -27,7 +27,7 @@ import (
 
 type Sink struct {
 	constructs.Construct
-	Handler awslambda.IFunction
+	Handler awslambda.Function
 }
 
 type SinkProps struct {
@@ -39,9 +39,12 @@ type SinkProps struct {
 func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	sink := &Sink{Construct: constructs.NewConstruct(scope, id)}
 
-	props.Function.Setenv(EnvConfigSourceS3, *props.Bucket.BucketName())
-
 	sink.Handler = scud.NewFunction(sink.Construct, jsii.String("Func"), props.Function)
+	sink.Handler.AddEnvironment(
+		jsii.String(EnvConfigSourceS3),
+		props.Bucket.BucketName(),
+		nil,
+	)
 
 	eventsource := &awslambdaeventsources.S3EventSourceProps{
 		Events: &[]awss3.EventType{

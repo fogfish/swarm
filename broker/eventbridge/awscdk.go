@@ -36,10 +36,9 @@ type Sink struct {
 
 // See https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-event-patterns.html
 type SinkProps struct {
-	System       awsevents.IEventBus
+	EventBus     awsevents.IEventBus
 	EventPattern *awsevents.EventPattern
 	Function     scud.FunctionProps
-	EventAgent   *string
 }
 
 func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
@@ -55,7 +54,7 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	//
 	sink.Rule = awsevents.NewRule(sink.Construct, jsii.String("Rule"),
 		&awsevents.RuleProps{
-			EventBus:     props.System,
+			EventBus:     props.EventBus,
 			EventPattern: pattern,
 		},
 	)
@@ -63,25 +62,15 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	if props.Function != nil {
 		sink.Handler = scud.NewFunction(sink.Construct, jsii.String("Func"), props.Function)
 
-		switch v := props.Function.(type) {
-		case *scud.FunctionGoProps:
-			if v.FunctionProps != nil && v.Timeout != nil {
-				t := int(aws.ToFloat64(v.Timeout.ToSeconds(nil)))
-				sink.Handler.AddEnvironment(
-					jsii.String(swarm.EnvConfigTimeToFlight),
-					jsii.String(strconv.Itoa(t)),
-					nil,
-				)
-			}
-		case *scud.ContainerGoProps:
-			if v.DockerImageFunctionProps != nil && v.Timeout != nil {
-				t := int(aws.ToFloat64(v.Timeout.ToSeconds(nil)))
-				sink.Handler.AddEnvironment(
-					jsii.String(swarm.EnvConfigTimeToFlight),
-					jsii.String(strconv.Itoa(t)),
-					nil,
-				)
-			}
+		if ttf := timeToFlight(props.Function); ttf != nil {
+			tsf := ttf.ToSeconds(nil)
+			tsi := int(aws.ToFloat64(tsf))
+
+			sink.Handler.AddEnvironment(
+				jsii.String(swarm.EnvConfigTimeToFlight),
+				jsii.String(strconv.Itoa(tsi)),
+				nil,
+			)
 		}
 
 		sink.Rule.AddTarget(awseventstargets.NewLambdaFunction(
@@ -95,6 +84,25 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	}
 
 	return sink
+}
+
+func timeToFlight(props scud.FunctionProps) awscdk.Duration {
+	if props == nil {
+		return nil
+	}
+
+	switch v := props.(type) {
+	case *scud.FunctionGoProps:
+		if v.FunctionProps != nil && v.Timeout != nil {
+			return v.Timeout
+		}
+	case *scud.ContainerGoProps:
+		if v.DockerImageFunctionProps != nil && v.Timeout != nil {
+			return v.Timeout
+		}
+	}
+
+	return nil
 }
 
 //------------------------------------------------------------------------------
@@ -143,7 +151,7 @@ func (broker *Broker) NewSink(props *SinkProps) *Sink {
 		panic("EventBus is not defined.")
 	}
 
-	props.System = broker.Bus
+	props.EventBus = broker.Bus
 
 	name := props.Function.UniqueID()
 	sink := NewSink(broker.Construct, jsii.String(name), props)

@@ -11,14 +11,11 @@ package websocket
 import (
 	"context"
 	"net/http"
-	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/apigatewaymanagementapi"
-	"github.com/fogfish/opts"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/kernel"
 )
@@ -31,78 +28,6 @@ type Gateway interface {
 type Client struct {
 	service Gateway
 	config  swarm.Config
-}
-
-// Create enqueue routine to WebSocket (AWS API Gateway)
-func NewEnqueuer(endpoint string, opts ...Option) (*kernel.Enqueuer, error) {
-	cli, err := newWebSocket(endpoint, opts...)
-	if err != nil {
-		return nil, err
-	}
-
-	return kernel.NewEnqueuer(cli, cli.config), nil
-}
-
-// Creates dequeue routine from WebSocket (AWS API Gateway)
-func NewDequeuer(opt ...Option) (*kernel.Dequeuer, error) {
-	c := &Client{}
-	if err := opts.Apply(c, defs); err != nil {
-		return nil, err
-	}
-	if err := opts.Apply(c, opt); err != nil {
-		return nil, err
-	}
-
-	bridge := &bridge{kernel.NewBridge(c.config.TimeToFlight)}
-
-	return kernel.NewDequeuer(bridge, c.config), nil
-}
-
-// Create enqueue & dequeue routines to WebSocket (AWS API Gateway)
-func New(endpoint string, opts ...Option) (*kernel.Kernel, error) {
-	cli, err := newWebSocket(endpoint, opts...)
-	if err != nil {
-		return nil, err
-	}
-
-	bridge := &bridge{kernel.NewBridge(cli.config.TimeToFlight)}
-
-	return kernel.New(
-		kernel.NewEnqueuer(cli, cli.config),
-		kernel.NewDequeuer(bridge, cli.config),
-	), nil
-}
-
-func newWebSocket(endpoint string, opt ...Option) (*Client, error) {
-	c := &Client{}
-	if err := opts.Apply(c, defs); err != nil {
-		return nil, err
-	}
-	if err := opts.Apply(c, opt); err != nil {
-		return nil, err
-	}
-
-	if c.service == nil {
-		cfg, err := config.LoadDefaultConfig(context.Background())
-		if err != nil {
-			return nil, swarm.ErrServiceIO.With(err)
-		}
-		c.service = apigatewaymanagementapi.NewFromConfig(cfg,
-			func(o *apigatewaymanagementapi.Options) {
-				if strings.HasPrefix(endpoint, "wss://") {
-					endpoint = strings.Replace(endpoint, "wss://", "https://", 1)
-				}
-
-				if strings.HasPrefix(endpoint, "ws://") {
-					endpoint = strings.Replace(endpoint, "ws://", "http://", 1)
-				}
-
-				o.BaseEndpoint = aws.String(endpoint)
-			},
-		)
-	}
-
-	return c, nil
 }
 
 // Enq enqueues message to broker

@@ -13,7 +13,8 @@ import (
 
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/eventbridge"
-	"github.com/fogfish/swarm/dequeue"
+	"github.com/fogfish/swarm/emit"
+	"github.com/fogfish/swarm/listen"
 )
 
 type User struct {
@@ -32,14 +33,34 @@ type Like struct {
 }
 
 func main() {
-	q := eventbridge.MustDequeuer()
+	// q := eventbridge.Channels().MustDequeuer()
+	q := eventbridge.Must(eventbridge.Endpoint().Build("swarm-example-eventbridge"))
+
+	note := swarm.LogDeadLetters(emit.Typed[Note](q.EmitterCore))
+	like := swarm.LogDeadLetters(emit.Typed[Like](q.EmitterCore))
+
+	go (&xxx{note, like}).handle(listen.Typed[User](q.ListenerCore))
 
 	//
-	go actor[User]("user").handle(dequeue.Typed[User](q))
-	go actor[Note]("note").handle(dequeue.Typed[Note](q))
-	go actor[Like]("like").handle(dequeue.Typed[Like](q))
+	// go actor[User]("user").handle(dequeue.Typed[User](q.Dequeuer))
+	go actor[Note]("note").handle(listen.Typed[Note](q.ListenerCore))
+	go actor[Like]("like").handle(listen.Typed[Like](q.ListenerCore))
 
 	q.Await()
+}
+
+type xxx struct {
+	note chan<- Note
+	like chan<- Like
+}
+
+func (x *xxx) handle(rcv <-chan swarm.Msg[User], ack chan<- swarm.Msg[User]) {
+	for msg := range rcv {
+		slog.Info("Event", "type", "user", "msg", msg.Object)
+		x.note <- Note{ID: "note", Text: "user wrote note"}
+		x.like <- Like{ID: "like", Text: "user liked note"}
+		ack <- msg
+	}
 }
 
 type actor[T any] string

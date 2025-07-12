@@ -14,7 +14,7 @@ import (
 
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/eventbridge"
-	"github.com/fogfish/swarm/dequeue"
+	"github.com/fogfish/swarm/listen"
 )
 
 type Event = swarm.Event[swarm.Meta, EventNote]
@@ -25,9 +25,9 @@ type EventNote struct {
 }
 
 func main() {
-	q := eventbridge.MustDequeuer()
+	q := eventbridge.Must(eventbridge.Listener().Build())
 
-	go bus(dequeue.Event[Event](q))
+	go bus(listen.Event[Event](q))
 
 	q.Await()
 }
