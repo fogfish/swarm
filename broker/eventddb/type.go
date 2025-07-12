@@ -11,8 +11,8 @@ package eventddb
 import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/dequeue"
 	"github.com/fogfish/swarm/kernel"
+	"github.com/fogfish/swarm/listen"
 )
 
 const Category = "DynamoDBEventRecord"
@@ -22,5 +22,5 @@ func Source(q *kernel.ListenerCore) (
 	<-chan swarm.Msg[*events.DynamoDBEventRecord],
 	chan<- swarm.Msg[*events.DynamoDBEventRecord],
 ) {
-	return dequeue.Typed[*events.DynamoDBEventRecord](q)
+	return listen.Typed[*events.DynamoDBEventRecord](q)
 }

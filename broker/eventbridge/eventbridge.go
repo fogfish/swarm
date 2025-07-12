@@ -11,7 +11,6 @@ package eventbridge
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -202,12 +201,6 @@ func (s bridge) Run(ctx context.Context) {
 }
 
 func (s bridge) run(ctx context.Context, evt events.CloudWatchEvent) error {
-	deadline, ok := ctx.Deadline()
-	if ok {
-		remaining := time.Until(deadline)
-		fmt.Println("Remaining time:", remaining)
-	}
-
 	bag := make([]swarm.Bag, 1)
 	bag[0] = swarm.Bag{
 		Category: evt.DetailType,

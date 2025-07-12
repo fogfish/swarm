@@ -21,10 +21,12 @@ import (
 
 func TestReader(t *testing.T) {
 	var bag []swarm.Bag
-	bridge := &bridge{kernel.NewBridge(100 * time.Millisecond)}
+	cfg := swarm.NewConfig()
+	cfg.TimeToFlight = 100 * time.Millisecond
+	bridge := &bridge{kernel.NewBridge(cfg)}
 
 	t.Run("NewReader", func(t *testing.T) {
-		q, err := Channels().NewDequeuer()
+		q, err := Listener().Build()
 
 		it.Then(t).Should(it.Nil(err))
 		q.Close()
@@ -38,7 +40,7 @@ func TestReader(t *testing.T) {
 			}
 		}()
 
-		err := bridge.run(
+		err := bridge.run(context.Background(),
 			DynamoDBEvent{
 				Records: []json.RawMessage{[]byte(`{"sut":"test"}`)},
 			},
@@ -57,7 +59,7 @@ func TestReader(t *testing.T) {
 			bag, _ = bridge.Ask(context.Background())
 		}()
 
-		err := bridge.run(
+		err := bridge.run(context.Background(),
 			DynamoDBEvent{
 				Records: []json.RawMessage{[]byte(`{"sut":"test"}`)},
 			},
@@ -71,7 +73,7 @@ func TestReader(t *testing.T) {
 
 func TestBuilder(t *testing.T) {
 	t.Run("Simple case with sensible defaults", func(t *testing.T) {
-		dequeuer, err := Channels().NewDequeuer()
+		dequeuer, err := Listener().Build()
 
 		it.Then(t).Should(
 			it.Nil(err),
@@ -81,12 +83,11 @@ func TestBuilder(t *testing.T) {
 	})
 
 	t.Run("Advanced kernel configuration", func(t *testing.T) {
-		dequeuer, err := Channels().
+		dequeuer, err := Listener().
 			WithKernel(
-				swarm.WithSource("ddb-stream-service"),
+				swarm.WithAgent("ddb-stream-service"),
 				swarm.WithTimeToFlight(30*time.Second),
-			).
-			NewDequeuer()
+			).Build()
 
 		it.Then(t).Should(
 			it.Nil(err),
@@ -98,10 +99,10 @@ func TestBuilder(t *testing.T) {
 	})
 
 	t.Run("Multiple kernel options", func(t *testing.T) {
-		dequeuer, err := Channels().
+		dequeuer, err := Listener().
 			WithKernel(swarm.WithSource("service1")).
 			WithKernel(swarm.WithTimeToFlight(60 * time.Second)).
-			NewDequeuer()
+			Build()
 
 		it.Then(t).Should(
 			it.Nil(err),
@@ -113,7 +114,9 @@ func TestBuilder(t *testing.T) {
 
 	t.Run("Builder works with dequeue operation", func(t *testing.T) {
 		var bag []swarm.Bag
-		bridge := &bridge{kernel.NewBridge(100 * time.Millisecond)}
+		cfg := swarm.NewConfig()
+		cfg.TimeToFlight = 100 * time.Millisecond
+		bridge := &bridge{kernel.NewBridge(cfg)}
 
 		go func() {
 			bag, _ = bridge.Ask(context.Background())
@@ -122,7 +125,7 @@ func TestBuilder(t *testing.T) {
 			}
 		}()
 
-		err := bridge.run(
+		err := bridge.run(context.Background(),
 			DynamoDBEvent{
 				Records: []json.RawMessage{[]byte(`{"test":"data"}`)},
 			},

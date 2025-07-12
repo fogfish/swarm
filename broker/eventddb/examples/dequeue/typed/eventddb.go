@@ -18,7 +18,7 @@ import (
 )
 
 func main() {
-	q := eventddb.Channels().MustDequeuer()
+	q := eventddb.Must(eventddb.Listener().Build())
 
 	go common(eventddb.Source(q))
 

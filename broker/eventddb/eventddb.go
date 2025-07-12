@@ -9,6 +9,7 @@
 package eventddb
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/aws/aws-lambda-go/lambda"
@@ -32,7 +33,7 @@ type DynamoDBEvent struct {
 
 func (s bridge) Run() { lambda.Start(s.run) }
 
-func (s bridge) run(events DynamoDBEvent) error {
+func (s bridge) run(ctx context.Context, events DynamoDBEvent) error {
 	bag := make([]swarm.Bag, len(events.Records))
 	for i, obj := range events.Records {
 		bag[i] = swarm.Bag{
@@ -42,5 +43,5 @@ func (s bridge) run(events DynamoDBEvent) error {
 		}
 	}
 
-	return s.Bridge.Dispatch(bag)
+	return s.Bridge.Dispatch(ctx, bag)
 }

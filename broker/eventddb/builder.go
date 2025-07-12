@@ -21,55 +21,62 @@ import (
 // Environment variable to config event source
 const EnvConfigSourceDynamoDB = "CONFIG_SWARM_SOURCE_DYNAMODB"
 
-// Builder provides API for configuring EventDDB broker
-type Builder struct {
-	kernelOpts []opts.Option[swarm.Config]
+func Must[T any](v T, err error) T {
+	if err != nil {
+		xlog.Emergency("eventddb broker has failed", err)
+	}
+	return v
 }
 
-// Channels creates new builder for EventDDB broker configuration.
-func Channels() *Builder {
-	kopts := []opts.Option[swarm.Config]{
-		swarm.WithLogStdErr(),
-		swarm.WithConfigFromEnv(),
-	}
-	if val := os.Getenv(EnvConfigSourceDynamoDB); val != "" {
-		kopts = append(kopts, swarm.WithSource(val))
-	}
+type ListenerBuilder struct{ *builder[*ListenerBuilder] }
 
-	return &Builder{
-		kernelOpts: kopts,
-	}
-}
-
-// WithKernel configures swarm kernel options for advanced usage.
-func (b *Builder) WithKernel(opts ...opts.Option[swarm.Config]) *Builder {
-	b.kernelOpts = append(b.kernelOpts, opts...)
+func Listener() *ListenerBuilder {
+	b := &ListenerBuilder{}
+	b.builder = newBuilder(b)
 	return b
 }
 
-// NewDequeuer creates dequeue routine from AWS DynamoDB Events (read-only)
-func (b *Builder) NewDequeuer() (*kernel.ListenerCore, error) {
+func (b *ListenerBuilder) Build() (*kernel.ListenerCore, error) {
 	client, err := b.build()
 	if err != nil {
 		return nil, err
 	}
 
-	bridge := &bridge{kernel.NewBridge(client.config.TimeToFlight)}
+	bridge := &bridge{kernel.NewBridge(client.config)}
 	return kernel.NewListener(bridge, client.config), nil
 }
 
-// Creates dequeue routine from AWS DynamoDB Events (read-only) and panics on error
-func (b *Builder) MustDequeuer() *kernel.ListenerCore {
-	client, err := b.NewDequeuer()
-	if err != nil {
-		xlog.Emergency("eventddb client has failed", err)
-		return nil
+//------------------------------------------------------------------------------
+
+type builder[T any] struct {
+	b          T
+	kernelOpts []opts.Option[swarm.Config]
+}
+
+// newBuilder creates new builder for EventDDB broker configuration.
+func newBuilder[T any](b T) *builder[T] {
+	kopts := []opts.Option[swarm.Config]{
+		swarm.WithLogStdErr(),
+		swarm.WithConfigFromEnv(),
 	}
-	return client
+	if val := os.Getenv(EnvConfigSourceDynamoDB); val != "" {
+		kopts = append(kopts, swarm.WithAgent(val))
+	}
+
+	return &builder[T]{
+		b:          b,
+		kernelOpts: kopts,
+	}
+}
+
+// WithKernel configures swarm kernel options for advanced usage.
+func (b *builder[T]) WithKernel(opts ...opts.Option[swarm.Config]) T {
+	b.kernelOpts = append(b.kernelOpts, opts...)
+	return b.b
 }
 
 // build constructs the EventDDB client with configuration
-func (b *Builder) build() (*Client, error) {
+func (b *builder[T]) build() (*Client, error) {
 	client := &Client{
 		config: swarm.NewConfig(),
 	}
