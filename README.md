@@ -236,12 +236,15 @@ See [Getting Started](#getting-started) for full details.
 
 Check the design pattern [Distributed event-driven Golang channels](./doc/pattern.md) for deep-dive into library philosophy. Also note, each supported [broker](./broker/) comes with runnable examples that shows the library. 
 
-
 Continue reading to understand the purpose of the library and why it exists.
+
+### How it Works
+
+tbd.
 
 ## What is `swarm`?
 
-`swarm` is a Go library that solves the complexity of distributed, event-driven systems by abstracting external messaging queues (like AWS SQS, AWS EventBrdige, RabbitMQ, Kafka, etc.) behind **type-safe Go channels**. 
+`swarm` is a Go library that solves the complexity of distributed, event-driven systems by abstracting external messaging queues (like AWS SQS, AWS EventBridge, RabbitMQ, Kafka, etc.) behind **type-safe Go channels**. 
 
 By aligning with Go’s native concurrency model, `swarm` encourages developers to think in terms of **message flows rather than request-response cycles**, which reflects the asynchronous and unreliable reality of distributed systems. This mindset shift leads to more resilient, scalable, and maintainable architectures — where complexity is not hidden, but made explicit and manageable.  
 
