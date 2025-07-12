@@ -6,7 +6,7 @@
 // https://github.com/fogfish/swarm
 //
 
-package dequeue_test
+package listen_test
 
 import (
 	"context"

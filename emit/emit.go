@@ -6,7 +6,7 @@
 // https://github.com/fogfish/swarm
 //
 
-package enqueue
+package emit
 
 import (
 	"github.com/fogfish/swarm"

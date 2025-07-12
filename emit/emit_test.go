@@ -6,7 +6,7 @@
 // https://github.com/fogfish/swarm
 //
 
-package enqueue_test
+package emit_test
 
 import (
 	"context"

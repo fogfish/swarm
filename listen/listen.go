@@ -6,7 +6,7 @@
 // https://github.com/fogfish/swarm
 //
 
-package dequeue
+package listen
 
 import (
 	"github.com/fogfish/swarm"
