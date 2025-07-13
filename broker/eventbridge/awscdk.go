@@ -111,9 +111,7 @@ func timeToFlight(props scud.FunctionProps) awscdk.Duration {
 //
 //------------------------------------------------------------------------------
 
-type BrokerProps struct {
-	System string
-}
+type BrokerProps struct{}
 
 type Broker struct {
 	constructs.Construct

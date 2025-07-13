@@ -65,9 +65,7 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 //
 //------------------------------------------------------------------------------
 
-type BrokerProps struct {
-	System string
-}
+type BrokerProps struct{}
 
 type Broker struct {
 	constructs.Construct
