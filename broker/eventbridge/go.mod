@@ -14,11 +14,10 @@ require (
 	github.com/aws/jsii-runtime-go v1.112.0
 	github.com/fogfish/curie v1.8.2
 	github.com/fogfish/it/v2 v2.2.2
-	github.com/fogfish/logger/v3 v3.2.0
 	github.com/fogfish/logger/x/xlog v0.0.1
 	github.com/fogfish/opts v0.0.5
 	github.com/fogfish/scud v0.11.1
-	github.com/fogfish/swarm v0.23.0
+	github.com/fogfish/swarm v0.23.1
 )
 
 require (
@@ -44,6 +43,7 @@ require (
 	github.com/fogfish/golem/hseq v1.3.0 // indirect
 	github.com/fogfish/golem/optics v0.14.0 // indirect
 	github.com/fogfish/guid/v2 v2.1.0 // indirect
+	github.com/fogfish/logger/v3 v3.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/yuin/goldmark v1.7.12 // indirect

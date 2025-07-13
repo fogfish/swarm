@@ -9,9 +9,6 @@
 package main
 
 import (
-	"log/slog"
-
-	"github.com/fogfish/logger/v3"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/eventbridge"
 	"github.com/fogfish/swarm/emit"
@@ -33,16 +30,15 @@ type Like struct {
 }
 
 func main() {
-	slog.SetDefault(logger.New(logger.WithLogLevel(slog.LevelDebug)))
 	q := eventbridge.Must(eventbridge.Emitter().Build("swarm-example-eventbridge"))
 
 	user := swarm.LogDeadLetters(emit.Typed[*User](q))
-	// note := swarm.LogDeadLetters(emit.Typed[*Note](q))
-	// like := swarm.LogDeadLetters(emit.Typed[*Like](q))
+	note := swarm.LogDeadLetters(emit.Typed[*Note](q))
+	like := swarm.LogDeadLetters(emit.Typed[*Like](q))
 
 	user <- &User{ID: "user", Text: "user signed  in"}
-	// note <- &Note{ID: "note", Text: "user wrote note"}
-	// like <- &Like{ID: "like", Text: "user liked note"}
+	note <- &Note{ID: "note", Text: "user wrote note"}
+	like <- &Like{ID: "like", Text: "user liked note"}
 
 	q.Close()
 }
