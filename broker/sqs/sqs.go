@@ -11,6 +11,7 @@ package sqs
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
@@ -19,11 +20,12 @@ import (
 )
 
 type Client struct {
-	service   SQS
-	config    swarm.Config
-	queue     *string
-	isFIFO    bool
-	batchSize int
+	service     SQS
+	config      swarm.Config
+	queue       *string
+	isFIFO      bool
+	batchSize   int
+	askWaitTime time.Duration
 }
 
 func (cli *Client) Close() error {
@@ -82,7 +84,7 @@ func (cli *Client) Err(ctx context.Context, digest string, err error) error {
 
 // Deq dequeues message from broker
 func (cli Client) Ask(ctx context.Context) ([]swarm.Bag, error) {
-	ctx, cancel := context.WithTimeout(ctx, cli.config.NetworkTimeout*2)
+	ctx, cancel := context.WithTimeout(ctx, cli.askWaitTime*2)
 	defer cancel()
 
 	result, err := cli.service.ReceiveMessage(ctx,
@@ -90,7 +92,7 @@ func (cli Client) Ask(ctx context.Context) ([]swarm.Bag, error) {
 			MessageAttributeNames: []string{string(types.QueueAttributeNameAll)},
 			QueueUrl:              cli.queue,
 			MaxNumberOfMessages:   int32(cli.batchSize),
-			WaitTimeSeconds:       int32(cli.config.NetworkTimeout.Seconds()),
+			WaitTimeSeconds:       int32(cli.askWaitTime.Seconds()),
 		},
 	)
 	if err != nil {

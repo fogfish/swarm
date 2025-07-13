@@ -11,6 +11,7 @@ package sqs
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -85,10 +86,11 @@ func (b *ListenerBuilder) Build(queue string) (*kernel.ListenerCore, error) {
 //------------------------------------------------------------------------------
 
 type builder[T any] struct {
-	b          T
-	kernelOpts []opts.Option[swarm.Config]
-	service    SQS
-	batchSize  int
+	b           T
+	kernelOpts  []opts.Option[swarm.Config]
+	service     SQS
+	batchSize   int
+	askWaitTime time.Duration
 }
 
 // Channels creates new builder for SQS broker configuration.
@@ -99,9 +101,10 @@ func newBuilder[T any](b T) *builder[T] {
 	}
 
 	return &builder[T]{
-		b:          b,
-		kernelOpts: kopts,
-		batchSize:  1,
+		b:           b,
+		kernelOpts:  kopts,
+		batchSize:   1,
+		askWaitTime: 5 * time.Second,
 	}
 }
 
@@ -125,12 +128,19 @@ func (b *builder[T]) WithBatchSize(size int) T {
 	return b.b
 }
 
+// WithWaitTime configures SQS message long polling.
+func (b *builder[T]) WithWaitTime(duration time.Duration) T {
+	b.askWaitTime = duration
+	return b.b
+}
+
 // build constructs the SQS client with configuration
 func (b *builder[T]) build(queue string) (*Client, error) { // Start with sensible defaults
 	client := &Client{
-		config:    swarm.NewConfig(),
-		batchSize: b.batchSize,
-		service:   b.service,
+		config:      swarm.NewConfig(),
+		service:     b.service,
+		batchSize:   b.batchSize,
+		askWaitTime: b.askWaitTime,
 	}
 
 	if err := opts.Apply(&client.config, b.kernelOpts); err != nil {
