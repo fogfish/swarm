@@ -152,8 +152,8 @@ func TestBuilder(t *testing.T) {
 
 		it.Then(t).Should(
 			it.Nil(err),
-			it.Equal(client.EmitterCore.Config.Agent, "github.com/fogfish/swarm"), // Default source
-			it.Equal(client.EmitterCore.Config.PollerPool, 1),                     // Default poller pool
+			it.Equal(client.Emitter.Config.Agent, "github.com/fogfish/swarm"), // Default source
+			it.Equal(client.Emitter.Config.PollerPool, 1),                     // Default poller pool
 		)
 		client.Close()
 	})
@@ -199,9 +199,9 @@ func TestBuilder(t *testing.T) {
 
 		it.Then(t).Should(
 			it.Nil(err),
-			it.Equal(client.EmitterCore.Config.Agent, "advanced-service"),
-			it.Equal(client.EmitterCore.Config.PollFrequency, 500*time.Millisecond),
-			it.Equal(client.EmitterCore.Config.PollerPool, 1),
+			it.Equal(client.Emitter.Config.Agent, "advanced-service"),
+			it.Equal(client.Emitter.Config.PollFrequency, 500*time.Millisecond),
+			it.Equal(client.Emitter.Config.PollerPool, 1),
 		)
 		client.Close()
 	})
@@ -225,8 +225,8 @@ func TestBuilder(t *testing.T) {
 		it.Then(t).Should(
 			it.Nil(err1),
 			it.Nil(err2),
-			it.Equal(client1.EmitterCore.Config.Agent, "test1"),
-			it.Equal(client2.EmitterCore.Config.Agent, "test2"),
+			it.Equal(client1.Emitter.Config.Agent, "test1"),
+			it.Equal(client2.Emitter.Config.Agent, "test2"),
 		)
 
 		client1.Close()

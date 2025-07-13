@@ -32,8 +32,8 @@ func main() {
 		),
 	)
 
-	a := &actor{emit: emit.NewTyped[User](q.EmitterCore)}
-	go a.handle(listen.Typed[User](q.ListenerCore))
+	a := &actor{emit: emit.NewTyped[User](q.Emitter)}
+	go a.handle(listen.Typed[User](q.Listener))
 
 	q.Await()
 }

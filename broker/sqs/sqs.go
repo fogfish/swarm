@@ -26,6 +26,10 @@ type Client struct {
 	batchSize int
 }
 
+func (cli *Client) Close() error {
+	return nil
+}
+
 // Enq enqueues message to broker
 func (cli *Client) Enq(ctx context.Context, bag swarm.Bag) error {
 	ctx, cancel := context.WithTimeout(ctx, cli.config.NetworkTimeout)
