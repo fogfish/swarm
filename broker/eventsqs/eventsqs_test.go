@@ -22,19 +22,21 @@ import (
 
 func TestReader(t *testing.T) {
 	var bag []swarm.Bag
-	bridge := &bridge{kernel.NewBridge(100 * time.Millisecond)}
+	cfg := swarm.NewConfig()
+	cfg.TimeToFlight = 100 * time.Millisecond
+	bridge := &bridge{kernel.NewBridge(cfg)}
 
 	// Test new builder pattern
 	t.Run("Builder.NewDequeuer", func(t *testing.T) {
-		q, err := Channels().NewDequeuer()
+		q, err := Listener().Build()
 		it.Then(t).Should(it.Nil(err))
 		q.Close()
 	})
 
 	t.Run("Builder.WithKernel", func(t *testing.T) {
-		q, err := Channels().
+		q, err := Listener().
 			WithKernel(swarm.WithLogStdErr()).
-			NewDequeuer()
+			Build()
 		it.Then(t).Should(it.Nil(err))
 		q.Close()
 	})
@@ -47,7 +49,7 @@ func TestReader(t *testing.T) {
 			}
 		}()
 
-		err := bridge.run(
+		err := bridge.run(context.Background(),
 			events.SQSEvent{
 				Records: []events.SQSMessage{
 					{
@@ -76,7 +78,7 @@ func TestReader(t *testing.T) {
 			bag, _ = bridge.Ask(context.Background())
 		}()
 
-		err := bridge.run(
+		err := bridge.run(context.Background(),
 			events.SQSEvent{
 				Records: []events.SQSMessage{
 					{
