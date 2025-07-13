@@ -22,19 +22,21 @@ import (
 
 func TestDequeuer(t *testing.T) {
 	var bag []swarm.Bag
-	bridge := &bridge{kernel.NewBridge(100 * time.Millisecond)}
+	cfg := swarm.NewConfig()
+	cfg.TimeToFlight = 100 * time.Millisecond
+	bridge := &bridge{kernel.NewBridge(cfg)}
 
 	// Test new builder pattern
 	t.Run("Builder.NewDequeuer", func(t *testing.T) {
-		q, err := Channels().NewDequeuer()
+		q, err := Listener().Build()
 		it.Then(t).Should(it.Nil(err))
 		q.Close()
 	})
 
 	t.Run("Builder.WithKernel", func(t *testing.T) {
-		q, err := Channels().
+		q, err := Listener().
 			WithKernel(swarm.WithLogStdErr()).
-			NewDequeuer()
+			Build()
 		it.Then(t).Should(it.Nil(err))
 		q.Close()
 	})
@@ -47,7 +49,7 @@ func TestDequeuer(t *testing.T) {
 			}
 		}()
 
-		_, err := bridge.run(
+		_, err := bridge.run(context.Background(),
 			events.APIGatewayWebsocketProxyRequest{
 				RequestContext: events.APIGatewayWebsocketProxyRequestContext{
 					RouteKey:     "test",
@@ -78,25 +80,25 @@ func TestDequeuer(t *testing.T) {
 func TestEnqueuer(t *testing.T) {
 	// Test new builder pattern
 	t.Run("Builder.NewEnqueuer", func(t *testing.T) {
-		q, err := Channels().NewEnqueuer("test")
+		q, err := Emitter().Build("test")
 		it.Then(t).Should(it.Nil(err))
 		q.Close()
 	})
 
 	t.Run("Builder.WithService", func(t *testing.T) {
 		mock := &mockGateway{}
-		q, err := Channels().
+		q, err := Emitter().
 			WithService(mock).
-			NewEnqueuer("test")
+			Build("test")
 		it.Then(t).Should(it.Nil(err))
 		q.Close()
 	})
 
 	t.Run("Builder.NewClient", func(t *testing.T) {
 		mock := &mockGateway{}
-		q, err := Channels().
+		q, err := Endpoint().
 			WithService(mock).
-			NewClient("test")
+			Build("test")
 		it.Then(t).Should(it.Nil(err))
 		q.Close()
 	})
@@ -104,7 +106,7 @@ func TestEnqueuer(t *testing.T) {
 	t.Run("Enqueue", func(t *testing.T) {
 		mock := &mockGateway{}
 
-		q, err := Channels().WithService(mock).NewEnqueuer("test")
+		q, err := Emitter().WithService(mock).Build("test")
 		it.Then(t).Should(it.Nil(err))
 
 		err = q.Emitter.Enq(context.Background(),

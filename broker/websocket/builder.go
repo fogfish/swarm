@@ -10,6 +10,7 @@ package websocket
 
 import (
 	"context"
+	"os"
 	"strings"
 	"time"
 
@@ -26,41 +27,48 @@ import (
 const EnvConfigEventType = "CONFIG_SWARM_WS_EVENT_TYPE"
 const EnvConfigSourceWebSocket = "CONFIG_SWARM_WS_URL"
 
-// Builder provides API for configuring WebSocket broker
-type Builder struct {
-	kernelOpts []opts.Option[swarm.Config]
-	service    Gateway
+func Must[T any](v T, err error) T {
+	if err != nil {
+		xlog.Emergency("websocket broker has failed", err)
+	}
+	return v
 }
 
-// Channels creates new builder for WebSocket broker configuration.
-func Channels() *Builder {
-	kopts := []opts.Option[swarm.Config]{
-		swarm.WithLogStdErr(),
-		swarm.WithConfigFromEnv(),
-	}
-	// if val := os.Getenv(EnvConfigSourceWebSocket); val != "" {
-	// 	kopts = append(kopts, swarm.WithSource(val))
-	// }
+type EndpointBuilder struct{ *builder[*EndpointBuilder] }
 
-	return &Builder{
-		kernelOpts: kopts,
-	}
-}
-
-// WithKernel configures swarm kernel options for advanced usage.
-func (b *Builder) WithKernel(opts ...opts.Option[swarm.Config]) *Builder {
-	b.kernelOpts = append(b.kernelOpts, opts...)
+func Endpoint() *EndpointBuilder {
+	b := &EndpointBuilder{}
+	b.builder = newBuilder(b)
 	return b
 }
 
-// WithService configures AWS API Gateway Management API client instance
-func (b *Builder) WithService(service Gateway) *Builder {
-	b.service = service
+func (b *EndpointBuilder) Build(endpoint string) (*kernel.Kernel, error) {
+	client, err := b.build()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := b.applyService(client, endpoint); err != nil {
+		return nil, err
+	}
+
+	bridge := &bridge{kernel.NewBridge(client.config)}
+
+	return kernel.New(
+		kernel.NewEmitter(client, client.config),
+		kernel.NewListener(bridge, client.config),
+	), nil
+}
+
+type EmitterBuilder struct{ *builder[*EmitterBuilder] }
+
+func Emitter() *EmitterBuilder {
+	b := &EmitterBuilder{}
+	b.builder = newBuilder(b)
 	return b
 }
 
-// NewEnqueuer creates enqueue routine to AWS API Gateway WebSocket
-func (b *Builder) NewEnqueuer(endpoint string) (*kernel.EmitterCore, error) {
+func (b *EmitterBuilder) Build(endpoint string) (*kernel.EmitterCore, error) {
 	client, err := b.build()
 	if err != nil {
 		return nil, err
@@ -73,67 +81,62 @@ func (b *Builder) NewEnqueuer(endpoint string) (*kernel.EmitterCore, error) {
 	return kernel.NewEmitter(client, client.config), nil
 }
 
-// Creates enqueue routine to AWS API Gateway WebSocket
-func (b *Builder) MustEnqueuer(endpoint string) *kernel.EmitterCore {
-	client, err := b.NewEnqueuer(endpoint)
-	if err != nil {
-		xlog.Emergency("websocket client has failed", err)
-		return nil
-	}
-	return client
+type ListenerBuilder struct{ *builder[*ListenerBuilder] }
+
+func Listener() *ListenerBuilder {
+	b := &ListenerBuilder{}
+	b.builder = newBuilder(b)
+	return b
 }
 
-// NewDequeuer creates dequeue routine from AWS API Gateway WebSocket (Lambda)
-func (b *Builder) NewDequeuer() (*kernel.ListenerCore, error) {
+func (b *ListenerBuilder) Build() (*kernel.ListenerCore, error) {
 	client, err := b.build()
 	if err != nil {
 		return nil, err
 	}
 
-	bridge := &bridge{kernel.NewBridge(client.config.TimeToFlight)}
+	bridge := &bridge{kernel.NewBridge(client.config)}
 	return kernel.NewListener(bridge, client.config), nil
 }
 
-// Creates dequeue routine from AWS API Gateway WebSocket (Lambda)
-func (b *Builder) MustDequeuer() *kernel.ListenerCore {
-	client, err := b.NewDequeuer()
-	if err != nil {
-		xlog.Emergency("websocket client has failed", err)
-		return nil
-	}
-	return client
+//------------------------------------------------------------------------------
+
+type builder[T any] struct {
+	b          T
+	kernelOpts []opts.Option[swarm.Config]
+	service    Gateway
 }
 
-// NewClient creates duplex client for AWS API Gateway WebSocket (enqueue & dequeue)
-func (b *Builder) NewClient(endpoint string) (*kernel.Kernel, error) {
-	client, err := b.build()
-	if err != nil {
-		return nil, err
+// newBuilder creates new builder for WebSocket broker configuration.
+func newBuilder[T any](b T) *builder[T] {
+	kopts := []opts.Option[swarm.Config]{
+		swarm.WithLogStdErr(),
+		swarm.WithConfigFromEnv(),
+	}
+	if val := os.Getenv(EnvConfigSourceWebSocket); val != "" {
+		kopts = append(kopts, swarm.WithAgent(val))
 	}
 
-	if err := b.applyService(client, endpoint); err != nil {
-		return nil, err
+	return &builder[T]{
+		b:          b,
+		kernelOpts: kopts,
 	}
-
-	bridge := &bridge{kernel.NewBridge(client.config.TimeToFlight)}
-
-	return kernel.New(
-		kernel.NewEmitter(client, client.config),
-		kernel.NewListener(bridge, client.config),
-	), nil
 }
 
-// Creates duplex client for AWS API Gateway WebSocket (enqueue & dequeue)
-func (b *Builder) MustClient(endpoint string) *kernel.Kernel {
-	client, err := b.NewClient(endpoint)
-	if err != nil {
-		xlog.Emergency("websocket client has failed", err)
-		return nil
-	}
-	return client
+// WithKernel configures swarm kernel options for advanced usage.
+func (b *builder[T]) WithKernel(opts ...opts.Option[swarm.Config]) T {
+	b.kernelOpts = append(b.kernelOpts, opts...)
+	return b.b
 }
 
-func (b *Builder) build() (*Client, error) {
+// WithService configures AWS API Gateway Management API client instance
+func (b *builder[T]) WithService(service Gateway) T {
+	b.service = service
+	return b.b
+}
+
+// build constructs the WebSocket client with configuration
+func (b *builder[T]) build() (*Client, error) {
 	client := &Client{
 		config:  swarm.NewConfig(),
 		service: b.service,
@@ -148,7 +151,7 @@ func (b *Builder) build() (*Client, error) {
 	return client, nil
 }
 
-func (b *Builder) applyService(c *Client, endpoint string) error {
+func (b *builder[T]) applyService(c *Client, endpoint string) error {
 	if c.service == nil {
 		cfg, err := config.LoadDefaultConfig(context.Background())
 		if err != nil {

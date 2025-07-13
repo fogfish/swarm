@@ -55,7 +55,7 @@ type bridge struct{ *kernel.Bridge }
 
 func (s bridge) Run() { lambda.Start(s.run) }
 
-func (s bridge) run(evt events.APIGatewayWebsocketProxyRequest) (events.APIGatewayProxyResponse, error) {
+func (s bridge) run(ctx context.Context, evt events.APIGatewayWebsocketProxyRequest) (events.APIGatewayProxyResponse, error) {
 	bag := make([]swarm.Bag, 1)
 	bag[0] = swarm.Bag{
 		Category:  evt.RequestContext.RouteKey,
@@ -64,7 +64,7 @@ func (s bridge) run(evt events.APIGatewayWebsocketProxyRequest) (events.APIGatew
 		Object:    []byte(evt.Body),
 	}
 
-	if err := s.Bridge.Dispatch(bag); err != nil {
+	if err := s.Bridge.Dispatch(ctx, bag); err != nil {
 		// TODO: handle error
 		return events.APIGatewayProxyResponse{StatusCode: http.StatusRequestTimeout}, err
 	}
