@@ -223,7 +223,7 @@ type Order struct {
 
 func main() {
   // create broker for AWS SQS
-  q := sqs.Channels().MustClient("aws-sqs-queue-name")
+  q := sqs.Endpoint().Build("aws-sqs-queue-name")
 
   // create Golang channels
   rcv, ack := listen.Typed[Order](q)
@@ -425,13 +425,13 @@ Using the `swarm` library, we benefit from
 * Technology Agnostic: Can switch from SQS to EventBridge without code changes
 
 ```go
-lEvents := eventbridge.Channels().MustListener()
-lS3 := s3.Channels().MustListener()
-lSqs := sqs.Channels().MustListener()
+events := eventbridge.Must(eventbridge.Listener().Build())
+upload := s3.Must(s3.Listener().Build())
+orders := sqs.Must(sqs.Listener().Build())
 
-listen.Typed[UserEvent](lEvents)
-listen.Typed[DataUploaded](lS3)
-listen.Typed[Order](lSqs)
+listen.Typed[UserEvent](events)
+listen.Typed[DataUploaded](upload)
+listen.Typed[Order](orders)
 ```
 
 ### Microservices Communication: The Synchronous Trap

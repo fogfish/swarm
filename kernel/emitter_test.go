@@ -205,6 +205,8 @@ func (e looser) Enq(ctx context.Context, bag swarm.Bag) error {
 	return fmt.Errorf("lost")
 }
 
+func (e looser) Close() error { return nil }
+
 func (e looser) Category() string { return "test" }
 
 func (e looser) Encode(x string) ([]byte, error) {

@@ -20,6 +20,7 @@ import (
 // Emitter defines on-the-wire protocol for [swarm.Bag], covering egress use-cases
 type Emitter interface {
 	Enq(context.Context, swarm.Bag) error
+	Close() error
 }
 
 // Encodes message into wire format
@@ -68,12 +69,14 @@ func newEmitter(emitter Emitter, config swarm.Config) *EmitterCore {
 func (k *EmitterCore) Close() {
 	k.cancel()
 	k.WaitGroup.Wait()
+	k.Emitter.Close()
 }
 
 // Await enqueue
 func (k *EmitterCore) Await() {
 	<-k.context.Done()
 	k.WaitGroup.Wait()
+	k.Emitter.Close()
 }
 
 // Creates pair of channels within kernel to emit messages to broker.

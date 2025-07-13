@@ -50,6 +50,10 @@ func newBridge(cfg swarm.Config) *Bridge {
 	}
 }
 
+func (s *Bridge) Close() error {
+	return nil
+}
+
 // Dispatch the batch of messages in the context of Lambda handler.
 //
 //	lambda.Start(
