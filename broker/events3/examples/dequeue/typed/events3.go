@@ -18,9 +18,9 @@ import (
 )
 
 func main() {
-	q := events3.Channels().MustDequeuer()
+	q := events3.Must(events3.Listener().Build())
 
-	go common(events3.Source(q))
+	go common(events3.Listen(q))
 
 	q.Await()
 }

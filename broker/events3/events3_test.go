@@ -21,10 +21,12 @@ import (
 
 func TestReader(t *testing.T) {
 	var bag []swarm.Bag
-	bridge := &bridge{kernel.NewBridge(100 * time.Millisecond)}
+	cfg := swarm.NewConfig()
+	cfg.TimeToFlight = 100 * time.Millisecond
+	bridge := &bridge{kernel.NewBridge(cfg)}
 
 	t.Run("New", func(t *testing.T) {
-		q, err := Channels().NewDequeuer()
+		q, err := Listener().Build()
 		it.Then(t).Should(it.Nil(err))
 		q.Close()
 	})
@@ -37,7 +39,7 @@ func TestReader(t *testing.T) {
 			}
 		}()
 
-		err := bridge.run(
+		err := bridge.run(context.Background(),
 			S3Event{
 				Records: []json.RawMessage{[]byte(`{"sut":"test"}`)},
 			},
@@ -56,7 +58,7 @@ func TestReader(t *testing.T) {
 			bag, _ = bridge.Ask(context.Background())
 		}()
 
-		err := bridge.run(
+		err := bridge.run(context.Background(),
 			S3Event{
 				Records: []json.RawMessage{[]byte(`{"sut":"test"}`)},
 			},
@@ -70,7 +72,7 @@ func TestReader(t *testing.T) {
 
 func TestBuilder(t *testing.T) {
 	t.Run("Simple case with sensible defaults", func(t *testing.T) {
-		dequeuer, err := Channels().NewDequeuer()
+		dequeuer, err := Listener().Build()
 		it.Then(t).Should(
 			it.Nil(err),
 			it.Equal(dequeuer.Config.PollFrequency, 5*time.Microsecond), // Events3 override
@@ -79,12 +81,12 @@ func TestBuilder(t *testing.T) {
 	})
 
 	t.Run("Kernel configuration", func(t *testing.T) {
-		dequeuer, err := Channels().
+		dequeuer, err := Listener().
 			WithKernel(
-				swarm.WithSource("s3-processor"),
+				swarm.WithAgent("s3-processor"),
 				swarm.WithTimeToFlight(30*time.Second),
 			).
-			NewDequeuer()
+			Build()
 
 		it.Then(t).Should(
 			it.Nil(err),
@@ -95,31 +97,11 @@ func TestBuilder(t *testing.T) {
 		dequeuer.Close()
 	})
 
-	t.Run("Method chaining maintains fluent API", func(t *testing.T) {
-		dequeuer1, err1 := Channels().
-			WithKernel(swarm.WithSource("test1")).
-			NewDequeuer()
-
-		dequeuer2, err2 := Channels().
-			WithKernel(swarm.WithSource("test2")).
-			NewDequeuer()
-
-		it.Then(t).Should(
-			it.Nil(err1),
-			it.Nil(err2),
-			it.Equal(dequeuer1.Config.Agent, "test1"),
-			it.Equal(dequeuer2.Config.Agent, "test2"),
-		)
-
-		dequeuer1.Close()
-		dequeuer2.Close()
-	})
-
 	t.Run("Multiple kernel options", func(t *testing.T) {
-		dequeuer, err := Channels().
-			WithKernel(swarm.WithSource("service1")).
+		dequeuer, err := Listener().
+			WithKernel(swarm.WithAgent("service1")).
 			WithKernel(swarm.WithTimeToFlight(60 * time.Second)).
-			NewDequeuer()
+			Build()
 
 		it.Then(t).Should(
 			it.Nil(err),
@@ -127,15 +109,5 @@ func TestBuilder(t *testing.T) {
 			it.Equal(dequeuer.Config.TimeToFlight, 60*time.Second),
 		)
 		dequeuer.Close()
-	})
-}
-
-func TestBuilderBackwardCompatibility(t *testing.T) {
-	// Verify that old API still works during transition period
-	t.Run("Legacy NewDequeuer still works", func(t *testing.T) {
-		q, err := Channels().NewDequeuer()
-
-		it.Then(t).Should(it.Nil(err))
-		q.Close()
 	})
 }

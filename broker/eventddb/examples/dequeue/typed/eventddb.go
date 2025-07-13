@@ -20,7 +20,7 @@ import (
 func main() {
 	q := eventddb.Must(eventddb.Listener().Build())
 
-	go common(eventddb.Source(q))
+	go common(eventddb.Listen(q))
 
 	q.Await()
 }
