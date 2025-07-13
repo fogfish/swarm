@@ -103,6 +103,8 @@ func mockEmitter() *emitter {
 	return &emitter{}
 }
 
+func (e *emitter) Close() error { return nil }
+
 func (e *emitter) Enq(ctx context.Context, bag swarm.Bag) error {
 	err := json.Unmarshal(bag.Object, &e.val)
 	return err

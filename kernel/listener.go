@@ -22,6 +22,7 @@ type Listener interface {
 	Ack(ctx context.Context, digest string) error
 	Err(ctx context.Context, digest string, err error) error
 	Ask(ctx context.Context) ([]swarm.Bag, error)
+	Close() error
 }
 
 // Decode message from wire format
@@ -80,6 +81,7 @@ func newListener(listener Listener, config swarm.Config) *ListenerCore {
 func (k *ListenerCore) Close() {
 	k.cancel()
 	k.WaitGroup.Wait()
+	k.Listener.Close()
 }
 
 // Await reader to complete
@@ -92,6 +94,7 @@ func (k *ListenerCore) Await() {
 
 	<-k.context.Done()
 	k.WaitGroup.Wait()
+	k.Listener.Close()
 }
 
 // internal infinite receive loop.

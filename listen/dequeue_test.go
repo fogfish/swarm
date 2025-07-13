@@ -135,6 +135,8 @@ func mockCathode[T any](cat string, obj T) cathode[T] {
 	}
 }
 
+func (c cathode[T]) Close() error { return nil }
+
 func (c cathode[T]) Ack(ctx context.Context, digest string) error {
 	return nil
 }

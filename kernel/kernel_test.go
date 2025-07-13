@@ -169,6 +169,10 @@ func (e *mockEmitter) Enq(ctx context.Context, bag swarm.Bag) error {
 	return nil
 }
 
+func (e *mockEmitter) Close() error {
+	return nil
+}
+
 //------------------------------------------------------------------------------
 
 type mockListener struct {
@@ -178,6 +182,10 @@ type mockListener struct {
 
 func newMockCathode(ack chan string, seq []swarm.Bag) *mockListener {
 	return &mockListener{seq: seq, ack: ack}
+}
+
+func (c *mockListener) Close() error {
+	return nil
 }
 
 func (c *mockListener) Ack(ctx context.Context, digest string) error {
