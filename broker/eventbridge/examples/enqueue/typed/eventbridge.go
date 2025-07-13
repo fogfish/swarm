@@ -11,7 +11,7 @@ package main
 import (
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/eventbridge"
-	"github.com/fogfish/swarm/enqueue"
+	"github.com/fogfish/swarm/emit"
 )
 
 type User struct {
@@ -30,17 +30,11 @@ type Like struct {
 }
 
 func main() {
-	q := eventbridge.MustEnqueuer(
-		eventbridge.WithEventBus("swarm-example-eventbridge"),
-		eventbridge.WithConfig(
-			swarm.WithSource("swarm-example-eventbridge"),
-			swarm.WithLogStdErr(),
-		),
-	)
+	q := eventbridge.Must(eventbridge.Emitter().Build("swarm-example-eventbridge"))
 
-	user := swarm.LogDeadLetters(enqueue.Typed[*User](q))
-	note := swarm.LogDeadLetters(enqueue.Typed[*Note](q))
-	like := swarm.LogDeadLetters(enqueue.Typed[*Like](q))
+	user := swarm.LogDeadLetters(emit.Typed[*User](q))
+	note := swarm.LogDeadLetters(emit.Typed[*Note](q))
+	like := swarm.LogDeadLetters(emit.Typed[*Like](q))
 
 	user <- &User{ID: "user", Text: "user signed  in"}
 	note <- &Note{ID: "note", Text: "user wrote note"}

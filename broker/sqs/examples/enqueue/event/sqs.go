@@ -9,11 +9,9 @@
 package main
 
 import (
-	"log/slog"
-
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/sqs"
-	"github.com/fogfish/swarm/enqueue"
+	"github.com/fogfish/swarm/emit"
 )
 
 // Date type (object) affected by events
@@ -42,20 +40,12 @@ type Note struct {
 type EvtNote = swarm.Event[swarm.Meta, Note]
 
 func main() {
-	q, err := sqs.NewEnqueuer("swarm-test",
-		sqs.WithConfig(
-			swarm.WithLogStdErr(),
-		),
-	)
-	if err != nil {
-		slog.Error("sqs writer has failed", "err", err)
-		return
-	}
+	q := sqs.Must(sqs.Emitter().Build("swarm-test"))
 
-	userCreated := swarm.LogDeadLetters(enqueue.Event[EvtCreatedUser](q))
-	userUpdated := swarm.LogDeadLetters(enqueue.Event[EvtUpdatedUser](q))
-	userRemoved := swarm.LogDeadLetters(enqueue.Event[EvtRemovedUser](q))
-	note := swarm.LogDeadLetters(enqueue.Event[EvtNote](q))
+	userCreated := swarm.LogDeadLetters(emit.Event[EvtCreatedUser](q))
+	userUpdated := swarm.LogDeadLetters(emit.Event[EvtUpdatedUser](q))
+	userRemoved := swarm.LogDeadLetters(emit.Event[EvtRemovedUser](q))
+	note := swarm.LogDeadLetters(emit.Event[EvtNote](q))
 
 	//
 	// Multiple channels emits events

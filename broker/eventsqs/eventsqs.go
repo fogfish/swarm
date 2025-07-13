@@ -9,9 +9,10 @@
 package eventsqs
 
 import (
+	"context"
+
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/fogfish/opts"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/kernel"
 )
@@ -20,28 +21,13 @@ type Client struct {
 	config swarm.Config
 }
 
-// New creates broker for AWS SQS (serverless events)
-func NewDequeuer(opt ...Option) (*kernel.Dequeuer, error) {
-	c := &Client{}
-	if err := opts.Apply(c, defs); err != nil {
-		return nil, err
-	}
-	if err := opts.Apply(c, opt); err != nil {
-		return nil, err
-	}
-
-	bridge := &bridge{kernel.NewBridge(c.config.TimeToFlight)}
-
-	return kernel.NewDequeuer(bridge, c.config), nil
-}
-
 //------------------------------------------------------------------------------
 
 type bridge struct{ *kernel.Bridge }
 
 func (s bridge) Run() { lambda.Start(s.run) }
 
-func (s bridge) run(events events.SQSEvent) error {
+func (s bridge) run(ctx context.Context, events events.SQSEvent) error {
 	bag := make([]swarm.Bag, len(events.Records))
 	for i, evt := range events.Records {
 		bag[i] = swarm.Bag{
@@ -51,7 +37,7 @@ func (s bridge) run(events events.SQSEvent) error {
 		}
 	}
 
-	return s.Bridge.Dispatch(bag)
+	return s.Bridge.Dispatch(ctx, bag)
 }
 
 func attr(msg *events.SQSMessage, key string) string {

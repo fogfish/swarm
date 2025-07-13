@@ -27,7 +27,7 @@ import (
 
 type Sink struct {
 	constructs.Construct
-	Handler awslambda.IFunction
+	Handler awslambda.Function
 }
 
 type SinkProps struct {
@@ -38,9 +38,12 @@ type SinkProps struct {
 func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	sink := &Sink{Construct: constructs.NewConstruct(scope, id)}
 
-	props.Function.Setenv(EnvConfigSourceSQS, *props.Queue.QueueName())
-
 	sink.Handler = scud.NewFunction(sink.Construct, jsii.String("Func"), props.Function)
+	sink.Handler.AddEnvironment(
+		jsii.String(EnvConfigSourceSQS),
+		props.Queue.QueueName(),
+		nil,
+	)
 
 	source := awslambdaeventsources.NewSqsEventSource(props.Queue,
 		&awslambdaeventsources.SqsEventSourceProps{})
@@ -56,9 +59,7 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 //
 //------------------------------------------------------------------------------
 
-type BrokerProps struct {
-	System string
-}
+type BrokerProps struct{}
 
 type Broker struct {
 	constructs.Construct

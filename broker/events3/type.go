@@ -11,16 +11,16 @@ package events3
 import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/fogfish/swarm"
-	"github.com/fogfish/swarm/dequeue"
 	"github.com/fogfish/swarm/kernel"
+	"github.com/fogfish/swarm/listen"
 )
 
 const Category = "S3EventRecord"
 
 // The broker produces only [events.S3EventRecord], the function is helper.
-func Source(q *kernel.Dequeuer) (
+func Listen(q *kernel.ListenerCore) (
 	<-chan swarm.Msg[*events.S3EventRecord],
 	chan<- swarm.Msg[*events.S3EventRecord],
 ) {
-	return dequeue.Typed[*events.S3EventRecord](q)
+	return listen.Typed[*events.S3EventRecord](q)
 }

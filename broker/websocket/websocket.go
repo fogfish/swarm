@@ -11,98 +11,22 @@ package websocket
 import (
 	"context"
 	"net/http"
-	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/apigatewaymanagementapi"
-	"github.com/fogfish/opts"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/kernel"
 )
-
-// WebSocket declares the subset of interface from AWS SDK used by the lib.
-type Gateway interface {
-	PostToConnection(ctx context.Context, params *apigatewaymanagementapi.PostToConnectionInput, optFns ...func(*apigatewaymanagementapi.Options)) (*apigatewaymanagementapi.PostToConnectionOutput, error)
-}
 
 type Client struct {
 	service Gateway
 	config  swarm.Config
 }
 
-// Create enqueue routine to WebSocket (AWS API Gateway)
-func NewEnqueuer(endpoint string, opts ...Option) (*kernel.Enqueuer, error) {
-	cli, err := newWebSocket(endpoint, opts...)
-	if err != nil {
-		return nil, err
-	}
-
-	return kernel.NewEnqueuer(cli, cli.config), nil
-}
-
-// Creates dequeue routine from WebSocket (AWS API Gateway)
-func NewDequeuer(opt ...Option) (*kernel.Dequeuer, error) {
-	c := &Client{}
-	if err := opts.Apply(c, defs); err != nil {
-		return nil, err
-	}
-	if err := opts.Apply(c, opt); err != nil {
-		return nil, err
-	}
-
-	bridge := &bridge{kernel.NewBridge(c.config.TimeToFlight)}
-
-	return kernel.NewDequeuer(bridge, c.config), nil
-}
-
-// Create enqueue & dequeue routines to WebSocket (AWS API Gateway)
-func New(endpoint string, opts ...Option) (*kernel.Kernel, error) {
-	cli, err := newWebSocket(endpoint, opts...)
-	if err != nil {
-		return nil, err
-	}
-
-	bridge := &bridge{kernel.NewBridge(cli.config.TimeToFlight)}
-
-	return kernel.New(
-		kernel.NewEnqueuer(cli, cli.config),
-		kernel.NewDequeuer(bridge, cli.config),
-	), nil
-}
-
-func newWebSocket(endpoint string, opt ...Option) (*Client, error) {
-	c := &Client{}
-	if err := opts.Apply(c, defs); err != nil {
-		return nil, err
-	}
-	if err := opts.Apply(c, opt); err != nil {
-		return nil, err
-	}
-
-	if c.service == nil {
-		cfg, err := config.LoadDefaultConfig(context.Background())
-		if err != nil {
-			return nil, swarm.ErrServiceIO.With(err)
-		}
-		c.service = apigatewaymanagementapi.NewFromConfig(cfg,
-			func(o *apigatewaymanagementapi.Options) {
-				if strings.HasPrefix(endpoint, "wss://") {
-					endpoint = strings.Replace(endpoint, "wss://", "https://", 1)
-				}
-
-				if strings.HasPrefix(endpoint, "ws://") {
-					endpoint = strings.Replace(endpoint, "ws://", "http://", 1)
-				}
-
-				o.BaseEndpoint = aws.String(endpoint)
-			},
-		)
-	}
-
-	return c, nil
+func (cli *Client) Close() error {
+	return nil
 }
 
 // Enq enqueues message to broker
@@ -130,7 +54,7 @@ type bridge struct{ *kernel.Bridge }
 
 func (s bridge) Run() { lambda.Start(s.run) }
 
-func (s bridge) run(evt events.APIGatewayWebsocketProxyRequest) (events.APIGatewayProxyResponse, error) {
+func (s bridge) run(ctx context.Context, evt events.APIGatewayWebsocketProxyRequest) (events.APIGatewayProxyResponse, error) {
 	bag := make([]swarm.Bag, 1)
 	bag[0] = swarm.Bag{
 		Category:  evt.RequestContext.RouteKey,
@@ -139,7 +63,7 @@ func (s bridge) run(evt events.APIGatewayWebsocketProxyRequest) (events.APIGatew
 		Object:    []byte(evt.Body),
 	}
 
-	if err := s.Bridge.Dispatch(bag); err != nil {
+	if err := s.Bridge.Dispatch(ctx, bag); err != nil {
 		// TODO: handle error
 		return events.APIGatewayProxyResponse{StatusCode: http.StatusRequestTimeout}, err
 	}

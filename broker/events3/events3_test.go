@@ -21,10 +21,12 @@ import (
 
 func TestReader(t *testing.T) {
 	var bag []swarm.Bag
-	bridge := &bridge{kernel.NewBridge(100 * time.Millisecond)}
+	cfg := swarm.NewConfig()
+	cfg.TimeToFlight = 100 * time.Millisecond
+	bridge := &bridge{kernel.NewBridge(cfg)}
 
 	t.Run("New", func(t *testing.T) {
-		q, err := NewDequeuer()
+		q, err := Listener().Build()
 		it.Then(t).Should(it.Nil(err))
 		q.Close()
 	})
@@ -37,7 +39,7 @@ func TestReader(t *testing.T) {
 			}
 		}()
 
-		err := bridge.run(
+		err := bridge.run(context.Background(),
 			S3Event{
 				Records: []json.RawMessage{[]byte(`{"sut":"test"}`)},
 			},
@@ -56,7 +58,7 @@ func TestReader(t *testing.T) {
 			bag, _ = bridge.Ask(context.Background())
 		}()
 
-		err := bridge.run(
+		err := bridge.run(context.Background(),
 			S3Event{
 				Records: []json.RawMessage{[]byte(`{"sut":"test"}`)},
 			},
@@ -65,5 +67,47 @@ func TestReader(t *testing.T) {
 		it.Then(t).ShouldNot(
 			it.Nil(err),
 		)
+	})
+}
+
+func TestBuilder(t *testing.T) {
+	t.Run("Simple case with sensible defaults", func(t *testing.T) {
+		dequeuer, err := Listener().Build()
+		it.Then(t).Should(
+			it.Nil(err),
+			it.Equal(dequeuer.Config.PollFrequency, 5*time.Microsecond), // Events3 override
+		)
+		dequeuer.Close()
+	})
+
+	t.Run("Kernel configuration", func(t *testing.T) {
+		dequeuer, err := Listener().
+			WithKernel(
+				swarm.WithAgent("s3-processor"),
+				swarm.WithTimeToFlight(30*time.Second),
+			).
+			Build()
+
+		it.Then(t).Should(
+			it.Nil(err),
+			it.Equal(dequeuer.Config.Agent, "s3-processor"),
+			it.Equal(dequeuer.Config.TimeToFlight, 30*time.Second),
+			it.Equal(dequeuer.Config.PollFrequency, 5*time.Microsecond), // Events3 override
+		)
+		dequeuer.Close()
+	})
+
+	t.Run("Multiple kernel options", func(t *testing.T) {
+		dequeuer, err := Listener().
+			WithKernel(swarm.WithAgent("service1")).
+			WithKernel(swarm.WithTimeToFlight(60 * time.Second)).
+			Build()
+
+		it.Then(t).Should(
+			it.Nil(err),
+			it.Equal(dequeuer.Config.Agent, "service1"),
+			it.Equal(dequeuer.Config.TimeToFlight, 60*time.Second),
+		)
+		dequeuer.Close()
 	})
 }

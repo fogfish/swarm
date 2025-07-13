@@ -15,8 +15,8 @@ import (
 
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/websocket"
-	"github.com/fogfish/swarm/dequeue"
-	"github.com/fogfish/swarm/enqueue"
+	"github.com/fogfish/swarm/emit"
+	"github.com/fogfish/swarm/listen"
 )
 
 type User struct {
@@ -26,24 +26,20 @@ type User struct {
 }
 
 func main() {
-	q, err := websocket.New(os.Getenv(websocket.EnvConfigSourceWebSocket),
-		websocket.WithConfig(
-			swarm.WithLogStdErr(),
+	q := websocket.Must(
+		websocket.Endpoint().Build(
+			os.Getenv(websocket.EnvConfigSourceWebSocketUrl),
 		),
 	)
-	if err != nil {
-		slog.Error("sqs reader has failed", "err", err)
-		return
-	}
 
-	a := &actor{emit: enqueue.NewTyped[User](q.Enqueuer)}
-	go a.handle(dequeue.Typed[User](q.Dequeuer))
+	a := &actor{emit: emit.NewTyped[User](q.Emitter)}
+	go a.handle(listen.Typed[User](q.Listener))
 
 	q.Await()
 }
 
 type actor struct {
-	emit *enqueue.EmitterTyped[User]
+	emit *emit.EmitterTyped[User]
 }
 
 func (a *actor) handle(rcv <-chan swarm.Msg[User], ack chan<- swarm.Msg[User]) {

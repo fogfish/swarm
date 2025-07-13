@@ -9,32 +9,17 @@
 package events3
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/fogfish/guid/v2"
-	"github.com/fogfish/opts"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/kernel"
 )
 
 type Client struct {
 	config swarm.Config
-}
-
-// Create reader from AWS S3 Events
-func NewDequeuer(opt ...Option) (*kernel.Dequeuer, error) {
-	c := &Client{}
-	if err := opts.Apply(c, defs); err != nil {
-		return nil, err
-	}
-	if err := opts.Apply(c, opt); err != nil {
-		return nil, err
-	}
-
-	bridge := &bridge{kernel.NewBridge(c.config.TimeToFlight)}
-
-	return kernel.NewDequeuer(bridge, c.config), nil
 }
 
 //------------------------------------------------------------------------------
@@ -48,7 +33,7 @@ type S3Event struct {
 
 func (s bridge) Run() { lambda.Start(s.run) }
 
-func (s bridge) run(events S3Event) error {
+func (s bridge) run(ctx context.Context, events S3Event) error {
 	bag := make([]swarm.Bag, len(events.Records))
 	for i, obj := range events.Records {
 		bag[i] = swarm.Bag{
@@ -58,5 +43,5 @@ func (s bridge) run(events S3Event) error {
 		}
 	}
 
-	return s.Bridge.Dispatch(bag)
+	return s.Bridge.Dispatch(ctx, bag)
 }

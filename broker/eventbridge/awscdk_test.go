@@ -42,9 +42,8 @@ func TestEventBridgeCDK(t *testing.T) {
 	require := map[*string]*float64{
 		jsii.String("AWS::Events::EventBus"): jsii.Number(1),
 		jsii.String("AWS::Events::Rule"):     jsii.Number(1),
-		jsii.String("AWS::IAM::Role"):        jsii.Number(2),
-		jsii.String("AWS::Lambda::Function"): jsii.Number(2),
-		jsii.String("Custom::LogRetention"):  jsii.Number(1),
+		jsii.String("AWS::IAM::Role"):        jsii.Number(1),
+		jsii.String("AWS::Lambda::Function"): jsii.Number(1),
 	}
 
 	template := assertions.Template_FromStack(stack, nil)
@@ -115,8 +114,7 @@ func TestAddEventBus(t *testing.T) {
 	require := map[*string]*float64{
 		jsii.String("AWS::Events::EventBus"): jsii.Number(0), // No new event bus created
 		jsii.String("AWS::Events::Rule"):     jsii.Number(1), // Rule should still be created
-		jsii.String("AWS::Lambda::Function"): jsii.Number(2), // Lambda function + Log Retention function
-		jsii.String("Custom::LogRetention"):  jsii.Number(1), // Log retention custom resource
+		jsii.String("AWS::Lambda::Function"): jsii.Number(1), // Lambda function + Log Retention function
 	}
 
 	for key, val := range require {
@@ -158,7 +156,7 @@ func TestGrantWriteEvents(t *testing.T) {
 		"Environment": map[string]any{
 			"Variables": map[string]any{
 				eventbridge.EnvConfigSourceEventBridge: assertions.Match_AnyValue(),
-				eventbridge.EnvConfigEventAgent:        "test-agent",
+				swarm.EnvConfigAgent:                   "test-agent",
 			},
 		},
 	})
@@ -185,7 +183,7 @@ func TestGrantReadEvents(t *testing.T) {
 	template.HasResourceProperties(jsii.String("AWS::Lambda::Function"), map[string]any{
 		"Environment": map[string]any{
 			"Variables": map[string]any{
-				eventbridge.EnvConfigEventAgent: "test-agent",
+				swarm.EnvConfigAgent: "test-agent",
 			},
 		},
 	})

@@ -11,7 +11,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log/slog"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/fogfish/swarm"
@@ -19,17 +18,9 @@ import (
 )
 
 func main() {
-	q, err := eventddb.NewReader(
-		eventddb.WithConfig(
-			swarm.WithLogStdErr(),
-		),
-	)
-	if err != nil {
-		slog.Error("eventddb reader has failed", "err", err)
-		return
-	}
+	q := eventddb.Must(eventddb.Listener().Build())
 
-	go common(eventddb.Source(q))
+	go common(eventddb.Listen(q))
 
 	q.Await()
 }

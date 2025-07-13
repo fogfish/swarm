@@ -11,24 +11,15 @@ package eventbridge
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/eventbridge"
 	"github.com/aws/aws-sdk-go-v2/service/eventbridge/types"
-	"github.com/fogfish/logger/x/xlog"
-	"github.com/fogfish/opts"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/kernel"
 )
-
-// EventBridge declares the subset of interface from AWS SDK used by the lib.
-type EventBridge interface {
-	PutEvents(context.Context, *eventbridge.PutEventsInput, ...func(*eventbridge.Options)) (*eventbridge.PutEventsOutput, error)
-}
 
 // EventBridge client
 type Client struct {
@@ -37,92 +28,8 @@ type Client struct {
 	config  swarm.Config
 }
 
-// Create writer to AWS EventBridge
-func NewEnqueuer(opts ...Option) (*kernel.Enqueuer, error) {
-	cli, err := newEventBridge(opts...)
-	if err != nil {
-		return nil, err
-	}
-
-	return kernel.NewEnqueuer(cli, cli.config), nil
-}
-
-// Create writer to AWS EventBridge
-func MustEnqueuer(opts ...Option) *kernel.Enqueuer {
-	cli, err := NewEnqueuer(opts...)
-	if err != nil {
-		xlog.Emergency("eventbridge client has failed", err)
-	}
-
-	return cli
-}
-
-// Create reader from AWS EventBridge
-func NewDequeuer(opt ...Option) (*kernel.Dequeuer, error) {
-	c := &Client{}
-	if err := opts.Apply(c, defs); err != nil {
-		return nil, err
-	}
-	if err := opts.Apply(c, opt); err != nil {
-		return nil, err
-	}
-
-	bridge := &bridge{kernel.NewBridge(c.config.TimeToFlight)}
-
-	return kernel.NewDequeuer(bridge, c.config), nil
-}
-
-func MustDequeuer(opt ...Option) *kernel.Dequeuer {
-	cli, err := NewDequeuer(opt...)
-	if err != nil {
-		xlog.Emergency("eventbridge client has failed", err)
-	}
-
-	return cli
-}
-
-// Create enqueue & dequeue routine to AWS EventBridge
-func New(opts ...Option) (*kernel.Kernel, error) {
-	cli, err := newEventBridge(opts...)
-	if err != nil {
-		return nil, err
-	}
-
-	bridge := &bridge{kernel.NewBridge(cli.config.TimeToFlight)}
-
-	return kernel.New(
-		kernel.NewEnqueuer(cli, cli.config),
-		kernel.NewDequeuer(bridge, cli.config),
-	), nil
-}
-
-// checkRequired validates that all mandatory configuration parameters are provided
-func (c *Client) checkRequired() error {
-	return opts.Required(c, WithEventBus(""))
-}
-
-func newEventBridge(opt ...Option) (*Client, error) {
-	c := &Client{bus: os.Getenv(EnvConfigSourceEventBridge)}
-	if err := opts.Apply(c, defs); err != nil {
-		return nil, err
-	}
-	if err := opts.Apply(c, opt); err != nil {
-		return nil, err
-	}
-
-	if c.service == nil {
-		aws, err := config.LoadDefaultConfig(context.Background())
-		if err != nil {
-			return nil, swarm.ErrServiceIO.With(err)
-		}
-		c.service = eventbridge.NewFromConfig(aws)
-	}
-
-	if err := c.checkRequired(); err != nil {
-		return nil, err
-	}
-
-	return c, nil
+func (cli *Client) Close() error {
+	return nil
 }
 
 // Enq enqueues message to broker
@@ -135,7 +42,7 @@ func (cli *Client) Enq(ctx context.Context, bag swarm.Bag) error {
 			Entries: []types.PutEventsRequestEntry{
 				{
 					EventBusName: aws.String(cli.bus),
-					Source:       aws.String(cli.config.Source),
+					Source:       aws.String(cli.config.Agent),
 					DetailType:   aws.String(bag.Category),
 					Detail:       aws.String(string(bag.Object)),
 				},
@@ -160,9 +67,11 @@ func (cli *Client) Enq(ctx context.Context, bag swarm.Bag) error {
 
 type bridge struct{ *kernel.Bridge }
 
-func (s bridge) Run() { lambda.Start(s.run) }
+func (s bridge) Run(ctx context.Context) {
+	lambda.Start(s.run)
+}
 
-func (s bridge) run(evt events.CloudWatchEvent) error {
+func (s bridge) run(ctx context.Context, evt events.CloudWatchEvent) error {
 	bag := make([]swarm.Bag, 1)
 	bag[0] = swarm.Bag{
 		Category: evt.DetailType,
@@ -170,5 +79,5 @@ func (s bridge) run(evt events.CloudWatchEvent) error {
 		Object:   evt.Detail,
 	}
 
-	return s.Bridge.Dispatch(bag)
+	return s.Bridge.Dispatch(ctx, bag)
 }

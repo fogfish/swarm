@@ -11,11 +11,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log/slog"
 
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/sqs"
-	"github.com/fogfish/swarm/dequeue"
+	"github.com/fogfish/swarm/listen"
 )
 
 // Date type (object) affected by events
@@ -44,27 +43,19 @@ type Note struct {
 type EvtNote = swarm.Event[swarm.Meta, Note]
 
 func main() {
-	q, err := sqs.NewDequeuer("swarm-test",
-		sqs.WithConfig(
-			swarm.WithLogStdErr(),
-		),
-	)
-	if err != nil {
-		slog.Error("sqs reader has failed", "err", err)
-		return
-	}
+	q := sqs.Must(sqs.Listener().Build("swarm-test"))
 
-	go create(dequeue.Event[EvtCreatedUser](q))
-	go update(dequeue.Event[EvtUpdatedUser](q))
-	go remove(dequeue.Event[EvtRemovedUser](q))
-	go common(dequeue.Event[EvtNote](q))
+	go create(listen.Event[EvtCreatedUser](q))
+	go update(listen.Event[EvtUpdatedUser](q))
+	go remove(listen.Event[EvtRemovedUser](q))
+	go common(listen.Event[EvtNote](q))
 
 	q.Await()
 }
 
 func create(rcv <-chan swarm.Msg[EvtCreatedUser], ack chan<- swarm.Msg[EvtCreatedUser]) {
 	for msg := range rcv {
-		v, _ := json.MarshalIndent(msg, "+ |", " ")
+		v, _ := json.MarshalIndent(msg.Object, "+ |", " ")
 		fmt.Printf("create user > \n %s\n", v)
 		ack <- msg
 	}
@@ -72,7 +63,7 @@ func create(rcv <-chan swarm.Msg[EvtCreatedUser], ack chan<- swarm.Msg[EvtCreate
 
 func update(rcv <-chan swarm.Msg[EvtUpdatedUser], ack chan<- swarm.Msg[EvtUpdatedUser]) {
 	for msg := range rcv {
-		v, _ := json.MarshalIndent(msg, "~ |", " ")
+		v, _ := json.MarshalIndent(msg.Object, "~ |", " ")
 		fmt.Printf("update user > \n %s\n", v)
 		ack <- msg
 	}
@@ -80,7 +71,7 @@ func update(rcv <-chan swarm.Msg[EvtUpdatedUser], ack chan<- swarm.Msg[EvtUpdate
 
 func remove(rcv <-chan swarm.Msg[EvtRemovedUser], ack chan<- swarm.Msg[EvtRemovedUser]) {
 	for msg := range rcv {
-		v, _ := json.MarshalIndent(msg, "- |", " ")
+		v, _ := json.MarshalIndent(msg.Object, "- |", " ")
 		fmt.Printf("remove user > \n %s\n", v)
 		ack <- msg
 	}
@@ -98,7 +89,7 @@ func common(rcv <-chan swarm.Msg[EvtNote], ack chan<- swarm.Msg[EvtNote]) {
 			prefix = "- |"
 		}
 
-		v, _ := json.MarshalIndent(msg, prefix, " ")
+		v, _ := json.MarshalIndent(msg.Object, prefix, " ")
 		fmt.Printf("common note > \n %s\n", v)
 		ack <- msg
 	}

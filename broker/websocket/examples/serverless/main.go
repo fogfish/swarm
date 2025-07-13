@@ -47,7 +47,7 @@ func main() {
 
 	broker.NewSink(
 		&websocket.SinkProps{
-			Route: "User",
+			Category: "User",
 			Function: &scud.FunctionGoProps{
 				SourceCodeModule: "github.com/fogfish/swarm/broker/websocket",
 				SourceCodeLambda: "examples/dequeue/typed",

@@ -37,9 +37,8 @@ func TestEventS3CDK(t *testing.T) {
 	require := map[*string]*float64{
 		jsii.String("AWS::S3::Bucket"):               jsii.Number(1),
 		jsii.String("Custom::S3BucketNotifications"): jsii.Number(1),
-		jsii.String("AWS::IAM::Role"):                jsii.Number(3),
-		jsii.String("AWS::Lambda::Function"):         jsii.Number(3),
-		jsii.String("Custom::LogRetention"):          jsii.Number(1),
+		jsii.String("AWS::IAM::Role"):                jsii.Number(2),
+		jsii.String("AWS::Lambda::Function"):         jsii.Number(2),
 	}
 
 	template := assertions.Template_FromStack(stack, nil)

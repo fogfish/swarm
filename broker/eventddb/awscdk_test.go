@@ -37,9 +37,8 @@ func TestEventDdbCDK(t *testing.T) {
 	require := map[*string]*float64{
 		jsii.String("AWS::DynamoDB::GlobalTable"):      jsii.Number(1),
 		jsii.String("AWS::Lambda::EventSourceMapping"): jsii.Number(1),
-		jsii.String("AWS::IAM::Role"):                  jsii.Number(2),
-		jsii.String("AWS::Lambda::Function"):           jsii.Number(2),
-		jsii.String("Custom::LogRetention"):            jsii.Number(1),
+		jsii.String("AWS::IAM::Role"):                  jsii.Number(1),
+		jsii.String("AWS::Lambda::Function"):           jsii.Number(1),
 	}
 
 	template := assertions.Template_FromStack(stack, nil)

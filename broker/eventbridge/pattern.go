@@ -63,7 +63,7 @@ func Category(cats ...string) Expr {
 	}
 }
 
-// Configure event pattern to match source(s)
+// Configure event pattern to match source(s) (aka agent)
 func Source(sources ...string) Expr {
 	return func(p *awsevents.EventPattern) {
 		if p.Source == nil {

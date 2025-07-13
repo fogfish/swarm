@@ -9,11 +9,9 @@
 package main
 
 import (
-	"log/slog"
-
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/sqs"
-	"github.com/fogfish/swarm/enqueue"
+	"github.com/fogfish/swarm/emit"
 )
 
 type User struct {
@@ -32,19 +30,11 @@ type Like struct {
 }
 
 func main() {
-	q, err := sqs.NewEnqueuer("swarm-test",
-		sqs.WithConfig(
-			swarm.WithLogStdErr(),
-		),
-	)
-	if err != nil {
-		slog.Error("sqs writer has failed", "err", err)
-		return
-	}
+	q := sqs.Must(sqs.Emitter().Build("swarm-test"))
 
-	user := swarm.LogDeadLetters(enqueue.Typed[*User](q))
-	note := swarm.LogDeadLetters(enqueue.Typed[*Note](q))
-	like := swarm.LogDeadLetters(enqueue.Typed[*Like](q))
+	user := swarm.LogDeadLetters(emit.Typed[*User](q))
+	note := swarm.LogDeadLetters(emit.Typed[*Note](q))
+	like := swarm.LogDeadLetters(emit.Typed[*Like](q))
 
 	user <- &User{ID: "user", Text: "some text by user"}
 
