@@ -9,7 +9,6 @@
 package eventsqs
 
 import (
-	"os"
 	"time"
 
 	"github.com/fogfish/logger/x/xlog"
@@ -58,9 +57,6 @@ func newBuilder[T any](b T) *builder[T] {
 	kopts := []opts.Option[swarm.Config]{
 		swarm.WithLogStdErr(),
 		swarm.WithConfigFromEnv(),
-	}
-	if val := os.Getenv(EnvConfigSourceSQS); val != "" {
-		kopts = append(kopts, swarm.WithAgent(val))
 	}
 
 	return &builder[T]{

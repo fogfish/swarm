@@ -176,7 +176,7 @@ func (broker *Broker) GrantWriteEvents(f awslambda.Function, agent string) {
 	)
 
 	f.AddEnvironment(
-		jsii.String(EnvConfigEventAgent),
+		jsii.String(swarm.EnvConfigAgent),
 		jsii.String(agent),
 		nil,
 	)
@@ -192,7 +192,7 @@ func (broker *Broker) GrantReadEvents(f awslambda.Function, agent string) {
 	}
 
 	f.AddEnvironment(
-		jsii.String(EnvConfigEventAgent),
+		jsii.String(swarm.EnvConfigAgent),
 		jsii.String(agent),
 		nil,
 	)

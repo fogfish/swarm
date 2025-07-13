@@ -10,7 +10,6 @@ package sqs
 
 import (
 	"context"
-	"os"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -97,9 +96,6 @@ func newBuilder[T any](b T) *builder[T] {
 	kopts := []opts.Option[swarm.Config]{
 		swarm.WithLogStdErr(),
 		swarm.WithConfigFromEnv(),
-	}
-	if val := os.Getenv(EnvConfigSourceSQS); val != "" {
-		kopts = append(kopts, swarm.WithAgent(val))
 	}
 
 	return &builder[T]{

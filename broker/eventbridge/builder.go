@@ -10,7 +10,6 @@ package eventbridge
 
 import (
 	"context"
-	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -23,8 +22,6 @@ import (
 
 // Environment variable to config event source
 const EnvConfigSourceEventBridge = "CONFIG_SWARM_SOURCE_EVENTBRIDGE"
-
-const EnvConfigEventAgent = "CONFIG_SWARM_EVENT_AGENT"
 
 func Must[T any](v T, err error) T {
 	if err != nil {
@@ -101,9 +98,6 @@ func newBuilder[T any](b T) *builder[T] {
 	kopts := []opts.Option[swarm.Config]{
 		swarm.WithLogStdErr(),
 		swarm.WithConfigFromEnv(),
-	}
-	if val := os.Getenv(EnvConfigSourceEventBridge); val != "" {
-		kopts = append(kopts, swarm.WithAgent(val))
 	}
 
 	return &builder[T]{

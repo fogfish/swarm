@@ -156,7 +156,7 @@ func TestGrantWriteEvents(t *testing.T) {
 		"Environment": map[string]any{
 			"Variables": map[string]any{
 				eventbridge.EnvConfigSourceEventBridge: assertions.Match_AnyValue(),
-				eventbridge.EnvConfigEventAgent:        "test-agent",
+				swarm.EnvConfigAgent:                   "test-agent",
 			},
 		},
 	})
@@ -183,7 +183,7 @@ func TestGrantReadEvents(t *testing.T) {
 	template.HasResourceProperties(jsii.String("AWS::Lambda::Function"), map[string]any{
 		"Environment": map[string]any{
 			"Variables": map[string]any{
-				eventbridge.EnvConfigEventAgent: "test-agent",
+				swarm.EnvConfigAgent: "test-agent",
 			},
 		},
 	})

@@ -28,7 +28,7 @@ type User struct {
 func main() {
 	q := websocket.Must(
 		websocket.Endpoint().Build(
-			os.Getenv(websocket.EnvConfigSourceWebSocket),
+			os.Getenv(websocket.EnvConfigSourceWebSocketUrl),
 		),
 	)
 

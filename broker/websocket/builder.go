@@ -10,7 +10,6 @@ package websocket
 
 import (
 	"context"
-	"os"
 	"strings"
 	"time"
 
@@ -23,9 +22,13 @@ import (
 	"github.com/fogfish/swarm/kernel"
 )
 
-// Environment variable to config event source
-const EnvConfigEventType = "CONFIG_SWARM_WS_EVENT_TYPE"
-const EnvConfigSourceWebSocket = "CONFIG_SWARM_WS_URL"
+const (
+	// Environment variable defines event category (the route function is bound with)
+	EnvConfigEventCategory = "CONFIG_SWARM_WS_EVENT_CATEGORY"
+
+	// Environment variable defines URL to WebSocket API Gateway
+	EnvConfigSourceWebSocketUrl = "CONFIG_SWARM_SOURCE_WS"
+)
 
 func Must[T any](v T, err error) T {
 	if err != nil {
@@ -112,9 +115,6 @@ func newBuilder[T any](b T) *builder[T] {
 	kopts := []opts.Option[swarm.Config]{
 		swarm.WithLogStdErr(),
 		swarm.WithConfigFromEnv(),
-	}
-	if val := os.Getenv(EnvConfigSourceWebSocket); val != "" {
-		kopts = append(kopts, swarm.WithAgent(val))
 	}
 
 	return &builder[T]{

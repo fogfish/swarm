@@ -39,9 +39,14 @@ type Sink struct {
 }
 
 type SinkProps struct {
-	Route    string
+	// Category of event to process. It is used to create a WebSocket route.
+	Category string
+
+	// Properties of Lambda function to handle the category
 	Function scud.FunctionProps
-	Gateway  awsapigatewayv2.WebSocketApi
+
+	// WebSocket Api Gateway lambda is bound with
+	Gateway awsapigatewayv2.WebSocketApi
 }
 
 func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
@@ -49,21 +54,21 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 
 	sink.Handler = scud.NewFunction(sink.Construct, jsii.String("Func"), props.Function)
 	sink.Handler.AddEnvironment(
-		jsii.String(EnvConfigEventType),
-		jsii.String(props.Route),
+		jsii.String(EnvConfigEventCategory),
+		jsii.String(props.Category),
 		nil,
 	)
 	sink.Handler.AddEnvironment(
-		jsii.String(EnvConfigSourceWebSocket),
+		jsii.String(EnvConfigSourceWebSocketUrl),
 		jsii.String(aws.ToString(props.Gateway.ApiEndpoint())+"/"+stage),
 		nil,
 	)
 
-	it := integrations.NewWebSocketLambdaIntegration(jsii.String(props.Route), sink.Handler,
+	it := integrations.NewWebSocketLambdaIntegration(jsii.String(props.Category), sink.Handler,
 		&integrations.WebSocketLambdaIntegrationProps{},
 	)
 
-	props.Gateway.AddRoute(jsii.String(props.Route),
+	props.Gateway.AddRoute(jsii.String(props.Category),
 		&awsapigatewayv2.WebSocketRouteOptions{
 			Integration: it,
 		},
