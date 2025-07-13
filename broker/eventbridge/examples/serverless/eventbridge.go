@@ -35,7 +35,6 @@ func main() {
 	typed := broker.NewSink(
 		&eventbridge.SinkProps{
 			EventPattern: eventbridge.Like(
-				// eventbridge.Source("swarm-example-eventbridge"),
 				eventbridge.Category("User", "Note", "Like"),
 			),
 			Function: &scud.FunctionGoProps{
@@ -44,13 +43,11 @@ func main() {
 			},
 		},
 	)
-	// broker.GrantReadEvents(typed.Handler, "eventbridge:example/typed")
-	broker.GrantWriteEvents(typed.Handler, "eventbridge:example/typed")
+	broker.GrantReadEvents(typed.Handler, "eventbridge:example/typed")
 
 	event := broker.NewSink(
 		&eventbridge.SinkProps{
 			EventPattern: eventbridge.Like(
-				// eventbridge.Source("swarm-example-eventbridge"),
 				eventbridge.Category("EventNote"),
 			),
 			Function: &scud.FunctionGoProps{
@@ -64,7 +61,6 @@ func main() {
 	octets := broker.NewSink(
 		&eventbridge.SinkProps{
 			EventPattern: eventbridge.Like(
-				// eventbridge.Source("swarm-example-eventbridge"),
 				eventbridge.Category("User", "Note", "Like"),
 			),
 			Function: &scud.FunctionGoProps{
