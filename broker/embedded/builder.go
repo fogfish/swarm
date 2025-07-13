@@ -20,7 +20,7 @@ import (
 
 func Must[T any](v T, err error) T {
 	if err != nil {
-		xlog.Emergency("events3 broker has failed", err)
+		xlog.Emergency("embedded broker has failed", err)
 	}
 	return v
 }
