@@ -28,8 +28,8 @@ func main() {
 	q := embedded.Must(embedded.Endpoint().Build())
 
 	// create Golang channels
-	rcv, ack := listen.Typed[Order](q.ListenerCore)
-	out := swarm.LogDeadLetters(emit.Typed[Order](q.EmitterCore))
+	rcv, ack := listen.Typed[Order](q.Listener)
+	out := swarm.LogDeadLetters(emit.Typed[Order](q.Emitter))
 
 	// Send messages
 	out <- Order{ID: "123", Amount: 100.0}

@@ -33,8 +33,8 @@ func TestEmitter(t *testing.T) {
 		it.Then(t).Should(it.Nil(err))
 
 		var obj string
-		snd := swarm.LogDeadLetters(emit.Typed[string](q.EmitterCore))
-		rcv, ack := listen.Typed[string](q.ListenerCore)
+		snd := swarm.LogDeadLetters(emit.Typed[string](q.Emitter))
+		rcv, ack := listen.Typed[string](q.Listener)
 
 		snd <- "hello world"
 		go func() {
@@ -57,8 +57,8 @@ func TestEmitter(t *testing.T) {
 		it.Then(t).Should(it.Nil(err))
 
 		var obj string
-		snd := swarm.LogDeadLetters(emit.Typed[string](q.EmitterCore))
-		rcv, ack := listen.Typed[string](q.ListenerCore)
+		snd := swarm.LogDeadLetters(emit.Typed[string](q.Emitter))
+		rcv, ack := listen.Typed[string](q.Listener)
 
 		snd <- "hello world"
 		go func() {

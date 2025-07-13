@@ -10,17 +10,29 @@ package embedded
 
 import (
 	"context"
+	"sync"
 
 	"github.com/fogfish/guid/v2"
 	"github.com/fogfish/swarm"
 )
 
 type Client struct {
-	config  swarm.Config
+	config swarm.Config
+
+	// Control-plane for managing I/O loop
 	context context.Context
-	bags    map[string]*swarm.Bag
-	recv    <-chan *swarm.Bag
-	emit    chan<- *swarm.Bag
+	cancel  context.CancelFunc
+	once    sync.Once
+
+	// Channels + inflight buffer
+	bags map[string]*swarm.Bag
+	recv <-chan *swarm.Bag
+	emit chan<- *swarm.Bag
+}
+
+func (cli *Client) Close() error {
+	cli.once.Do(cli.cancel)
+	return nil
 }
 
 func (cli *Client) Enq(ctx context.Context, bag swarm.Bag) error {
@@ -54,7 +66,7 @@ func (cli *Client) Err(ctx context.Context, digest string, err error) error {
 	return nil
 }
 
-func (cli Client) Ask(ctx context.Context) ([]swarm.Bag, error) {
+func (cli *Client) Ask(ctx context.Context) ([]swarm.Bag, error) {
 	req, cancel := context.WithTimeout(context.Background(), cli.config.NetworkTimeout*2)
 	defer cancel()
 

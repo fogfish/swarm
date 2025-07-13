@@ -72,10 +72,10 @@ func (b *builder[T]) WithKernel(opts ...opts.Option[swarm.Config]) T {
 // build constructs the EventBridge client with configuration
 func (b *builder[T]) build() (*Client, error) {
 	client := &Client{
-		config:  swarm.NewConfig(),
-		context: context.Background(),
-		bags:    make(map[string]*swarm.Bag),
+		config: swarm.NewConfig(),
+		bags:   make(map[string]*swarm.Bag),
 	}
+	client.context, client.cancel = context.WithCancel(context.Background())
 
 	if err := opts.Apply(&client.config, b.kernelOpts); err != nil {
 		return nil, err

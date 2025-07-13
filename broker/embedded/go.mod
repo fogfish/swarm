@@ -7,7 +7,7 @@ require (
 	github.com/fogfish/guid/v2 v2.1.0
 	github.com/fogfish/it/v2 v2.2.2
 	github.com/fogfish/opts v0.0.5
-	github.com/fogfish/swarm v0.23.0
+	github.com/fogfish/swarm v0.23.1
 )
 
 require (

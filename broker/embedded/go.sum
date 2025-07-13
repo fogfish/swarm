@@ -14,7 +14,11 @@ github.com/fogfish/guid/v2 v2.1.0 h1:oEJHKM4yFOOCmKZdh0oH7eD3mL32n2+1YCc27lXB5rE
 github.com/fogfish/guid/v2 v2.1.0/go.mod h1:KkZ5T4EE3BqWQJFZBPLSHV/tBe23Xq4KvuPfwtNtepU=
 github.com/fogfish/it/v2 v2.2.2 h1:0Ynx60xjYn4HvmvdKtPqqthAJ2w0PSHdKPpi+69ik/8=
 github.com/fogfish/it/v2 v2.2.2/go.mod h1:HHwufnTaZTvlRVnSesPl49HzzlMrQtweKbf+8Co/ll4=
+github.com/fogfish/logger/v3 v3.2.0 h1:YjCyV+KvmacVvRy37RWH5431UjTGtPE1CSj4N9XS+1E=
+github.com/fogfish/logger/v3 v3.2.0/go.mod h1:hsucoJz/3OX90UdYrXykcKvjjteBnPcYSTr4Rie0ZqU=
+github.com/fogfish/logger/x/xlog v0.0.1 h1:1p9H66X2gxIBj5FdmZnRzFPWdk8BhbjMQ1qZ6b9VP/A=
+github.com/fogfish/logger/x/xlog v0.0.1/go.mod h1:wz6csc5Qdy+JEAhW7wFEr93M/5UoCEDkLo7okoFM2J4=
 github.com/fogfish/opts v0.0.5 h1:Bh3Nucr1kx7G1F0Tq3DxO14/qYgmR6C2GjWr2k6O+Oc=
 github.com/fogfish/opts v0.0.5/go.mod h1:+HM1YrMsTzfouZRoHfPOsGT9VZw+0ZBKZ36PMqoNFqM=
-github.com/fogfish/swarm v0.23.0 h1:lzPM/uPB8MMmR+ezdGz4R7CABPHmsGBfLIQ9s0SlFZw=
-github.com/fogfish/swarm v0.23.0/go.mod h1:7YheTAIuzSTBtSMssjdsxwdmI/4zX7h52XdCxmah1iY=
+github.com/fogfish/swarm v0.23.1 h1:mmzmJ14hkD5jfAVsPUOnsLCOaTcejoLMKwJTLpf+Cpo=
+github.com/fogfish/swarm v0.23.1/go.mod h1:7YheTAIuzSTBtSMssjdsxwdmI/4zX7h52XdCxmah1iY=
