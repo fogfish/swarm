@@ -12,4 +12,4 @@ package eventbridge
 // MAJOR - incompatible api changes
 // MINOR - version of the event kernel
 // PATCH - version of the event bridge module
-const Version = "broker/eventbridge/v0.22.4"
+const Version = "broker/eventbridge/v0.23.0"

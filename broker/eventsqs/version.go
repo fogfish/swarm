@@ -8,4 +8,4 @@
 
 package eventsqs
 
-const Version = "broker/eventsqs/v0.22.0"
+const Version = "broker/eventsqs/v0.23.0"

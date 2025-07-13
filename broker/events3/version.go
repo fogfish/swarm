@@ -8,4 +8,4 @@
 
 package events3
 
-const Version = "broker/events3/v0.22.1"
+const Version = "broker/events3/v0.23.0"
