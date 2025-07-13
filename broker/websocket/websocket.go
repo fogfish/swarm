@@ -20,11 +20,6 @@ import (
 	"github.com/fogfish/swarm/kernel"
 )
 
-// WebSocket declares the subset of interface from AWS SDK used by the lib.
-type Gateway interface {
-	PostToConnection(ctx context.Context, params *apigatewaymanagementapi.PostToConnectionInput, optFns ...func(*apigatewaymanagementapi.Options)) (*apigatewaymanagementapi.PostToConnectionOutput, error)
-}
-
 type Client struct {
 	service Gateway
 	config  swarm.Config

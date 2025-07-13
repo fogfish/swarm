@@ -21,11 +21,6 @@ import (
 	"github.com/fogfish/swarm/kernel"
 )
 
-// EventBridge declares the subset of interface from AWS SDK used by the lib.
-type EventBridge interface {
-	PutEvents(context.Context, *eventbridge.PutEventsInput, ...func(*eventbridge.Options)) (*eventbridge.PutEventsOutput, error)
-}
-
 // EventBridge client
 type Client struct {
 	service EventBridge
