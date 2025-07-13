@@ -14,15 +14,15 @@ import (
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/sqs"
 	"github.com/fogfish/swarm/kernel/encoding"
-	dequeue "github.com/fogfish/swarm/listen"
+	"github.com/fogfish/swarm/listen"
 )
 
 func main() {
 	q := sqs.Must(sqs.Listener().Build("swarm-test"))
 
-	go actor("user").handle(dequeue.Bytes(q, encoding.ForBytes("User")))
-	go actor("note").handle(dequeue.Bytes(q, encoding.ForBytes("Note")))
-	go actor("like").handle(dequeue.Bytes(q, encoding.ForBytes("Like")))
+	go actor("user").handle(listen.Bytes(q, encoding.ForBytes("User")))
+	go actor("note").handle(listen.Bytes(q, encoding.ForBytes("Note")))
+	go actor("like").handle(listen.Bytes(q, encoding.ForBytes("Like")))
 
 	q.Await()
 }

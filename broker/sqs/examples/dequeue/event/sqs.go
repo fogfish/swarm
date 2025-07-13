@@ -14,7 +14,7 @@ import (
 
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/sqs"
-	dequeue "github.com/fogfish/swarm/listen"
+	"github.com/fogfish/swarm/listen"
 )
 
 // Date type (object) affected by events
@@ -45,10 +45,10 @@ type EvtNote = swarm.Event[swarm.Meta, Note]
 func main() {
 	q := sqs.Must(sqs.Listener().Build("swarm-test"))
 
-	go create(dequeue.Event[EvtCreatedUser](q))
-	go update(dequeue.Event[EvtUpdatedUser](q))
-	go remove(dequeue.Event[EvtRemovedUser](q))
-	go common(dequeue.Event[EvtNote](q))
+	go create(listen.Event[EvtCreatedUser](q))
+	go update(listen.Event[EvtUpdatedUser](q))
+	go remove(listen.Event[EvtRemovedUser](q))
+	go common(listen.Event[EvtNote](q))
 
 	q.Await()
 }
