@@ -54,18 +54,18 @@ We will implement a **Hybrid Configuration Pattern** that uses:
 
 ```go
 // Simple case (95% of users) - ultra-clean with sensible defaults
-client := sqs.Channels().NewClient("queue")
-sender := sqs.Channels().NewEnqueuer("queue")  
-receiver := sqs.Channels().NewDequeuer("queue")
+client := sqs.Endpoint().Build("queue")
+sender := sqs.Emitter().Build("queue")  
+receiver := sqs.Listener().Build("queue")
 
 // Broker customization - still simple
-processor := sqs.Channels().
+processor := sqs.Endpoint().
   WithBatchSize(10).
   WithService(customSQS).
-  NewClient("work-queue")
+  Build("work-queue")
 
 // Power user case - kernel configuration when needed  
-advanced := sqs.Channels().
+advanced := sqs.Endpoint().
   WithKernel(
     swarm.WithSource("advanced-service"),
     swarm.WithRetry(backoff.Exp(50*time.Millisecond, 15, 0.7)),
@@ -75,16 +75,18 @@ advanced := sqs.Channels().
   ).
   WithBatchSize(25).
   WithService(customSQS).
-  NewClient("complex-queue")
+  Build("complex-queue")
 ```
 
 ## Architecture
 
 ### Core Components
 
-1. **Channel Builder**: Entry point for all broker configuration
+1. **Builder**: There are few entry point for broker configuration
    ```go
-   func Channels() *Builder
+   func Endpoint() *Builder
+   func Listener() *Builder
+   func Emitter() *Builder
    ```
 
 2. **Builder Methods**: Fluent API for broker-specific options
@@ -100,17 +102,17 @@ advanced := sqs.Channels().
 
 4. **Terminal Functions**: Create the actual communication channels
    ```go
-   func (b *Builder) NewEnqueuer(queue string) (*kernel.Enqueuer, error)
-   func (b *Builder) NewDequeuer(queue string) (*kernel.Dequeuer, error)  
-   func (b *Builder) NewClient(queue string) (*kernel.Kernel, error)
+   func (b *Builder) Build(queue string) (*kernel.Enqueuer, error)
    ```
 
 ### Naming Conventions
 
-- **Entry Point**: `Channels()` - emphasizes core library abstraction (Go channels for distributed communication)
-- **Specialized Functions**: `NewEnqueuer()`, `NewDequeuer()` - clear single-purpose intent
-- **Full Capability**: `NewClient()` - intuitive bidirectional client pattern, hides kernel concept
-- **Queue Parameter**: Always at the end as mandatory parameter: `New*("queue-name")`
+- **Entry Point**: - clear single-purpose builder intent
+  -  `Endpoint()` - emphasizes duplex Emitter/Listener channels for communication;
+  -  `Listener()` - emphasizes receiver only channels;
+  -  `Emitter()` - emphasizes sender only channels;
+  -  core library abstraction (Go channels for distributed communication)
+- **Queue Parameter**: Always at the end as mandatory parameter: `Build("queue-name")`
 
 ### Cross-Broker Consistency
 
@@ -118,13 +120,13 @@ All brokers follow the same pattern:
 
 ```go
 // SQS
-sqs.Channels().WithKernel(...).WithBatchSize(5).NewClient("queue")
+sqs.Endpoint().WithKernel(...).WithBatchSize(5).NewClient("queue")
 
 // EventBridge  
-eventbridge.Channels().WithKernel(...).WithEventBus("bus").NewClient()
+eventbridge.Endpoint().WithKernel(...).WithEventBus("bus").NewClient()
 
 // WebSocket
-websocket.Channels().WithKernel(...).WithService(gateway).NewClient()
+websocket.Endpoint().WithKernel(...).WithService(gateway).NewClient()
 ```
 
 ## Implementation Guidelines
@@ -141,61 +143,67 @@ When implementing this pattern:
 
 ```go
 // Template for broker builder implementation
-type Builder struct {
-  kernelConfig []opts.Option[swarm.Config]
-  // broker-specific fields (e.g., batchSize, service)
+type EmitterBuilder struct { *builder[*EmitterBuilder] }
+
+func Emitter() *EmitterBuilder {
+  b := &EmitterBuilder{}
+	b.builder = newBuilder(b)
+	return b
 }
 
-func Channels() *Builder {
-  return &Builder{}
+func (b *EmitterBuilder) Build(bus string) (*kernel.EmitterCore, error) {
+	client, err := b.build(bus)
+	if err != nil {
+		return nil, err
+	}
+	return kernel.NewEmitter(client, client.config), nil
 }
 
-func (b *Builder) WithKernel(opts ...opts.Option[swarm.Config]) *Builder {
-  b.kernelOpts = append(b.kernelOpts, opts...)
-  return b
+type builder[T any] struct {
+	b          T
+	kernelOpts []opts.Option[swarm.Config]
+	service    EventBridge
 }
 
-// Broker-specific methods
-func (b *Builder) WithBrokerOption(value Type) *Builder {
-  b.brokerField = value
-  return b
+// newBuilder creates new builder for EventBridge broker configuration.
+func newBuilder[T any](b T) *builder[T] {
+	kopts := []opts.Option[swarm.Config]{
+		swarm.WithLogStdErr(),
+		swarm.WithConfigFromEnv(),
+	}
+	if val := os.Getenv(EnvConfigSourceEventBridge); val != "" {
+		kopts = append(kopts, swarm.WithAgent(val))
+	}
+
+	return &builder[T]{
+		b:          b,
+		kernelOpts: kopts,
+	}
 }
 
-// Terminal functions
-func (b *Builder) NewEnqueuer(queue string) (*kernel.Enqueuer, error) {
-  client, err := b.build(queue)
-  if err != nil {
-    return nil, err
-  }
-  return kernel.NewEnqueuer(client, client.config), nil
+// WithKernel configures swarm kernel options for advanced usage.
+func (b *builder[T]) WithKernel(opts ...opts.Option[swarm.Config]) T {
+	b.kernelOpts = append(b.kernelOpts, opts...)
+	return b.b
 }
 
-func (b *Builder) NewDequeuer(queue string) (*kernel.Dequeuer, error) {
-  client, err := b.build(queue)
-  if err != nil {
-    return nil, err
-  }
-  return kernel.NewDequeuer(client, client.config), nil
-}
-
-func (b *Builder) NewClient(queue string) (*kernel.Kernel, error) {
-  client, err := b.build(queue)
-  if err != nil {
-    return nil, err
-  }
-  return kernel.New(
-    kernel.NewEnqueuer(client, client.config),
-    kernel.NewDequeuer(client, client.config),
-  ), nil
+// WithService configures AWS EventBridge client instance
+func (b *builder[T]) WithService(service EventBridge) T {
+	b.service = service
+	return b.b
 }
 
 func (b *Builder) build(queue string) (*Client, error) {
-  kernelConfig := swarm.NewConfig()
-  if err := opts.Apply(&kernelConfig, opt); err != nil {
-    return nil, err
-  }
-  // 1. Create client with broker-specific fields
-  // 3. Apply user kernel options (if any)
+	client := &Client{
+		config:  swarm.NewConfig(),
+		bus:     bus,
+		service: b.service,
+	}
+
+	if err := opts.Apply(&client.config, b.kernelOpts); err != nil {
+		return nil, err
+	}
+
   // 4. Perform broker-specific initialization
 }
 ```
@@ -213,7 +221,7 @@ func (b *Builder) build(queue string) (*Client, error) {
 
 ### Must Achieve
 - 95% of users need zero kernel configuration
-- Simple cases stay simple: `sqs.Channels().NewClient("queue")`
+- Simple cases stay simple: `sqs.Endpoint().Build("queue")`
 - Complex cases remain powerful when needed
 - Consistent API across all brokers
 
@@ -257,37 +265,37 @@ q, err := sqs.New("queue",
 )
 
 // After (new pattern)
-q, err := sqs.Channels().
+q, err := sqs.Endpoint().
   WithKernel(
     swarm.WithSource("service"),
     swarm.WithLogStdErr(),
   ).
   WithBatchSize(5).
-  NewClient("queue")
+  Build("queue")
 
 // Most common case becomes:
-q, err := sqs.Channels().NewClient("queue") // That's it!
+q, err := sqs.Endpoint().Build("queue") // That's it!
 ```
 
 ### Cross-Broker Examples
 
 ```go
 // EventBridge
-events := eventbridge.Channels().
+events := eventbridge.Emitter().
   WithKernel(swarm.WithSource("event-service")).
   WithEventBus("production-events").
-  NewEnqueuer()
+  Build()
 
 // WebSocket  
-socket := websocket.Channels().
+socket := websocket.Endpoint().
   WithKernel(swarm.WithPollFrequency(100*time.Millisecond)).
   WithService(gateway).
-  NewClient()
+  Build()
 
 // DynamoDB Events (read-only)
-stream := eventddb.Channels().
+stream := eventddb.Listener().
   WithKernel(swarm.WithSource("ddb-stream")).
-  NewDequeuer()
+  Build()
 ```
 
 ## Success Metrics
