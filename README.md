@@ -195,7 +195,7 @@ Writing distributed, event-driven systems in Go today is harder than it should b
 `swarm` makes asynchronous, distributed messaging in Go **idiomatic, testable, and portable** by expressing queueing/event-driven systems through Go channels instead of vendor-specific APIs.
 
 [User Guide](./doc/user-guide.md) |
-[Playground](https://goplay.tools/snippet/RLxmdLZ49SC) |
+[Playground](https://goplay.tools/snippet/MjH-V7MbCS0) |
 [Getting started](#getting-started) | 
 [Examples](./broker/) |
 [Philosophy](./doc/pattern.md)
@@ -247,8 +247,9 @@ func processOrder(order Order) {
   // Your business logic here
 }
 ```
+
 **That's it!** You're now using distributed messaging with native Go channels.
-- Try it by coping the code above and run `go mod init test && go get github.com/fogfish/swarm`
+- Try this code in [playground](https://goplay.tools/snippet/MjH-V7MbCS0) 
 - Continue to [Getting Started](#getting-started) for advanced configuration
 - See more examples by browsing [/broker/*/examples/](./broker/)
 - Check the design pattern [Distributed event-driven Golang channels](./doc/pattern.md) for deep-dive into library philosophy. 
