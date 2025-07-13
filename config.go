@@ -131,6 +131,18 @@ var (
 	// Timeout for Network I/O
 	WithNetworkTimeout = opts.ForName[Config, time.Duration]("NetworkTimeout")
 
+	// Configures capacity for emit channel at broker
+	WithEmitCapacity = opts.ForName[Config, string]("CapOut")
+
+	// Configures capacity for dead letter channel at broker
+	WithDeadLetterCapacity = opts.ForName[Config, string]("CapDlq")
+
+	// Configures capacity for receive channel at broker
+	WithRecvCapacity = opts.ForName[Config, string]("CapRcv")
+
+	// Configures capacity for acknowledge channel at broker
+	WithAckCapacity = opts.ForName[Config, string]("CapAck")
+
 	// AtMostOnce is best effort policy, where a message is published without any
 	// formal acknowledgement of receipt, and it isn't replayed.
 	//
