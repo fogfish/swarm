@@ -12,14 +12,17 @@ import (
 	"context"
 
 	"github.com/fogfish/golem/pipe"
+	"github.com/fogfish/logger/x/xlog"
 	"github.com/fogfish/opts"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/kernel"
 )
 
-type builder[T any] struct {
-	b          T
-	kernelOpts []opts.Option[swarm.Config]
+func Must[T any](v T, err error) T {
+	if err != nil {
+		xlog.Emergency("events3 broker has failed", err)
+	}
+	return v
 }
 
 type EndpointBuilder struct{ *builder[*EndpointBuilder] }
@@ -40,6 +43,11 @@ func (b *EndpointBuilder) Build() (*kernel.Kernel, error) {
 		kernel.NewEmitter(client, client.config),
 		kernel.NewListener(client, client.config),
 	), nil
+}
+
+type builder[T any] struct {
+	b          T
+	kernelOpts []opts.Option[swarm.Config]
 }
 
 // newBuilder creates new builder for EventBridge broker configuration.
