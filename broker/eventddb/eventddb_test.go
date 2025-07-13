@@ -100,7 +100,7 @@ func TestBuilder(t *testing.T) {
 
 	t.Run("Multiple kernel options", func(t *testing.T) {
 		dequeuer, err := Listener().
-			WithKernel(swarm.WithSource("service1")).
+			WithKernel(swarm.WithAgent("service1")).
 			WithKernel(swarm.WithTimeToFlight(60 * time.Second)).
 			Build()
 
