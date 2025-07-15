@@ -13,6 +13,7 @@ import (
 	"strings"
 )
 
+// Unique brief summary of the message, specific to the broker
 type Digest string
 
 // Msg is a generic envelop type for incoming messages.
