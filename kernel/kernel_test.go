@@ -90,7 +90,7 @@ func (b *mockFactory) Bag(n int) []swarm.Bag {
 		seq = append(seq,
 			swarm.Bag{
 				Category:  "string",
-				Digest:    val,
+				Digest:    swarm.Digest(val),
 				IOContext: "context",
 				Object:    fmt.Appendf(nil, `"%s"`, val), // JSON is expected
 			},
@@ -118,12 +118,12 @@ func newMockBridge(cfg config, seq []swarm.Bag) *mockBridge {
 	}
 }
 
-func (s *mockBridge) Ack(ctx context.Context, digest string) error {
+func (s *mockBridge) Ack(ctx context.Context, digest swarm.Digest) error {
 	if err := s.Bridge.Ack(ctx, digest); err != nil {
 		return err
 	}
 
-	s.ack = append(s.ack, digest)
+	s.ack = append(s.ack, string(digest))
 	return nil
 }
 
@@ -188,13 +188,13 @@ func (c *mockListener) Close() error {
 	return nil
 }
 
-func (c *mockListener) Ack(ctx context.Context, digest string) error {
-	c.ack <- digest
+func (c *mockListener) Ack(ctx context.Context, digest swarm.Digest) error {
+	c.ack <- string(digest)
 	return nil
 }
 
-func (c *mockListener) Err(ctx context.Context, digest string, err error) error {
-	c.ack <- digest
+func (c *mockListener) Err(ctx context.Context, digest swarm.Digest, err error) error {
+	c.ack <- string(digest)
 	return nil
 }
 

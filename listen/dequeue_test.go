@@ -137,11 +137,11 @@ func mockCathode[T any](cat string, obj T) cathode[T] {
 
 func (c cathode[T]) Close() error { return nil }
 
-func (c cathode[T]) Ack(ctx context.Context, digest string) error {
+func (c cathode[T]) Ack(ctx context.Context, digest swarm.Digest) error {
 	return nil
 }
 
-func (c cathode[T]) Err(ctx context.Context, digest string, err error) error {
+func (c cathode[T]) Err(ctx context.Context, digest swarm.Digest, err error) error {
 	return nil
 }
 

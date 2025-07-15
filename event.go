@@ -29,12 +29,24 @@ import (
 // In contrast with other solutions, the event does not uses envelop approach.
 // Instead, it side-car meta and data each other, making extendible
 type Event[M, T any] struct {
+	// Unique brief summary of the message
+	Digest Digest `json:"-"`
+
+	// Error on the message processing
+	Error error `json:"-"`
+
+	// I/O Context of the message, as obtained from broker
+	IOContext any `json:"-"`
+
 	Meta *M `json:"meta,omitempty"`
 	Data *T `json:"data,omitempty"`
 }
 
 // The default metadata associated with event.
 type Meta struct {
+	// Sink for the event
+	Sink curie.IRI `json:"sink,omitempty"`
+
 	//
 	// Unique identity for event.
 	// It is automatically defined by the library upon the transmission unless

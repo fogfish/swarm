@@ -13,6 +13,8 @@ import (
 	"strings"
 )
 
+type Digest string
+
 // Msg is a generic envelop type for incoming messages.
 // It contains both decoded object and its digest used to acknowledge message.
 type Msg[T any] struct {
@@ -20,7 +22,7 @@ type Msg[T any] struct {
 	Category string
 
 	// Unique brief summary of the message
-	Digest string
+	Digest Digest
 
 	// Error on the message processing
 	Error error
@@ -45,7 +47,7 @@ type Bag struct {
 	Category string
 
 	// Unique brief summary of the message
-	Digest string
+	Digest Digest
 
 	// Error on the message processing
 	Error error

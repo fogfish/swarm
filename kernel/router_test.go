@@ -17,14 +17,25 @@ import (
 	"github.com/fogfish/swarm/kernel/encoding"
 )
 
-func TestRoute(t *testing.T) {
-	r := router[string]{
-		ch:    make(chan swarm.Msg[string], 1),
-		codec: encoding.ForTyped[string](),
-	}
+func TestMsgRoute(t *testing.T) {
+	r := newMsgRouter[string](
+		make(chan swarm.Msg[string], 1),
+		encoding.ForTyped[string](),
+	)
 
 	r.Route(context.Background(), swarm.Bag{Object: []byte(`"1"`)})
 	it.Then(t).Should(
 		it.Equal((<-r.ch).Object, `1`),
+	)
+}
+
+func TestEvtRoute(t *testing.T) {
+	type E = swarm.Event[swarm.Meta, string]
+
+	r := newEvtRouter[E](make(chan E, 1), encoding.ForTyped[E]())
+
+	r.Route(context.Background(), swarm.Bag{Object: []byte(`{"data": "1"}`)})
+	it.Then(t).Should(
+		it.Equal(*(<-r.ch).Data, `1`),
 	)
 }

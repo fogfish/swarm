@@ -14,13 +14,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fogfish/golem/optics"
 	"github.com/fogfish/swarm"
 )
 
 // Listener defines on-the-wire protocol for [swarm.Bag], covering the ingress use-cases.
 type Listener interface {
-	Ack(ctx context.Context, digest string) error
-	Err(ctx context.Context, digest string, err error) error
+	Ack(ctx context.Context, digest swarm.Digest) error
+	Err(ctx context.Context, digest swarm.Digest, err error) error
 	Ask(ctx context.Context) ([]swarm.Bag, error)
 	Close() error
 }
@@ -170,13 +171,13 @@ func (k *ListenerCore) receive() {
 	}
 }
 
-// RecvChan creates pair of channels within kernel to enqueue messages
-func RecvChan[T any](k *ListenerCore, codec Decoder[T]) ( /*rcv*/ <-chan swarm.Msg[T] /*ack*/, chan<- swarm.Msg[T]) {
+// RecvChan creates pair of channels within kernel to receive messages
+func RecvChan[T any](k *ListenerCore, codec Decoder[T]) (<-chan swarm.Msg[T], chan<- swarm.Msg[T]) {
 	rcv := make(chan swarm.Msg[T], k.Config.CapRcv)
 	ack := make(chan swarm.Msg[T], k.Config.CapAck)
 
 	k.RWMutex.Lock()
-	k.router[codec.Category()] = router[T]{ch: rcv, codec: codec}
+	k.router[codec.Category()] = newMsgRouter[T](rcv, codec)
 	k.RWMutex.Unlock()
 
 	// emitter routine
@@ -235,6 +236,83 @@ func RecvChan[T any](k *ListenerCore, codec Decoder[T]) ( /*rcv*/ <-chan swarm.M
 		if backlog != 0 {
 			for msg := range ack {
 				acks(msg)
+			}
+		}
+
+		k.WaitGroup.Done()
+	}()
+
+	return rcv, ack
+}
+
+// RecvEvent creates pair of channels within kernel to receive events
+func RecvEvent[E swarm.Event[M, T], M, T any](k *ListenerCore, codec Decoder[E]) (<-chan E, chan<- E) {
+	rcv := make(chan E, k.Config.CapRcv)
+	ack := make(chan E, k.Config.CapAck)
+
+	k.RWMutex.Lock()
+	k.router[codec.Category()] = newEvtRouter[E, M, T](rcv, codec)
+	k.RWMutex.Unlock()
+
+	shape := optics.ForShape2[E, swarm.Digest, error]()
+
+	// emitter routine
+	acks := func(evt E) {
+		digest, exx := shape.Get(&evt)
+		if exx == nil {
+			err := k.Config.Backoff.Retry(
+				func() error {
+					return k.Listener.Ack(k.context, digest)
+				},
+			)
+			if k.Config.StdErr != nil && err != nil {
+				k.Config.StdErr <- swarm.ErrDequeue.With(err)
+			}
+		} else {
+			err := k.Config.Backoff.Retry(
+				func() error {
+					return k.Listener.Err(k.context, digest, exx)
+				},
+			)
+			if k.Config.StdErr != nil && err != nil {
+				k.Config.StdErr <- swarm.ErrDequeue.With(err)
+			}
+		}
+	}
+
+	k.WaitGroup.Add(1)
+	go func() {
+		slog.Debug("kernel dequeue started", "cat", codec.Category())
+		defer slog.Debug("kernel dequeue stopped", "cat", codec.Category())
+
+	exit:
+		for {
+			// The try-receive operation here is to
+			// try to exit the sender goroutine as
+			// early as possible. Try-receive and
+			// try-send select blocks are specially
+			// optimized by the standard Go
+			// compiler, so they are very efficient.
+			select {
+			case <-k.context.Done():
+				break exit
+			default:
+			}
+
+			select {
+			case <-k.context.Done():
+				break exit
+			case evt := <-ack:
+				acks(evt)
+			}
+		}
+
+		backlog := len(ack)
+		close(ack)
+
+		if backlog != 0 {
+			for evt := range ack {
+				acks(evt)
 			}
 		}
 
