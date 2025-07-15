@@ -14,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/fogfish/it/v2"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/kernel/encoding"
@@ -53,9 +52,10 @@ func TestEmitEvent(t *testing.T) {
 		encoding.ForEvent[E]("testReal", "testAgent"),
 		EmitEvent,
 		func(i int) E {
+			obj := fmt.Sprintf(`"%d"`, i)
 			return E{
 				Meta: &swarm.Meta{Type: "string"},
-				Data: aws.String(fmt.Sprintf(`"%d"`, i)),
+				Data: &obj,
 			}
 		},
 	)
