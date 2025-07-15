@@ -60,7 +60,7 @@ func (b *mockFactory) ListenerCore(ack chan string, seq []swarm.Bag) *mockListen
 	return newMockCathode(ack, seq)
 }
 
-func (b *mockFactory) Emitter(emitter Emitter, cfg config) *EmitterCore {
+func (b *mockFactory) Emitter(emitter Emitter, cfg config) *EmitterIO {
 	enqueuer := newEmitter(emitter, cfg.kernel)
 	enqueuer.ctrlPreempt = b.ctrlPreempt
 
@@ -72,7 +72,7 @@ func (b *mockFactory) Emitter(emitter Emitter, cfg config) *EmitterCore {
 	return enqueuer
 }
 
-func (b *mockFactory) Listener(cathode Listener, cfg config) *ListenerCore {
+func (b *mockFactory) Listener(cathode Listener, cfg config) *ListenerIO {
 	dequeuer := newListener(cathode, cfg.kernel)
 	// auto close is essential for testing
 	go func() {

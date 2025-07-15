@@ -38,7 +38,7 @@ type Router = interface {
 }
 
 // The ingress part of the kernel is used to dequeue messages from message broker.
-type ListenerCore struct {
+type ListenerIO struct {
 	sync.WaitGroup
 	sync.RWMutex
 
@@ -56,12 +56,12 @@ type ListenerCore struct {
 	Listener Listener
 }
 
-func NewListener(listener Listener, config swarm.Config) *ListenerCore {
+func NewListener(listener Listener, config swarm.Config) *ListenerIO {
 	return builder().Listener(listener, config)
 }
 
 // Creates instance of broker reader
-func newListener(listener Listener, config swarm.Config) *ListenerCore {
+func newListener(listener Listener, config swarm.Config) *ListenerIO {
 	ctx, can := context.WithCancel(context.Background())
 
 	// Must not be 0
@@ -69,7 +69,7 @@ func newListener(listener Listener, config swarm.Config) *ListenerCore {
 		config.PollerPool = 1
 	}
 
-	return &ListenerCore{
+	return &ListenerIO{
 		Config:   config,
 		context:  ctx,
 		cancel:   can,
@@ -79,14 +79,14 @@ func newListener(listener Listener, config swarm.Config) *ListenerCore {
 }
 
 // Closes broker reader, gracefully shutdowns all I/O
-func (k *ListenerCore) Close() {
+func (k *ListenerIO) Close() {
 	k.cancel()
 	k.WaitGroup.Wait()
 	k.Listener.Close()
 }
 
 // Await reader to complete
-func (k *ListenerCore) Await() {
+func (k *ListenerIO) Await() {
 	if spawner, ok := k.Listener.(interface{ Run(context.Context) }); ok {
 		go spawner.Run(k.context)
 	}
@@ -100,7 +100,7 @@ func (k *ListenerCore) Await() {
 
 // internal infinite receive loop.
 // waiting for message from event buses and queues and schedules it for delivery.
-func (k *ListenerCore) receive() {
+func (k *ListenerIO) receive() {
 	asker := func() {
 		var seq []swarm.Bag
 		err := k.Config.Backoff.Retry(
@@ -172,7 +172,7 @@ func (k *ListenerCore) receive() {
 }
 
 // RecvChan creates pair of channels within kernel to receive messages
-func RecvChan[T any](k *ListenerCore, codec Decoder[T]) (<-chan swarm.Msg[T], chan<- swarm.Msg[T]) {
+func RecvChan[T any](k *ListenerIO, codec Decoder[T]) (<-chan swarm.Msg[T], chan<- swarm.Msg[T]) {
 	rcv := make(chan swarm.Msg[T], k.Config.CapRcv)
 	ack := make(chan swarm.Msg[T], k.Config.CapAck)
 
@@ -246,7 +246,7 @@ func RecvChan[T any](k *ListenerCore, codec Decoder[T]) (<-chan swarm.Msg[T], ch
 }
 
 // RecvEvent creates pair of channels within kernel to receive events
-func RecvEvent[E swarm.Event[M, T], M, T any](k *ListenerCore, codec Decoder[E]) (<-chan E, chan<- E) {
+func RecvEvent[E swarm.Event[M, T], M, T any](k *ListenerIO, codec Decoder[E]) (<-chan E, chan<- E) {
 	rcv := make(chan E, k.Config.CapRcv)
 	ack := make(chan E, k.Config.CapAck)
 

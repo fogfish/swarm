@@ -31,7 +31,7 @@ type Encoder[T any] interface {
 }
 
 // The egress part of the kernel is used to enqueue messages into message broker.
-type EmitterCore struct {
+type EmitterIO struct {
 	sync.WaitGroup
 
 	// Control-plane stop channel used by go routines to stop I/O on data channels
@@ -50,15 +50,15 @@ type EmitterCore struct {
 }
 
 // Creates a new emitter kernel with the given emitter and configuration.
-func NewEmitter(emitter Emitter, config swarm.Config) *EmitterCore {
+func NewEmitter(emitter Emitter, config swarm.Config) *EmitterIO {
 	return builder().Emitter(emitter, config)
 }
 
 // Creates a new emitter kernel with the given emitter and configuration.
-func newEmitter(emitter Emitter, config swarm.Config) *EmitterCore {
+func newEmitter(emitter Emitter, config swarm.Config) *EmitterIO {
 	ctx, can := context.WithCancel(context.Background())
 
-	return &EmitterCore{
+	return &EmitterIO{
 		Config:  config,
 		context: ctx,
 		cancel:  can,
@@ -67,21 +67,21 @@ func newEmitter(emitter Emitter, config swarm.Config) *EmitterCore {
 }
 
 // Close emitter
-func (k *EmitterCore) Close() {
+func (k *EmitterIO) Close() {
 	k.cancel()
 	k.WaitGroup.Wait()
 	k.Emitter.Close()
 }
 
 // Await enqueue
-func (k *EmitterCore) Await() {
+func (k *EmitterIO) Await() {
 	<-k.context.Done()
 	k.WaitGroup.Wait()
 	k.Emitter.Close()
 }
 
 // Creates pair of channels within kernel to emit messages to broker.
-func EmitChan[T any](k *EmitterCore, codec Encoder[T]) (chan<- T, <-chan T) {
+func EmitChan[T any](k *EmitterIO, codec Encoder[T]) (chan<- T, <-chan T) {
 	snd := make(chan T, k.Config.CapOut)
 	dlq := make(chan T, k.Config.CapDlq)
 
@@ -179,7 +179,7 @@ func EmitChan[T any](k *EmitterCore, codec Encoder[T]) (chan<- T, <-chan T) {
 }
 
 // Creates pair of channels within kernel to events to broker.
-func EmitEvent[E swarm.Event[M, T], M, T any](k *EmitterCore, codec Encoder[E]) (chan<- E, <-chan E) {
+func EmitEvent[E swarm.Event[M, T], M, T any](k *EmitterIO, codec Encoder[E]) (chan<- E, <-chan E) {
 	snd := make(chan E, k.Config.CapOut)
 	dlq := make(chan E, k.Config.CapDlq)
 

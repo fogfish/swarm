@@ -64,7 +64,7 @@ func TestEmitEvent(t *testing.T) {
 func emitTest[T any](
 	t *testing.T,
 	codec Encoder[T],
-	emitChan func(k *EmitterCore, codec Encoder[T]) (chan<- T, <-chan T),
+	emitChan func(k *EmitterIO, codec Encoder[T]) (chan<- T, <-chan T),
 	gen func(int) T,
 ) {
 	t.Helper()

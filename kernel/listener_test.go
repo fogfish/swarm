@@ -75,7 +75,7 @@ func TestRecvEvent(t *testing.T) {
 func recvTest[M any, T any](
 	t *testing.T,
 	codec Decoder[T],
-	recvChan func(k *ListenerCore, codec Decoder[T]) (<-chan M, chan<- M),
+	recvChan func(k *ListenerIO, codec Decoder[T]) (<-chan M, chan<- M),
 	ioContext optics.Lens[M, any],
 	bag []swarm.Bag,
 ) {
