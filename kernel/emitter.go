@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"sync"
 
+	"github.com/fogfish/golem/optics"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/kernel/broadcast"
 )
@@ -187,10 +188,13 @@ func EmitEvent[E swarm.Event[M, T], M, T any](k *EmitterCore, codec Encoder[E]) 
 		ctl = k.ctrlPreempt.Register()
 	}
 
+	shape := optics.ForProduct1[E, error]()
+
 	// emitter routine
 	emit := func(evt E) {
 		bag, err := codec.Encode(evt)
 		if err != nil {
+			shape.Put(&evt, err)
 			dlq <- evt
 			if k.Config.StdErr != nil {
 				k.Config.StdErr <- swarm.ErrEncoder.With(err)
@@ -207,6 +211,7 @@ func EmitEvent[E swarm.Event[M, T], M, T any](k *EmitterCore, codec Encoder[E]) 
 			return k.Emitter.Enq(context.Background(), bag)
 		})
 		if err != nil {
+			shape.Put(&evt, err)
 			dlq <- evt
 			if k.Config.StdErr != nil {
 				k.Config.StdErr <- swarm.ErrEnqueue.With(err)

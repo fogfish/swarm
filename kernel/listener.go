@@ -251,7 +251,7 @@ func RecvEvent[E swarm.Event[M, T], M, T any](k *ListenerCore, codec Decoder[E])
 	ack := make(chan E, k.Config.CapAck)
 
 	k.RWMutex.Lock()
-	k.router[codec.Category()] = newEvtRouter[E, M, T](rcv, codec)
+	k.router[codec.Category()] = newEvtRouter(rcv, codec)
 	k.RWMutex.Unlock()
 
 	shape := optics.ForShape2[E, swarm.Digest, error]()
