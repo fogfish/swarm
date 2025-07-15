@@ -18,7 +18,7 @@ import (
 )
 
 func TestMsgRoute(t *testing.T) {
-	r := newMsgRouter[string](
+	r := newMsgRouter(
 		make(chan swarm.Msg[string], 1),
 		encoding.ForTyped[string](),
 	)
@@ -32,7 +32,10 @@ func TestMsgRoute(t *testing.T) {
 func TestEvtRoute(t *testing.T) {
 	type E = swarm.Event[swarm.Meta, string]
 
-	r := newEvtRouter[E](make(chan E, 1), encoding.ForTyped[E]())
+	r := newEvtRouter(
+		make(chan E, 1),
+		encoding.ForEvent[E]("realm", "agent"),
+	)
 
 	r.Route(context.Background(), swarm.Bag{Object: []byte(`{"data": "1"}`)})
 	it.Then(t).Should(

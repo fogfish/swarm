@@ -14,7 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fogfish/golem/optics"
 	"github.com/fogfish/swarm"
 )
 
@@ -246,23 +245,22 @@ func RecvChan[T any](k *ListenerIO, codec Decoder[T]) (<-chan swarm.Msg[T], chan
 }
 
 // RecvEvent creates pair of channels within kernel to receive events
-func RecvEvent[E swarm.Event[M, T], M, T any](k *ListenerIO, codec Decoder[E]) (<-chan E, chan<- E) {
-	rcv := make(chan E, k.Config.CapRcv)
-	ack := make(chan E, k.Config.CapAck)
+func RecvEvent[E swarm.Event[M, T], M, T any](k *ListenerIO, codec Decoder[swarm.Event[M, T]]) (<-chan swarm.Event[M, T], chan<- swarm.Event[M, T]) {
+	rcv := make(chan swarm.Event[M, T], k.Config.CapRcv)
+	ack := make(chan swarm.Event[M, T], k.Config.CapAck)
 
 	k.RWMutex.Lock()
 	k.router[codec.Category()] = newEvtRouter(rcv, codec)
 	k.RWMutex.Unlock()
 
-	shape := optics.ForShape2[E, swarm.Digest, error]()
+	// shape := optics.ForShape2[E, swarm.Digest, error]()
 
 	// emitter routine
-	acks := func(evt E) {
-		digest, exx := shape.Get(&evt)
-		if exx == nil {
+	acks := func(evt swarm.Event[M, T]) {
+		if evt.Error == nil {
 			err := k.Config.Backoff.Retry(
 				func() error {
-					return k.Listener.Ack(k.context, digest)
+					return k.Listener.Ack(k.context, evt.Digest)
 				},
 			)
 			if k.Config.StdErr != nil && err != nil {
@@ -271,7 +269,7 @@ func RecvEvent[E swarm.Event[M, T], M, T any](k *ListenerIO, codec Decoder[E]) (
 		} else {
 			err := k.Config.Backoff.Retry(
 				func() error {
-					return k.Listener.Err(k.context, digest, exx)
+					return k.Listener.Err(k.context, evt.Digest, evt.Error)
 				},
 			)
 			if k.Config.StdErr != nil && err != nil {

@@ -12,7 +12,6 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/fogfish/golem/optics"
 	"github.com/fogfish/swarm"
 )
 
@@ -54,27 +53,25 @@ func (a msgRouter[T]) Route(ctx context.Context, bag swarm.Bag) error {
 }
 
 // Router is typed pair of message channel and codec
-type evtRouter[E swarm.Event[M, T], M, T any] struct {
-	ch    chan E
-	codec Decoder[E]
-	shape optics.Lens3[E, swarm.Digest, error, any]
+type evtRouter[M, T any] struct {
+	ch    chan swarm.Event[M, T]
+	codec Decoder[swarm.Event[M, T]]
 }
 
 func newEvtRouter[E swarm.Event[M, T], M, T any](
-	ch chan E,
-	codec Decoder[E],
-) evtRouter[E, M, T] {
-	return evtRouter[E, M, T]{
+	ch chan swarm.Event[M, T],
+	codec Decoder[swarm.Event[M, T]],
+) evtRouter[M, T] {
+	return evtRouter[M, T]{
 		ch:    ch,
 		codec: codec,
-		shape: optics.ForShape3[E, swarm.Digest, error, any](),
 	}
 }
 
-func (a evtRouter[E, M, T]) Route(ctx context.Context, bag swarm.Bag) error {
+func (a evtRouter[M, T]) Route(ctx context.Context, bag swarm.Bag) error {
 	evt, err := a.codec.Decode(bag)
 	if err != nil {
-		slog.Debug("rouetr failed to decode event",
+		slog.Debug("router failed to decode event",
 			slog.Any("cat", bag.Category),
 			slog.Any("bag", bag),
 			slog.Any("err", err),
@@ -82,7 +79,7 @@ func (a evtRouter[E, M, T]) Route(ctx context.Context, bag swarm.Bag) error {
 		return swarm.ErrDecoder.With(err)
 	}
 
-	a.shape.Put(&evt, bag.Digest, bag.Error, bag.IOContext)
+	evt = swarm.ToEvent(bag, evt)
 
 	select {
 	case <-ctx.Done():

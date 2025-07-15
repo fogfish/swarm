@@ -10,6 +10,7 @@ package kernel
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -120,8 +121,9 @@ func emitTest[T any](
 
 		obj := gen(1)
 		snd <- obj
+
 		it.Then(t).Should(
-			it.Equiv(obj, <-dlq),
+			it.Json(<-dlq).Equiv(objToPattern(obj)),
 			it.Fail(func() error { return <-err }).Contain("lost"),
 		)
 
@@ -138,8 +140,9 @@ func emitTest[T any](
 
 		obj := gen(1)
 		snd <- obj
+
 		it.Then(t).Should(
-			it.Equiv(obj, <-dlq),
+			it.Json(<-dlq).Equiv(objToPattern(obj)),
 			it.Fail(func() error { return <-err }).Contain("invalid"),
 		)
 
@@ -231,13 +234,13 @@ func emitTest[T any](
 		}
 
 		it.Then(t).Should(
-			it.Equiv(<-dlq, seq[0]),
+			it.Json(<-dlq).Equiv(objToPattern(seq[0])),
 			it.Fail(func() error { return <-err }).Contain("lost"),
 
-			it.Equiv(<-dlq, seq[1]),
+			it.Json(<-dlq).Equiv(objToPattern(seq[1])),
 			it.Fail(func() error { return <-err }).Contain("lost"),
 
-			it.Equiv(<-dlq, seq[2]),
+			it.Json(<-dlq).Equiv(objToPattern(seq[2])),
 			it.Fail(func() error { return <-err }).Contain("lost"),
 		)
 
@@ -246,6 +249,14 @@ func emitTest[T any](
 }
 
 //------------------------------------------------------------------------------
+
+func objToPattern(obj any) string {
+	pat, err := json.Marshal(obj)
+	if err != nil {
+		panic(err)
+	}
+	return string(pat)
+}
 
 type devnil[T any] struct{}
 

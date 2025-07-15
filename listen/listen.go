@@ -30,7 +30,7 @@ func Typed[T any](q *kernel.ListenerIO, codec ...kernel.Decoder[T]) (rcv <-chan 
 func Event[E swarm.Event[M, T], M, T any](q *kernel.ListenerIO, codec ...kernel.Decoder[swarm.Event[M, T]]) (<-chan swarm.Event[M, T], chan<- swarm.Event[M, T]) {
 	var c kernel.Decoder[swarm.Event[M, T]]
 	if len(codec) == 0 {
-		c = encoding.ForEvent[E, M, T](q.Config.Realm, q.Config.Agent)
+		c = encoding.ForEvent[E](q.Config.Realm, q.Config.Agent)
 	} else {
 		c = codec[0]
 	}

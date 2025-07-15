@@ -28,13 +28,11 @@ func Typed[T any](q *kernel.EmitterIO, codec ...kernel.Encoder[T]) (snd chan<- T
 
 // Creates pair of channels to emit events of type T
 func Event[E swarm.Event[M, T], M, T any](q *kernel.EmitterIO, codec ...kernel.Encoder[swarm.Event[M, T]]) (snd chan<- swarm.Event[M, T], dlq <-chan swarm.Event[M, T]) {
-	var c kernel.Encoder[swarm.Event[M, T]]
-	if len(codec) == 0 {
-		c = encoding.ForEvent[E](q.Config.Realm, q.Config.Agent)
-	} else {
-		c = codec[0]
+	if len(codec) > 0 {
+		return kernel.EmitEvent(q, codec[0])
 	}
 
+	c := encoding.ForEvent[E](q.Config.Realm, q.Config.Agent)
 	return kernel.EmitEvent(q, c)
 }
 

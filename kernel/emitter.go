@@ -13,7 +13,6 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/fogfish/golem/optics"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/kernel/broadcast"
 )
@@ -179,22 +178,21 @@ func EmitChan[T any](k *EmitterIO, codec Encoder[T]) (chan<- T, <-chan T) {
 }
 
 // Creates pair of channels within kernel to events to broker.
-func EmitEvent[E swarm.Event[M, T], M, T any](k *EmitterIO, codec Encoder[E]) (chan<- E, <-chan E) {
-	snd := make(chan E, k.Config.CapOut)
-	dlq := make(chan E, k.Config.CapDlq)
+func EmitEvent[E swarm.Event[M, T], M, T any](k *EmitterIO, codec Encoder[swarm.Event[M, T]]) (chan<- swarm.Event[M, T], <-chan swarm.Event[M, T]) {
+	snd := make(chan swarm.Event[M, T], k.Config.CapOut)
+	dlq := make(chan swarm.Event[M, T], k.Config.CapDlq)
 
 	var ctl chan chan struct{}
 	if k.ctrlPreempt != nil {
 		ctl = k.ctrlPreempt.Register()
 	}
 
-	shape := optics.ForProduct1[E, error]()
-
 	// emitter routine
-	emit := func(evt E) {
+	emit := func(evt swarm.Event[M, T]) {
 		bag, err := codec.Encode(evt)
 		if err != nil {
-			shape.Put(&evt, err)
+			evt.Error = err
+
 			dlq <- evt
 			if k.Config.StdErr != nil {
 				k.Config.StdErr <- swarm.ErrEncoder.With(err)
@@ -211,7 +209,8 @@ func EmitEvent[E swarm.Event[M, T], M, T any](k *EmitterIO, codec Encoder[E]) (c
 			return k.Emitter.Enq(context.Background(), bag)
 		})
 		if err != nil {
-			shape.Put(&evt, err)
+			evt.Error = err
+
 			dlq <- evt
 			if k.Config.StdErr != nil {
 				k.Config.StdErr <- swarm.ErrEnqueue.With(err)
