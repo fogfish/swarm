@@ -229,7 +229,7 @@ func TestBridgeWait(t *testing.T) {
 		enq := mock.Emitter(emit, cfg)
 
 		rcv, ack := RecvChan(deq, "test", codec)
-		snd, _ := EmitChan(enq, "test", codec)
+		snd, _ := EmitChan(enq, codec)
 
 		// Note: in real apps receive loop is always go function
 		go func() {
@@ -256,7 +256,7 @@ func TestBridgeWait(t *testing.T) {
 		enq := mock.Emitter(emit, cfg)
 
 		rcv, ack := RecvChan(deq, "test", codec)
-		snd, _ := EmitChan(enq, "test", codec)
+		snd, _ := EmitChan(enq, codec)
 
 		// Note: in real apps receive loop is always go function
 		go func() {
@@ -296,7 +296,7 @@ func TestBridgeWaitTimeout(t *testing.T) {
 	enq := mock.Emitter(emit, cfg)
 
 	rcv, ack := RecvChan(deq, "test", codec)
-	snd, _ := EmitChan(enq, "test", codec)
+	snd, _ := EmitChan(enq, codec)
 
 	// Note: in real apps receive loop is always go function
 	go func() {

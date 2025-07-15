@@ -43,19 +43,13 @@ func NewTyped[T any](q *kernel.EmitterCore, codec ...kernel.Encoder[T]) *Emitter
 // Synchronously enqueue message to broker.
 // It guarantees message to be send after return
 func (q *EmitterTyped[T]) Enq(ctx context.Context, object T, cat ...string) error {
-	msg, err := q.codec.Encode(object)
+	bag, err := q.codec.Encode(object)
 	if err != nil {
 		return err
 	}
 
-	category := q.cat
 	if len(cat) > 0 {
-		category = cat[0]
-	}
-
-	bag := swarm.Bag{
-		Category: category,
-		Object:   msg,
+		bag.Category = cat[0]
 	}
 
 	err = q.kernel.Emitter.Enq(ctx, bag)
@@ -95,19 +89,13 @@ func NewEvent[E swarm.Event[M, T], M, T any](q *kernel.EmitterCore, codec ...ker
 // Synchronously enqueue event to broker.
 // It guarantees event to be send after return.
 func (q *EmitterEvent[M, T]) Enq(ctx context.Context, object swarm.Event[M, T], cat ...string) error {
-	msg, err := q.codec.Encode(object)
+	bag, err := q.codec.Encode(object)
 	if err != nil {
 		return err
 	}
 
-	category := q.cat
 	if len(cat) > 0 {
-		category = cat[0]
-	}
-
-	bag := swarm.Bag{
-		Category: category,
-		Object:   msg,
+		bag.Category = cat[0]
 	}
 
 	err = q.kernel.Emitter.Enq(ctx, bag)
@@ -140,19 +128,13 @@ func NewBytes(q *kernel.EmitterCore, codec kernel.Encoder[[]byte]) *EmitterBytes
 // Synchronously enqueue bytes to broker.
 // It guarantees message to be send after return
 func (q *EmitterBytes) Enq(ctx context.Context, object []byte, cat ...string) error {
-	msg, err := q.codec.Encode(object)
+	bag, err := q.codec.Encode(object)
 	if err != nil {
 		return err
 	}
 
-	category := q.cat
 	if len(cat) > 0 {
-		category = cat[0]
-	}
-
-	bag := swarm.Bag{
-		Category: category,
-		Object:   msg,
+		bag.Category = cat[0]
 	}
 
 	err = q.kernel.Emitter.Enq(ctx, bag)

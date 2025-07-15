@@ -26,7 +26,7 @@ type Emitter interface {
 // Encodes message into wire format
 type Encoder[T any] interface {
 	Category() string
-	Encode(T) ([]byte, error)
+	Encode(T) (swarm.Bag, error)
 }
 
 // The egress part of the kernel is used to enqueue messages into message broker.
@@ -80,7 +80,7 @@ func (k *EmitterCore) Await() {
 }
 
 // Creates pair of channels within kernel to emit messages to broker.
-func EmitChan[T any](k *EmitterCore, cat string, codec Encoder[T]) ( /*snd*/ chan<- T /*dlq*/, <-chan T) {
+func EmitChan[T any](k *EmitterCore, codec Encoder[T]) (chan<- T, <-chan T) {
 	snd := make(chan T, k.Config.CapOut)
 	dlq := make(chan T, k.Config.CapDlq)
 
@@ -91,21 +91,20 @@ func EmitChan[T any](k *EmitterCore, cat string, codec Encoder[T]) ( /*snd*/ cha
 
 	// emitter routine
 	emit := func(obj T) {
-		msg, err := codec.Encode(obj)
+		bag, err := codec.Encode(obj)
 		if err != nil {
 			dlq <- obj
 			if k.Config.StdErr != nil {
 				k.Config.StdErr <- swarm.ErrEncoder.With(err)
 			}
 			slog.Debug("emitter failed to encode message",
-				slog.Any("cat", cat),
+				slog.Any("cat", codec.Category()),
 				slog.Any("obj", obj),
 				slog.Any("err", err),
 			)
 			return
 		}
 
-		bag := swarm.Bag{Category: cat, Object: msg}
 		err = k.Config.Backoff.Retry(func() error {
 			return k.Emitter.Enq(context.Background(), bag)
 		})
@@ -115,7 +114,7 @@ func EmitChan[T any](k *EmitterCore, cat string, codec Encoder[T]) ( /*snd*/ cha
 				k.Config.StdErr <- swarm.ErrEnqueue.With(err)
 			}
 			slog.Debug("emitter failed to send message",
-				slog.Any("cat", cat),
+				slog.Any("cat", bag.Category),
 				slog.Any("bag", bag),
 				slog.Any("err", err),
 			)
@@ -125,8 +124,8 @@ func EmitChan[T any](k *EmitterCore, cat string, codec Encoder[T]) ( /*snd*/ cha
 
 	k.WaitGroup.Add(1)
 	go func() {
-		slog.Info("init emitter", slog.Any("cat", cat))
-		defer slog.Info("free emitter", slog.Any("cat", cat))
+		slog.Info("init emitter", slog.Any("cat", codec.Category()))
+		defer slog.Info("free emitter", slog.Any("cat", codec.Category()))
 
 	exit:
 		for {

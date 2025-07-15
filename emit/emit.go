@@ -23,7 +23,7 @@ func Typed[T any](q *kernel.EmitterCore, codec ...kernel.Encoder[T]) (snd chan<-
 		c = codec[0]
 	}
 
-	return kernel.EmitChan(q, c.Category(), c)
+	return kernel.EmitChan(q, c)
 }
 
 // Creates pair of channels to emit events of type T
@@ -35,10 +35,10 @@ func Event[E swarm.Event[M, T], M, T any](q *kernel.EmitterCore, codec ...kernel
 		c = codec[0]
 	}
 
-	return kernel.EmitChan(q, c.Category(), c)
+	return kernel.EmitChan(q, c)
 }
 
 // Create pair of channels to emit pure binaries
 func Bytes(q *kernel.EmitterCore, codec kernel.Encoder[[]byte]) (snd chan<- []byte, dlq <-chan []byte) {
-	return kernel.EmitChan(q, codec.Category(), codec)
+	return kernel.EmitChan(q, codec)
 }

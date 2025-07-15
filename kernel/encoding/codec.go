@@ -25,8 +25,16 @@ type Typed[T any] string
 
 func (c Typed[T]) Category() string { return string(c) }
 
-func (Typed[T]) Encode(x T) ([]byte, error) {
-	return json.Marshal(x)
+func (c Typed[T]) Encode(obj T) (swarm.Bag, error) {
+	msg, err := json.Marshal(obj)
+	if err != nil {
+		return swarm.Bag{}, err
+	}
+
+	return swarm.Bag{
+		Category: string(c),
+		Object:   msg,
+	}, nil
 }
 
 func (Typed[T]) Decode(b []byte) (x T, err error) {
@@ -51,7 +59,7 @@ type Event[M, T any] struct {
 
 func (c Event[M, T]) Category() string { return string(c.cat) }
 
-func (c Event[M, T]) Encode(obj swarm.Event[M, T]) ([]byte, error) {
+func (c Event[M, T]) Encode(obj swarm.Event[M, T]) (swarm.Bag, error) {
 	_, cat, rlm, agt, _ := c.shape.Get(obj.Meta)
 	if cat == "" {
 		cat = c.cat
@@ -66,8 +74,15 @@ func (c Event[M, T]) Encode(obj swarm.Event[M, T]) ([]byte, error) {
 	}
 
 	c.shape.Put(obj.Meta, guid.G(guid.Clock).String(), cat, rlm, agt, time.Now())
+	msg, err := json.Marshal(obj)
+	if err != nil {
+		return swarm.Bag{}, err
+	}
 
-	return json.Marshal(obj)
+	return swarm.Bag{
+		Category: string(cat),
+		Object:   msg,
+	}, nil
 }
 
 func (c Event[M, T]) Decode(b []byte) (swarm.Event[M, T], error) {
@@ -92,8 +107,15 @@ func ForEvent[E swarm.Event[M, T], M, T any](realm, agent string, category ...st
 // Identity encoding for bytes
 type Bytes string
 
-func (c Bytes) Category() string              { return string(c) }
-func (Bytes) Encode(x []byte) ([]byte, error) { return x, nil }
+func (c Bytes) Category() string { return string(c) }
+
+func (c Bytes) Encode(x []byte) (swarm.Bag, error) {
+	return swarm.Bag{
+		Category: string(c),
+		Object:   x,
+	}, nil
+}
+
 func (Bytes) Decode(x []byte) ([]byte, error) { return x, nil }
 
 // Create bytes identity codec
@@ -110,9 +132,16 @@ type packet struct {
 
 func (c BytesJB64) Category() string { return string(c) }
 
-func (BytesJB64) Encode(x []byte) ([]byte, error) {
-	b, err := json.Marshal(packet{Octets: x})
-	return b, err
+func (c BytesJB64) Encode(obj []byte) (swarm.Bag, error) {
+	msg, err := json.Marshal(packet{Octets: obj})
+	if err != nil {
+		return swarm.Bag{}, err
+	}
+
+	return swarm.Bag{
+		Category: string(c),
+		Object:   msg,
+	}, nil
 }
 func (BytesJB64) Decode(x []byte) ([]byte, error) {
 	var pckt packet

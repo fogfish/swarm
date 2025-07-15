@@ -40,7 +40,7 @@ func TestEnqueuer(t *testing.T) {
 		emit := mock.EmitterCore(cfg)
 		k := mock.Emitter(emit, cfg)
 
-		EmitChan(k, "test", codec)
+		EmitChan(k, codec)
 		k.Await()
 	})
 
@@ -48,7 +48,7 @@ func TestEnqueuer(t *testing.T) {
 		emit := mock.EmitterCore(cfg)
 		k := mock.Emitter(emit, cfg)
 
-		snd, _ := EmitChan(k, "test", codec)
+		snd, _ := EmitChan(k, codec)
 
 		snd <- "1"
 		it.Then(t).Should(
@@ -62,7 +62,7 @@ func TestEnqueuer(t *testing.T) {
 		emit := mock.EmitterCore(cfg)
 		k := mock.Emitter(emit, cfg)
 
-		snd, _ := EmitChan(k, "test", codec)
+		snd, _ := EmitChan(k, codec)
 
 		snd <- "1"
 		k.Await()
@@ -78,7 +78,7 @@ func TestEnqueuer(t *testing.T) {
 		cfg.kernel.StdErr = err
 		k := mock.Emitter(looser{}, cfg)
 
-		snd, dlq := EmitChan(k, "test", codec)
+		snd, dlq := EmitChan(k, codec)
 
 		snd <- "1"
 		it.Then(t).Should(
@@ -95,7 +95,7 @@ func TestEnqueuer(t *testing.T) {
 		cfg.kernel.StdErr = err
 		k := mock.Emitter(looser{}, cfg)
 
-		snd, dlq := EmitChan(k, "test", looser{})
+		snd, dlq := EmitChan(k, looser{})
 
 		snd <- "1"
 		it.Then(t).Should(
@@ -110,7 +110,7 @@ func TestEnqueuer(t *testing.T) {
 		emit := mock.EmitterCore(cfg)
 		k := mock.Emitter(emit, cfg)
 
-		snd, _ := EmitChan(k, "test", codec)
+		snd, _ := EmitChan(k, codec)
 
 		snd <- "1"
 		it.Then(t).Should(
@@ -134,7 +134,7 @@ func TestEnqueuer(t *testing.T) {
 		emit := mock.EmitterCore(cfg)
 		k := mock.Emitter(emit, cfg)
 
-		snd, _ := EmitChan(k, "test", codec)
+		snd, _ := EmitChan(k, codec)
 
 		snd <- "1"
 		snd <- "2"
@@ -154,7 +154,7 @@ func TestEnqueuer(t *testing.T) {
 		emit := mock.EmitterCore(cfg)
 		k := mock.Emitter(emit, cfg)
 
-		snd, _ := EmitChan(k, "test", codec)
+		snd, _ := EmitChan(k, codec)
 
 		snd <- "1"
 		snd <- "2"
@@ -176,7 +176,7 @@ func TestEnqueuer(t *testing.T) {
 
 		k := mock.Emitter(looser{}, cfg)
 
-		snd, dlq := EmitChan(k, "test", codec)
+		snd, dlq := EmitChan(k, codec)
 
 		snd <- "1"
 		snd <- "2"
@@ -209,6 +209,6 @@ func (e looser) Close() error { return nil }
 
 func (e looser) Category() string { return "test" }
 
-func (e looser) Encode(x string) ([]byte, error) {
-	return nil, fmt.Errorf("invalid")
+func (e looser) Encode(x string) (swarm.Bag, error) {
+	return swarm.Bag{}, fmt.Errorf("invalid")
 }
