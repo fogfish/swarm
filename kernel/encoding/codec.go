@@ -37,8 +37,8 @@ func (c Typed[T]) Encode(obj T) (swarm.Bag, error) {
 	}, nil
 }
 
-func (Typed[T]) Decode(b []byte) (x T, err error) {
-	err = json.Unmarshal(b, &x)
+func (Typed[T]) Decode(bag swarm.Bag) (x T, err error) {
+	err = json.Unmarshal(bag.Object, &x)
 	return
 }
 
@@ -85,9 +85,9 @@ func (c Event[M, T]) Encode(obj swarm.Event[M, T]) (swarm.Bag, error) {
 	}, nil
 }
 
-func (c Event[M, T]) Decode(b []byte) (swarm.Event[M, T], error) {
+func (c Event[M, T]) Decode(bag swarm.Bag) (swarm.Event[M, T], error) {
 	var x swarm.Event[M, T]
-	err := json.Unmarshal(b, &x)
+	err := json.Unmarshal(bag.Object, &x)
 
 	return x, err
 }
@@ -116,7 +116,9 @@ func (c Bytes) Encode(x []byte) (swarm.Bag, error) {
 	}, nil
 }
 
-func (Bytes) Decode(x []byte) ([]byte, error) { return x, nil }
+func (Bytes) Decode(bag swarm.Bag) ([]byte, error) {
+	return bag.Object, nil
+}
 
 // Create bytes identity codec
 func ForBytes(cat string) Bytes { return Bytes(cat) }

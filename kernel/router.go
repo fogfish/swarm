@@ -22,7 +22,7 @@ type router[T any] struct {
 }
 
 func (a router[T]) Route(ctx context.Context, bag swarm.Bag) error {
-	obj, err := a.codec.Decode(bag.Object)
+	obj, err := a.codec.Decode(bag)
 	if err != nil {
 		slog.Debug("rouetr failed to decode message",
 			slog.Any("cat", bag.Category),

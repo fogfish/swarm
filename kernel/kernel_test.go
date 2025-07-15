@@ -89,7 +89,7 @@ func (b *mockFactory) Bag(n int) []swarm.Bag {
 		val := strconv.Itoa(i + 1)
 		seq = append(seq,
 			swarm.Bag{
-				Category:  "test",
+				Category:  "string",
 				Digest:    val,
 				IOContext: "context",
 				Object:    fmt.Appendf(nil, `"%s"`, val), // JSON is expected

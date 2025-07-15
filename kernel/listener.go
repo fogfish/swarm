@@ -28,7 +28,7 @@ type Listener interface {
 // Decode message from wire format
 type Decoder[T any] interface {
 	Category() string
-	Decode([]byte) (T, error)
+	Decode(swarm.Bag) (T, error)
 }
 
 // Routes messages from the ingress to the destination channel.
@@ -171,12 +171,12 @@ func (k *ListenerCore) receive() {
 }
 
 // RecvChan creates pair of channels within kernel to enqueue messages
-func RecvChan[T any](k *ListenerCore, cat string, codec Decoder[T]) ( /*rcv*/ <-chan swarm.Msg[T] /*ack*/, chan<- swarm.Msg[T]) {
+func RecvChan[T any](k *ListenerCore, codec Decoder[T]) ( /*rcv*/ <-chan swarm.Msg[T] /*ack*/, chan<- swarm.Msg[T]) {
 	rcv := make(chan swarm.Msg[T], k.Config.CapRcv)
 	ack := make(chan swarm.Msg[T], k.Config.CapAck)
 
 	k.RWMutex.Lock()
-	k.router[cat] = router[T]{ch: rcv, codec: codec}
+	k.router[codec.Category()] = router[T]{ch: rcv, codec: codec}
 	k.RWMutex.Unlock()
 
 	// emitter routine
@@ -204,8 +204,8 @@ func RecvChan[T any](k *ListenerCore, cat string, codec Decoder[T]) ( /*rcv*/ <-
 
 	k.WaitGroup.Add(1)
 	go func() {
-		slog.Debug("kernel dequeue started", "cat", cat)
-		defer slog.Debug("kernel dequeue stopped", "cat", cat)
+		slog.Debug("kernel dequeue started", "cat", codec.Category())
+		defer slog.Debug("kernel dequeue stopped", "cat", codec.Category())
 
 	exit:
 		for {

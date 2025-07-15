@@ -28,7 +28,7 @@ func TestBridge(t *testing.T) {
 
 	t.Run("None", func(t *testing.T) {
 		k := mock.Listener(mock.Bridge(cfg, mock.Bag(1)), cfg)
-		RecvChan(k, "test", codec)
+		RecvChan(k, codec)
 		k.Await()
 	})
 
@@ -36,7 +36,7 @@ func TestBridge(t *testing.T) {
 		bridge := mock.Bridge(cfg, mock.Bag(1))
 		k := mock.Listener(bridge, cfg)
 
-		rcv, ack := RecvChan(k, "test", codec)
+		rcv, ack := RecvChan(k, codec)
 
 		// Note: in real apps receive loop is always go function
 		go func() { ack <- <-rcv }()
@@ -51,7 +51,7 @@ func TestBridge(t *testing.T) {
 		bridge := mock.Bridge(cfg, mock.Bag(3))
 		k := mock.Listener(bridge, cfg)
 
-		rcv, ack := RecvChan(k, "test", codec)
+		rcv, ack := RecvChan(k, codec)
 
 		// Note: in real apps receive loop is always go function
 		go func() {
@@ -70,7 +70,7 @@ func TestBridge(t *testing.T) {
 		bridge := mock.Bridge(cfg, mock.Bag(1))
 		k := mock.Listener(bridge, cfg)
 
-		rcv, ack := RecvChan(k, "test", codec)
+		rcv, ack := RecvChan(k, codec)
 
 		// Note: in real apps receive loop is always go function
 		go func() {
@@ -88,7 +88,7 @@ func TestBridge(t *testing.T) {
 		bridge := mock.Bridge(cfg, mock.Bag(3))
 		k := mock.Listener(bridge, cfg)
 
-		rcv, ack := RecvChan(k, "test", codec)
+		rcv, ack := RecvChan(k, codec)
 
 		// Note: in real apps receive loop is always go function
 		go func() {
@@ -106,7 +106,7 @@ func TestBridge(t *testing.T) {
 		bridge := mock.Bridge(cfg, mock.Bag(3))
 		k := mock.Listener(bridge, cfg)
 
-		rcv, ack := RecvChan(k, "test", codec)
+		rcv, ack := RecvChan(k, codec)
 
 		// Note: in real apps receive loop is always go function
 		go func() {
@@ -125,7 +125,7 @@ func TestBridge(t *testing.T) {
 		bridge := mock.Bridge(cfg, mock.Bag(3))
 		k := mock.Listener(bridge, cfg)
 
-		rcv, ack := RecvChan(k, "test", codec)
+		rcv, ack := RecvChan(k, codec)
 
 		// Note: in real apps receive loop is always go function
 		go func() {
@@ -145,7 +145,7 @@ func TestBridge(t *testing.T) {
 		bridge := mock.Bridge(cfg, mock.Bag(1))
 		k := mock.Listener(bridge, cfg)
 
-		rcv, _ := RecvChan(k, "test", codec)
+		rcv, _ := RecvChan(k, codec)
 
 		// Note: in real apps receive loop is always go function
 		go func() { <-rcv }()
@@ -160,7 +160,7 @@ func TestBridge(t *testing.T) {
 		bridge := mock.Bridge(cfg, mock.Bag(3))
 		k := mock.Listener(bridge, cfg)
 
-		rcv, _ := RecvChan(k, "test", codec)
+		rcv, _ := RecvChan(k, codec)
 
 		// Note: in real apps receive loop is always go function
 		go func() {
@@ -177,7 +177,7 @@ func TestBridge(t *testing.T) {
 		bridge := mock.Bridge(cfg, mock.Bag(3))
 		k := mock.Listener(bridge, cfg)
 
-		rcv, ack := RecvChan(k, "test", codec)
+		rcv, ack := RecvChan(k, codec)
 
 		// Note: in real apps receive loop is always go function
 		go func() {
@@ -195,7 +195,7 @@ func TestBridge(t *testing.T) {
 		bridge := mock.Bridge(cfg, mock.Bag(3))
 		k := mock.Listener(bridge, cfg)
 
-		rcv, ack := RecvChan(k, "test", codec)
+		rcv, ack := RecvChan(k, codec)
 
 		// Note: in real apps receive loop is always go function
 		go func() {
@@ -228,7 +228,7 @@ func TestBridgeWait(t *testing.T) {
 		emit := mock.EmitterCore(cfg)
 		enq := mock.Emitter(emit, cfg)
 
-		rcv, ack := RecvChan(deq, "test", codec)
+		rcv, ack := RecvChan(deq, codec)
 		snd, _ := EmitChan(enq, codec)
 
 		// Note: in real apps receive loop is always go function
@@ -255,7 +255,7 @@ func TestBridgeWait(t *testing.T) {
 		emit := mock.EmitterCore(cfg)
 		enq := mock.Emitter(emit, cfg)
 
-		rcv, ack := RecvChan(deq, "test", codec)
+		rcv, ack := RecvChan(deq, codec)
 		snd, _ := EmitChan(enq, codec)
 
 		// Note: in real apps receive loop is always go function
@@ -295,7 +295,7 @@ func TestBridgeWaitTimeout(t *testing.T) {
 	emit := mock.EmitterCore(cfg)
 	enq := mock.Emitter(emit, cfg)
 
-	rcv, ack := RecvChan(deq, "test", codec)
+	rcv, ack := RecvChan(deq, codec)
 	snd, _ := EmitChan(enq, codec)
 
 	// Note: in real apps receive loop is always go function

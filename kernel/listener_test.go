@@ -42,14 +42,14 @@ func TestDequeuer(t *testing.T) {
 
 	t.Run("Idle", func(t *testing.T) {
 		k := NewListener(none, cfg.kernel)
-		RecvChan(k, "test", codec)
+		RecvChan(k, codec)
 		go k.Await()
 		k.Close()
 	})
 
 	t.Run("Dequeue.1", func(t *testing.T) {
 		k := NewListener(pass, cfg.kernel)
-		rcv, ack := RecvChan(k, "test", codec)
+		rcv, ack := RecvChan(k, codec)
 		go k.Await()
 
 		ack <- <-rcv
@@ -62,7 +62,7 @@ func TestDequeuer(t *testing.T) {
 
 	t.Run("Dequeue.1.Context", func(t *testing.T) {
 		k := NewListener(pass, cfg.kernel)
-		rcv, ack := RecvChan(k, "test", codec)
+		rcv, ack := RecvChan(k, codec)
 		go k.Await()
 
 		msg := <-rcv
@@ -80,7 +80,7 @@ func TestDequeuer(t *testing.T) {
 		cfg.CapAck = 4
 		cfg.PollFrequency = 1 * time.Millisecond
 		k := NewListener(pass, cfg)
-		rcv, ack := RecvChan(k, "test", codec)
+		rcv, ack := RecvChan(k, codec)
 		go k.Await()
 
 		ack <- <-rcv

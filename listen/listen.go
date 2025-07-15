@@ -23,7 +23,7 @@ func Typed[T any](q *kernel.ListenerCore, codec ...kernel.Decoder[T]) (rcv <-cha
 		c = codec[0]
 	}
 
-	return kernel.RecvChan(q, c.Category(), c)
+	return kernel.RecvChan(q, c)
 }
 
 // Creates pair of channels to receive and acknowledge events of type T
@@ -40,5 +40,5 @@ func Event[E swarm.Event[M, T], M, T any](q *kernel.ListenerCore, codec ...kerne
 
 // Create pair of channels to receive and acknowledge pure binary
 func Bytes(q *kernel.ListenerCore, codec kernel.Decoder[[]byte]) (<-chan swarm.Msg[[]byte], chan<- swarm.Msg[[]byte]) {
-	return kernel.RecvChan(q, codec.Category(), codec)
+	return kernel.RecvChan(q, codec)
 }
