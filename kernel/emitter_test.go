@@ -14,15 +14,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/fogfish/it/v2"
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/kernel/encoding"
 )
 
-func TestEnqueuer(t *testing.T) {
+func TestEmitterFactory(t *testing.T) {
 	cfg := newConfig()
-
-	codec := encoding.ForTyped[string]()
 	mock := mockFactory{}
 
 	t.Run("Kernel", func(t *testing.T) {
@@ -35,40 +34,79 @@ func TestEnqueuer(t *testing.T) {
 		}()
 		k.Await()
 	})
+}
+
+func TestEmitChan(t *testing.T) {
+	emitTest(t,
+		encoding.ForTyped[string](),
+		EmitChan,
+		func(i int) string {
+			return fmt.Sprintf(`"%d"`, i)
+		},
+	)
+}
+
+func TestEmitEvent(t *testing.T) {
+	type E = swarm.Event[swarm.Meta, string]
+
+	emitTest(t,
+		encoding.ForEvent[E]("testReal", "testAgent"),
+		EmitEvent,
+		func(i int) E {
+			return E{
+				Meta: &swarm.Meta{Type: "string"},
+				Data: aws.String(fmt.Sprintf(`"%d"`, i)),
+			}
+		},
+	)
+}
+
+func emitTest[T any](
+	t *testing.T,
+	codec Encoder[T],
+	emitChan func(k *EmitterCore, codec Encoder[T]) (chan<- T, <-chan T),
+	gen func(int) T,
+) {
+	t.Helper()
+	conf := newConfig()
+	mock := mockFactory{}
 
 	t.Run("None", func(t *testing.T) {
-		emit := mock.EmitterCore(cfg)
-		k := mock.Emitter(emit, cfg)
+		emit := mock.EmitterCore(conf)
+		k := mock.Emitter(emit, conf)
 
-		EmitChan(k, codec)
+		emitChan(k, codec)
 		k.Await()
 	})
 
 	t.Run("Enqueue.1", func(t *testing.T) {
-		emit := mock.EmitterCore(cfg)
-		k := mock.Emitter(emit, cfg)
+		emit := mock.EmitterCore(conf)
+		k := mock.Emitter(emit, conf)
 
-		snd, _ := EmitChan(k, codec)
+		snd, _ := emitChan(k, codec)
 
-		snd <- "1"
+		obj := gen(1)
+		snd <- obj
 		it.Then(t).Should(
-			it.Equal(<-emit.val, `"1"`),
+			it.Json(obj).Equiv(<-emit.val),
 		)
 
 		k.Await()
 	})
 
-	t.Run("Enqueue.1.Shut", func(t *testing.T) {
-		emit := mock.EmitterCore(cfg)
-		k := mock.Emitter(emit, cfg)
+	t.Run("Enqueue.1.Shutdown", func(t *testing.T) {
+		emit := mock.EmitterCore(conf)
+		k := mock.Emitter(emit, conf)
 
-		snd, _ := EmitChan(k, codec)
+		snd, _ := emitChan(k, codec)
 
-		snd <- "1"
+		obj := gen(1)
+		snd <- obj
 		k.Await()
 
 		it.Then(t).Should(
-			it.Seq(emit.seq).Equal(`"1"`),
+			it.Equal(len(emit.seq), 1),
+			it.Json(obj).Equiv(emit.seq[0]),
 		)
 	})
 
@@ -76,13 +114,14 @@ func TestEnqueuer(t *testing.T) {
 		cfg := newConfig()
 		err := make(chan error)
 		cfg.kernel.StdErr = err
-		k := mock.Emitter(looser{}, cfg)
+		k := mock.Emitter(devnil[T]{}, cfg)
 
-		snd, dlq := EmitChan(k, codec)
+		snd, dlq := emitChan(k, codec)
 
-		snd <- "1"
+		obj := gen(1)
+		snd <- obj
 		it.Then(t).Should(
-			it.Equal(<-dlq, "1"),
+			it.Equiv(obj, <-dlq),
 			it.Fail(func() error { return <-err }).Contain("lost"),
 		)
 
@@ -93,13 +132,14 @@ func TestEnqueuer(t *testing.T) {
 		cfg := newConfig()
 		err := make(chan error)
 		cfg.kernel.StdErr = err
-		k := mock.Emitter(looser{}, cfg)
+		k := mock.Emitter(devnil[T]{}, cfg)
 
-		snd, dlq := EmitChan(k, looser{})
+		snd, dlq := emitChan(k, devnil[T]{})
 
-		snd <- "1"
+		obj := gen(1)
+		snd <- obj
 		it.Then(t).Should(
-			it.Equal(<-dlq, "1"),
+			it.Equiv(obj, <-dlq),
 			it.Fail(func() error { return <-err }).Contain("invalid"),
 		)
 
@@ -107,44 +147,49 @@ func TestEnqueuer(t *testing.T) {
 	})
 
 	t.Run("Enqueue.N", func(t *testing.T) {
-		emit := mock.EmitterCore(cfg)
-		k := mock.Emitter(emit, cfg)
+		emit := mock.EmitterCore(conf)
+		k := mock.Emitter(emit, conf)
 
-		snd, _ := EmitChan(k, codec)
+		snd, _ := emitChan(k, codec)
 
-		snd <- "1"
+		obj := gen(1)
+		snd <- obj
 		it.Then(t).Should(
-			it.Equal(<-emit.val, `"1"`),
+			it.Json(obj).Equiv(<-emit.val),
 		)
 
-		snd <- "2"
+		obj = gen(2)
+		snd <- obj
 		it.Then(t).Should(
-			it.Equal(<-emit.val, `"2"`),
+			it.Json(obj).Equiv(<-emit.val),
 		)
 
-		snd <- "3"
+		obj = gen(3)
+		snd <- obj
 		it.Then(t).Should(
-			it.Equal(<-emit.val, `"3"`),
+			it.Json(obj).Equiv(<-emit.val),
 		)
 
 		k.Await()
 	})
 
-	t.Run("Enqueue.N.Shut", func(t *testing.T) {
-		emit := mock.EmitterCore(cfg)
-		k := mock.Emitter(emit, cfg)
+	t.Run("Enqueue.N.Shutdown", func(t *testing.T) {
+		emit := mock.EmitterCore(conf)
+		k := mock.Emitter(emit, conf)
 
-		snd, _ := EmitChan(k, codec)
+		snd, _ := emitChan(k, codec)
 
-		snd <- "1"
-		snd <- "2"
-		snd <- "3"
-
+		seq := []T{gen(1), gen(2), gen(3)}
+		for _, obj := range seq {
+			snd <- obj
+		}
 		k.Await()
 
-		it.Then(t).Should(
-			it.Seq(emit.seq).Equal(`"1"`, `"2"`, `"3"`),
-		)
+		for i, obj := range seq {
+			it.Then(t).Should(
+				it.Json(obj).Equiv(emit.seq[i]),
+			)
+		}
 	})
 
 	t.Run("Enqueue.N.Backlog", func(t *testing.T) {
@@ -154,17 +199,19 @@ func TestEnqueuer(t *testing.T) {
 		emit := mock.EmitterCore(cfg)
 		k := mock.Emitter(emit, cfg)
 
-		snd, _ := EmitChan(k, codec)
+		snd, _ := emitChan(k, codec)
 
-		snd <- "1"
-		snd <- "2"
-		snd <- "3"
-
+		seq := []T{gen(1), gen(2), gen(3)}
+		for _, obj := range seq {
+			snd <- obj
+		}
 		k.Close()
 
-		it.Then(t).Should(
-			it.Seq(emit.seq).Equal(`"1"`, `"2"`, `"3"`),
-		)
+		for i, obj := range seq {
+			it.Then(t).Should(
+				it.Json(obj).Equiv(emit.seq[i]),
+			)
+		}
 	})
 
 	t.Run("Enqueue.N.Error", func(t *testing.T) {
@@ -174,22 +221,23 @@ func TestEnqueuer(t *testing.T) {
 		cfg.kernel.CapDlq = 4
 		cfg.kernel.StdErr = err
 
-		k := mock.Emitter(looser{}, cfg)
+		k := mock.Emitter(devnil[T]{}, cfg)
 
-		snd, dlq := EmitChan(k, codec)
+		snd, dlq := emitChan(k, codec)
 
-		snd <- "1"
-		snd <- "2"
-		snd <- "3"
+		seq := []T{gen(1), gen(2), gen(3)}
+		for _, obj := range seq {
+			snd <- obj
+		}
 
 		it.Then(t).Should(
-			it.Equal(<-dlq, "1"),
+			it.Equiv(<-dlq, seq[0]),
 			it.Fail(func() error { return <-err }).Contain("lost"),
 
-			it.Equal(<-dlq, "2"),
+			it.Equiv(<-dlq, seq[1]),
 			it.Fail(func() error { return <-err }).Contain("lost"),
 
-			it.Equal(<-dlq, "3"),
+			it.Equiv(<-dlq, seq[2]),
 			it.Fail(func() error { return <-err }).Contain("lost"),
 		)
 
@@ -199,16 +247,16 @@ func TestEnqueuer(t *testing.T) {
 
 //------------------------------------------------------------------------------
 
-type looser struct{}
+type devnil[T any] struct{}
 
-func (e looser) Enq(ctx context.Context, bag swarm.Bag) error {
+func (e devnil[T]) Enq(ctx context.Context, bag swarm.Bag) error {
 	return fmt.Errorf("lost")
 }
 
-func (e looser) Close() error { return nil }
+func (e devnil[T]) Close() error { return nil }
 
-func (e looser) Category() string { return "test" }
+func (e devnil[T]) Category() string { return "test" }
 
-func (e looser) Encode(x string) (swarm.Bag, error) {
+func (e devnil[T]) Encode(x T) (swarm.Bag, error) {
 	return swarm.Bag{}, fmt.Errorf("invalid")
 }

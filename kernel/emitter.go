@@ -124,8 +124,8 @@ func EmitChan[T any](k *EmitterCore, codec Encoder[T]) (chan<- T, <-chan T) {
 
 	k.WaitGroup.Add(1)
 	go func() {
-		slog.Info("init emitter", slog.Any("cat", codec.Category()))
-		defer slog.Info("free emitter", slog.Any("cat", codec.Category()))
+		slog.Info("init message emitter", slog.Any("cat", codec.Category()))
+		defer slog.Info("free message emitter", slog.Any("cat", codec.Category()))
 
 	exit:
 		for {
@@ -165,6 +165,104 @@ func EmitChan[T any](k *EmitterCore, codec Encoder[T]) (chan<- T, <-chan T) {
 		if backlog != 0 {
 			for obj := range snd {
 				emit(obj)
+			}
+		}
+
+		if k.ctrlPreempt != nil {
+			k.ctrlPreempt.Unregister(ctl)
+		}
+		k.WaitGroup.Done()
+	}()
+
+	return snd, dlq
+}
+
+// Creates pair of channels within kernel to events to broker.
+func EmitEvent[E swarm.Event[M, T], M, T any](k *EmitterCore, codec Encoder[E]) (chan<- E, <-chan E) {
+	snd := make(chan E, k.Config.CapOut)
+	dlq := make(chan E, k.Config.CapDlq)
+
+	var ctl chan chan struct{}
+	if k.ctrlPreempt != nil {
+		ctl = k.ctrlPreempt.Register()
+	}
+
+	// emitter routine
+	emit := func(evt E) {
+		bag, err := codec.Encode(evt)
+		if err != nil {
+			dlq <- evt
+			if k.Config.StdErr != nil {
+				k.Config.StdErr <- swarm.ErrEncoder.With(err)
+			}
+			slog.Debug("emitter failed to encode event",
+				slog.Any("cat", codec.Category()),
+				slog.Any("evt", evt),
+				slog.Any("err", err),
+			)
+			return
+		}
+
+		err = k.Config.Backoff.Retry(func() error {
+			return k.Emitter.Enq(context.Background(), bag)
+		})
+		if err != nil {
+			dlq <- evt
+			if k.Config.StdErr != nil {
+				k.Config.StdErr <- swarm.ErrEnqueue.With(err)
+			}
+			slog.Debug("emitter failed to send event",
+				slog.Any("cat", bag.Category),
+				slog.Any("bag", bag),
+				slog.Any("err", err),
+			)
+			return
+		}
+	}
+
+	k.WaitGroup.Add(1)
+	go func() {
+		slog.Info("init event emitter", slog.Any("cat", codec.Category()))
+		defer slog.Info("free event emitter", slog.Any("cat", codec.Category()))
+
+	exit:
+		for {
+			// The try-receive operation here is to
+			// try to exit the sender goroutine as
+			// early as possible. Try-receive and
+			// try-send select blocks are specially
+			// optimized by the standard Go
+			// compiler, so they are very efficient.
+			select {
+			case <-k.context.Done():
+				break exit
+			default:
+			}
+
+			select {
+			case <-k.context.Done():
+				break exit
+			case sack := <-ctl:
+				for range len(snd) {
+					emit(<-snd)
+				}
+				func() {
+					defer func() {
+						recover() // Ignore panic if ackCh is closed due to timeout (preemption)
+					}()
+					sack <- struct{}{}
+				}()
+			case evt := <-snd:
+				emit(evt)
+			}
+		}
+
+		backlog := len(snd)
+		close(snd)
+
+		if backlog != 0 {
+			for evt := range snd {
+				emit(evt)
 			}
 		}
 
