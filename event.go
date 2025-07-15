@@ -83,3 +83,10 @@ type Meta struct {
 	// Indirect participants, a user who initiated an event.
 	Participant curie.IRI `json:"participant,omitempty"`
 }
+
+func ToEvent[M, T any](bag Bag, evt Event[M, T]) Event[M, T] {
+	evt.Digest = bag.Digest
+	evt.Error = bag.Error
+	evt.IOContext = bag.IOContext
+	return evt
+}
