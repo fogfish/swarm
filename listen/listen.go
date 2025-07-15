@@ -35,7 +35,7 @@ func Event[E swarm.Event[M, T], M, T any](q *kernel.ListenerCore, codec ...kerne
 		c = codec[0]
 	}
 
-	return kernel.RecvChan(q, c.Category(), c)
+	return kernel.RecvChan(q, c)
 }
 
 // Create pair of channels to receive and acknowledge pure binary
