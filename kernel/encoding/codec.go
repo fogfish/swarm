@@ -60,6 +60,10 @@ type Event[M, T any] struct {
 func (c Event[M, T]) Category() string { return string(c.cat) }
 
 func (c Event[M, T]) Encode(obj swarm.Event[M, T]) (swarm.Bag, error) {
+	if obj.Meta == nil {
+		obj.Meta = new(M)
+	}
+
 	_, cat, rlm, agt, _ := c.shape.Get(obj.Meta)
 	if cat == "" {
 		cat = c.cat

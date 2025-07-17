@@ -42,6 +42,12 @@ type Event[M, T any] struct {
 	Data *T `json:"data,omitempty"`
 }
 
+// Fail event with error
+func (evt Event[M, T]) Fail(err error) Event[M, T] {
+	evt.Error = err
+	return evt
+}
+
 // The default metadata associated with event.
 type Meta struct {
 	// Sink for the event
