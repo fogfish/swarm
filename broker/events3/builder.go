@@ -17,8 +17,11 @@ import (
 	"github.com/fogfish/swarm/kernel"
 )
 
-// Environment variable to config event source
+// Environment define name of source S3 bucket
 const EnvConfigSourceS3 = "CONFIG_SWARM_SOURCE_S3"
+
+// Environment define name of target S3 bucket
+const EnvConfigTargetS3 = "CONFIG_SWARM_TARGET_S3"
 
 func Must[T any](v T, err error) T {
 	if err != nil {
@@ -35,7 +38,7 @@ func Listener() *ListenerBuilder {
 	return b
 }
 
-func (b *ListenerBuilder) Build() (*kernel.ListenerCore, error) {
+func (b *ListenerBuilder) Build() (*kernel.ListenerIO, error) {
 	client, err := b.build()
 	if err != nil {
 		return nil, err

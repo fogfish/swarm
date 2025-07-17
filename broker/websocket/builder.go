@@ -26,8 +26,11 @@ const (
 	// Environment variable defines event category (the route function is bound with)
 	EnvConfigEventCategory = "CONFIG_SWARM_WS_EVENT_CATEGORY"
 
-	// Environment variable defines URL to WebSocket API Gateway
-	EnvConfigSourceWebSocketUrl = "CONFIG_SWARM_SOURCE_WS"
+	// Environment variable defines source WebSocket API Gateway
+	EnvConfigSourceWebSocketUrl = "CONFIG_SWARM_SOURCE_WS_URL"
+
+	// Environment variable defines target WebSocket API Gateway
+	EnvConfigTargetWebSocketUrl = "CONFIG_SWARM_TARGET_WS_URL"
 )
 
 func Must[T any](v T, err error) T {
@@ -71,7 +74,7 @@ func Emitter() *EmitterBuilder {
 	return b
 }
 
-func (b *EmitterBuilder) Build(endpoint string) (*kernel.EmitterCore, error) {
+func (b *EmitterBuilder) Build(endpoint string) (*kernel.EmitterIO, error) {
 	client, err := b.build()
 	if err != nil {
 		return nil, err
@@ -92,7 +95,7 @@ func Listener() *ListenerBuilder {
 	return b
 }
 
-func (b *ListenerBuilder) Build() (*kernel.ListenerCore, error) {
+func (b *ListenerBuilder) Build() (*kernel.ListenerIO, error) {
 	client, err := b.build()
 	if err != nil {
 		return nil, err

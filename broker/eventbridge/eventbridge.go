@@ -67,7 +67,7 @@ func (cli *Client) Enq(ctx context.Context, bag swarm.Bag) error {
 
 type bridge struct{ *kernel.Bridge }
 
-func (s bridge) Run(ctx context.Context) {
+func (s bridge) Run(context.Context) {
 	lambda.Start(s.run)
 }
 
@@ -75,7 +75,7 @@ func (s bridge) run(ctx context.Context, evt events.CloudWatchEvent) error {
 	bag := make([]swarm.Bag, 1)
 	bag[0] = swarm.Bag{
 		Category: evt.DetailType,
-		Digest:   evt.ID,
+		Digest:   swarm.Digest(evt.ID),
 		Object:   evt.Detail,
 	}
 

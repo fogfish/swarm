@@ -130,12 +130,16 @@ func TestGrantWriteEvents(t *testing.T) {
 	broker.NewEventBus(nil)
 
 	// Create a function to grant write permissions to
-	fn := scud.NewFunction(stack, jsii.String("TestFunc"), &scud.FunctionGoProps{
-		SourceCodeModule: "github.com/fogfish/swarm/broker/eventbridge",
-		SourceCodeLambda: "examples/dequeue/typed",
-	})
-
-	broker.GrantWriteEvents(fn, "test-agent")
+	fn := broker.NewSink(
+		&eventbridge.SinkProps{
+			Agent: jsii.String("test-agent"),
+			Function: &scud.FunctionGoProps{
+				SourceCodeModule: "github.com/fogfish/swarm/broker/eventbridge",
+				SourceCodeLambda: "examples/dequeue/typed",
+			},
+		},
+	)
+	broker.GrantWrite(fn.Handler)
 
 	template := assertions.Template_FromStack(stack, nil)
 
@@ -155,8 +159,8 @@ func TestGrantWriteEvents(t *testing.T) {
 	template.HasResourceProperties(jsii.String("AWS::Lambda::Function"), map[string]any{
 		"Environment": map[string]any{
 			"Variables": map[string]any{
-				eventbridge.EnvConfigSourceEventBridge: assertions.Match_AnyValue(),
-				swarm.EnvConfigAgent:                   "test-agent",
+				eventbridge.EnvConfigSourceEventBus: assertions.Match_AnyValue(),
+				swarm.EnvConfigAgent:                "test-agent",
 			},
 		},
 	})
@@ -170,12 +174,16 @@ func TestGrantReadEvents(t *testing.T) {
 	broker.NewEventBus(nil)
 
 	// Create a function to grant read permissions to
-	fn := scud.NewFunction(stack, jsii.String("TestFunc"), &scud.FunctionGoProps{
-		SourceCodeModule: "github.com/fogfish/swarm/broker/eventbridge",
-		SourceCodeLambda: "examples/dequeue/typed",
-	})
-
-	broker.GrantReadEvents(fn, "test-agent")
+	fn := broker.NewSink(
+		&eventbridge.SinkProps{
+			Agent: jsii.String("test-agent"),
+			Function: &scud.FunctionGoProps{
+				SourceCodeModule: "github.com/fogfish/swarm/broker/eventbridge",
+				SourceCodeLambda: "examples/dequeue/typed",
+			},
+		},
+	)
+	broker.GrantRead(fn.Handler)
 
 	template := assertions.Template_FromStack(stack, nil)
 

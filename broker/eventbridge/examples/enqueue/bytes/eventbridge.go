@@ -11,16 +11,18 @@ package main
 import (
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/eventbridge"
-	"github.com/fogfish/swarm/emit"
-	"github.com/fogfish/swarm/kernel/encoding"
 )
 
 func main() {
-	q := eventbridge.Must(eventbridge.Emitter().Build("swarm-example-eventbridge"))
+	q := eventbridge.Must(
+		eventbridge.Emitter().
+			WithKernel(swarm.WithAgent("eventbridge:example/bytes")).
+			Build("swarm-example-eventbridge"),
+	)
 
-	user := swarm.LogDeadLetters(emit.Bytes(q, encoding.ForBytesJB64("User")))
-	note := swarm.LogDeadLetters(emit.Bytes(q, encoding.ForBytesJB64("Note")))
-	like := swarm.LogDeadLetters(emit.Bytes(q, encoding.ForBytesJB64("Like")))
+	user := swarm.LogDeadLetters(eventbridge.EmitBytes(q, "User"))
+	note := swarm.LogDeadLetters(eventbridge.EmitBytes(q, "Note"))
+	like := swarm.LogDeadLetters(eventbridge.EmitBytes(q, "Like"))
 
 	user <- []byte(`User Signed in`)
 	note <- []byte(`User wrote note`)

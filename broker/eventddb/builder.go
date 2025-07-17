@@ -17,8 +17,11 @@ import (
 	"github.com/fogfish/swarm/kernel"
 )
 
-// Environment variable to config event source
-const EnvConfigSourceDynamoDB = "CONFIG_SWARM_SOURCE_DYNAMODB"
+// Environment define name of source DynamoDB table
+const EnvConfigSourceDynamoDB = "CONFIG_SWARM_SOURCE_DDB"
+
+// Environment define name of target DynamoDB table
+const EnvConfigTargetDynamoDB = "CONFIG_SWARM_TARGET_DDB"
 
 func Must[T any](v T, err error) T {
 	if err != nil {
@@ -35,7 +38,7 @@ func Listener() *ListenerBuilder {
 	return b
 }
 
-func (b *ListenerBuilder) Build() (*kernel.ListenerCore, error) {
+func (b *ListenerBuilder) Build() (*kernel.ListenerIO, error) {
 	client, err := b.build()
 	if err != nil {
 		return nil, err

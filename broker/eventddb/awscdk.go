@@ -9,13 +9,17 @@
 package eventddb
 
 import (
+	"strconv"
+
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsdynamodb"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambdaeventsources"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/constructs-go/constructs/v10"
 	"github.com/aws/jsii-runtime-go"
 	"github.com/fogfish/scud"
+	"github.com/fogfish/swarm"
 )
 
 //------------------------------------------------------------------------------
@@ -30,20 +34,51 @@ type Sink struct {
 }
 
 type SinkProps struct {
+	Agent       *string
 	Table       awsdynamodb.ITable
 	Function    scud.FunctionProps
 	EventSource *awslambdaeventsources.DynamoEventSourceProps
 }
 
-func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
-	sink := &Sink{Construct: constructs.NewConstruct(scope, id)}
+func (props *SinkProps) assert() {
+	if props.Function == nil {
+		panic("Function is not defined.")
+	}
+	if props.Table == nil {
+		panic("Table is not defined.")
+	}
+}
 
+func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
+	props.assert()
+
+	sink := &Sink{Construct: constructs.NewConstruct(scope, id)}
 	sink.Handler = scud.NewFunction(sink.Construct, jsii.String("Func"), props.Function)
+
 	sink.Handler.AddEnvironment(
 		jsii.String(EnvConfigSourceDynamoDB),
 		props.Table.TableName(),
 		nil,
 	)
+
+	if props.Agent != nil {
+		sink.Handler.AddEnvironment(
+			jsii.String(swarm.EnvConfigAgent),
+			props.Agent,
+			nil,
+		)
+	}
+
+	if ttf := timeToFlight(props.Function); ttf != nil {
+		tsf := ttf.ToSeconds(nil)
+		tsi := int(aws.ToFloat64(tsf))
+
+		sink.Handler.AddEnvironment(
+			jsii.String(swarm.EnvConfigTimeToFlight),
+			jsii.String(strconv.Itoa(tsi)),
+			nil,
+		)
+	}
 
 	eventsource := &awslambdaeventsources.DynamoEventSourceProps{
 		StartingPosition: awslambda.StartingPosition_LATEST,
@@ -57,6 +92,25 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 	sink.Handler.AddEventSource(source)
 
 	return sink
+}
+
+func timeToFlight(props scud.FunctionProps) awscdk.Duration {
+	if props == nil {
+		return nil
+	}
+
+	switch v := props.(type) {
+	case *scud.FunctionGoProps:
+		if v.FunctionProps != nil && v.Timeout != nil {
+			return v.Timeout
+		}
+	case *scud.ContainerGoProps:
+		if v.DockerImageFunctionProps != nil && v.Timeout != nil {
+			return v.Timeout
+		}
+	}
+
+	return nil
 }
 
 //------------------------------------------------------------------------------
@@ -133,4 +187,24 @@ func (broker *Broker) NewSink(props *SinkProps) *Sink {
 	sink := NewSink(broker.Construct, jsii.String(name), props)
 
 	return sink
+}
+
+func (broker *Broker) GrantWrite(f awslambda.Function) {
+	broker.Table.GrantWriteData(f)
+
+	f.AddEnvironment(
+		jsii.String(EnvConfigTargetDynamoDB),
+		broker.Table.TableName(),
+		nil,
+	)
+}
+
+func (broker *Broker) GrantRead(f awslambda.Function) {
+	broker.Table.GrantReadData(f)
+
+	f.AddEnvironment(
+		jsii.String(EnvConfigSourceDynamoDB),
+		broker.Table.TableName(),
+		nil,
+	)
 }

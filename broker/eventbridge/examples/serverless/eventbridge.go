@@ -32,10 +32,12 @@ func main() {
 	broker := eventbridge.NewBroker(stack, jsii.String("Broker"), nil)
 	broker.NewEventBus(nil)
 
-	typed := broker.NewSink(
+	broker.NewSink(
 		&eventbridge.SinkProps{
+			Agent: jsii.String("eventbridge:example/typed"),
 			EventPattern: eventbridge.Like(
 				eventbridge.Category("User", "Note", "Like"),
+				eventbridge.Source("eventbridge:example/typed"),
 			),
 			Function: &scud.FunctionGoProps{
 				SourceCodeModule: "github.com/fogfish/swarm/broker/eventbridge",
@@ -43,12 +45,13 @@ func main() {
 			},
 		},
 	)
-	broker.GrantReadEvents(typed.Handler, "eventbridge:example/typed")
 
-	event := broker.NewSink(
+	broker.NewSink(
 		&eventbridge.SinkProps{
+			Agent: jsii.String("eventbridge:example/event"),
 			EventPattern: eventbridge.Like(
 				eventbridge.Category("EventNote"),
+				eventbridge.Source("eventbridge:example/event"),
 			),
 			Function: &scud.FunctionGoProps{
 				SourceCodeModule: "github.com/fogfish/swarm/broker/eventbridge",
@@ -56,12 +59,13 @@ func main() {
 			},
 		},
 	)
-	broker.GrantReadEvents(event.Handler, "eventbridge:example/event")
 
-	octets := broker.NewSink(
+	broker.NewSink(
 		&eventbridge.SinkProps{
+			Agent: jsii.String("eventbridge:example/bytes"),
 			EventPattern: eventbridge.Like(
 				eventbridge.Category("User", "Note", "Like"),
+				eventbridge.Source("eventbridge:example/bytes"),
 			),
 			Function: &scud.FunctionGoProps{
 				SourceCodeModule: "github.com/fogfish/swarm/broker/eventbridge",
@@ -69,7 +73,6 @@ func main() {
 			},
 		},
 	)
-	broker.GrantReadEvents(octets.Handler, "eventbridge:example/bytes")
 
 	app.Synth(nil)
 }

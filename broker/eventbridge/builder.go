@@ -20,8 +20,11 @@ import (
 	"github.com/fogfish/swarm/kernel"
 )
 
-// Environment variable to config event source
-const EnvConfigSourceEventBridge = "CONFIG_SWARM_SOURCE_EVENTBRIDGE"
+// Environment define name of source EventBus
+const EnvConfigSourceEventBus = "CONFIG_SWARM_SOURCE_EVENTBUS"
+
+// Environment define name of target EventBus
+const EnvConfigTargetEventBus = "CONFIG_SWARM_TARGET_EVENTBUS"
 
 func Must[T any](v T, err error) T {
 	if err != nil {
@@ -59,7 +62,7 @@ func Emitter() *EmitterBuilder {
 	return b
 }
 
-func (b *EmitterBuilder) Build(bus string) (*kernel.EmitterCore, error) {
+func (b *EmitterBuilder) Build(bus string) (*kernel.EmitterIO, error) {
 	client, err := b.build(bus)
 	if err != nil {
 		return nil, err
@@ -75,7 +78,7 @@ func Listener() *ListenerBuilder {
 	return b
 }
 
-func (b *ListenerBuilder) Build() (*kernel.ListenerCore, error) {
+func (b *ListenerBuilder) Build() (*kernel.ListenerIO, error) {
 	client, err := b.build("")
 	if err != nil {
 		return nil, err

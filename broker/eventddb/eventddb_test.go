@@ -82,6 +82,15 @@ func TestBuilder(t *testing.T) {
 		dequeuer.Close()
 	})
 
+	t.Run("Simple case with sensible defaults, must create", func(t *testing.T) {
+		dequeuer := Must(Listener().Build())
+
+		it.Then(t).Should(
+			it.Equal(dequeuer.Config.PollFrequency, 5*time.Microsecond), // EventDDB override
+		)
+		dequeuer.Close()
+	})
+
 	t.Run("Advanced kernel configuration", func(t *testing.T) {
 		dequeuer, err := Listener().
 			WithKernel(

@@ -32,10 +32,10 @@ func main() {
 	q.Await()
 }
 
-func bus(rcv <-chan swarm.Msg[Event], ack chan<- swarm.Msg[Event]) {
-	for msg := range rcv {
+func bus(rcv <-chan Event, ack chan<- Event) {
+	for evt := range rcv {
 		prefix := ""
-		switch string(msg.Object.Meta.Type) {
+		switch string(evt.Meta.Type) {
 		case "note:EventCreateNote":
 			prefix = "+ |"
 		case "note:EventUpdateNote":
@@ -44,9 +44,9 @@ func bus(rcv <-chan swarm.Msg[Event], ack chan<- swarm.Msg[Event]) {
 			prefix = "- |"
 		}
 
-		v, _ := json.MarshalIndent(msg, prefix, " ")
+		v, _ := json.MarshalIndent(evt, prefix, " ")
 		fmt.Printf("event > \n %s\n", v)
 
-		ack <- msg
+		ack <- evt
 	}
 }

@@ -36,13 +36,51 @@ type Sink struct {
 
 // See https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-event-patterns.html
 type SinkProps struct {
+	Agent        *string
 	EventBus     awsevents.IEventBus
 	EventPattern *awsevents.EventPattern
 	Function     scud.FunctionProps
 }
 
+func (props *SinkProps) assert() {
+	if props.Function == nil {
+		panic("Function is not defined.")
+	}
+	if props.EventBus == nil {
+		panic("EventBus is not defined.")
+	}
+}
+
 func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
+	props.assert()
+
 	sink := &Sink{Construct: constructs.NewConstruct(scope, id)}
+	sink.Handler = scud.NewFunction(sink.Construct, jsii.String("Func"), props.Function)
+
+	sink.Handler.AddEnvironment(
+		jsii.String(EnvConfigSourceEventBus),
+		props.EventBus.EventBusName(),
+		nil,
+	)
+
+	if props.Agent != nil {
+		sink.Handler.AddEnvironment(
+			jsii.String(swarm.EnvConfigAgent),
+			props.Agent,
+			nil,
+		)
+	}
+
+	if ttf := timeToFlight(props.Function); ttf != nil {
+		tsf := ttf.ToSeconds(nil)
+		tsi := int(aws.ToFloat64(tsf))
+
+		sink.Handler.AddEnvironment(
+			jsii.String(swarm.EnvConfigTimeToFlight),
+			jsii.String(strconv.Itoa(tsi)),
+			nil,
+		)
+	}
 
 	pattern := props.EventPattern
 	if pattern == nil {
@@ -59,29 +97,14 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 		},
 	)
 
-	if props.Function != nil {
-		sink.Handler = scud.NewFunction(sink.Construct, jsii.String("Func"), props.Function)
-
-		if ttf := timeToFlight(props.Function); ttf != nil {
-			tsf := ttf.ToSeconds(nil)
-			tsi := int(aws.ToFloat64(tsf))
-
-			sink.Handler.AddEnvironment(
-				jsii.String(swarm.EnvConfigTimeToFlight),
-				jsii.String(strconv.Itoa(tsi)),
-				nil,
-			)
-		}
-
-		sink.Rule.AddTarget(awseventstargets.NewLambdaFunction(
-			sink.Handler,
-			&awseventstargets.LambdaFunctionProps{
-				// TODO:
-				// MaxEventAge: ,
-				// RetryAttempts: ,
-			},
-		))
-	}
+	sink.Rule.AddTarget(awseventstargets.NewLambdaFunction(
+		sink.Handler,
+		&awseventstargets.LambdaFunctionProps{
+			// TODO:
+			// MaxEventAge: ,
+			// RetryAttempts: ,
+		},
+	))
 
 	return sink
 }
@@ -157,43 +180,22 @@ func (broker *Broker) NewSink(props *SinkProps) *Sink {
 	return sink
 }
 
-// Grant permission to write events to the EventBus
-func (broker *Broker) GrantWriteEvents(f awslambda.Function, agent string) {
-	if broker.Bus == nil {
-		panic("EventBus is not defined.")
-	}
-
-	if agent == "" {
-		panic("Event agent is not defined.")
-	}
-
+// Grant permission to write events to the EventBus.
+func (broker *Broker) GrantWrite(f awslambda.Function) {
 	broker.Bus.GrantPutEventsTo(f, nil)
 
 	f.AddEnvironment(
-		jsii.String(EnvConfigSourceEventBridge),
+		jsii.String(EnvConfigTargetEventBus),
 		broker.Bus.EventBusName(),
-		nil,
-	)
-
-	f.AddEnvironment(
-		jsii.String(swarm.EnvConfigAgent),
-		jsii.String(agent),
 		nil,
 	)
 }
 
-func (broker *Broker) GrantReadEvents(f awslambda.Function, agent string) {
-	if broker.Bus == nil {
-		panic("EventBus is not defined.")
-	}
-
-	if agent == "" {
-		panic("Event agent is not defined.")
-	}
-
+// Grant permission to read events from the EventBus.
+func (broker *Broker) GrantRead(f awslambda.Function) {
 	f.AddEnvironment(
-		jsii.String(swarm.EnvConfigAgent),
-		jsii.String(agent),
+		jsii.String(EnvConfigSourceEventBus),
+		broker.Bus.EventBusName(),
 		nil,
 	)
 }

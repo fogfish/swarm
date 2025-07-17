@@ -52,13 +52,13 @@ func (cli *Client) Enq(ctx context.Context, bag swarm.Bag) error {
 
 type bridge struct{ *kernel.Bridge }
 
-func (s bridge) Run() { lambda.Start(s.run) }
+func (s bridge) Run(context.Context) { lambda.Start(s.run) }
 
 func (s bridge) run(ctx context.Context, evt events.APIGatewayWebsocketProxyRequest) (events.APIGatewayProxyResponse, error) {
 	bag := make([]swarm.Bag, 1)
 	bag[0] = swarm.Bag{
 		Category:  evt.RequestContext.RouteKey,
-		Digest:    evt.RequestContext.ConnectionID,
+		Digest:    swarm.Digest(evt.RequestContext.ConnectionID),
 		IOContext: &evt.RequestContext,
 		Object:    []byte(evt.Body),
 	}

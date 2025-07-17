@@ -9,6 +9,7 @@
 package websocket
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/aws/aws-cdk-go/awscdk/v2"
@@ -23,6 +24,7 @@ import (
 	"github.com/aws/constructs-go/constructs/v10"
 	"github.com/aws/jsii-runtime-go"
 	"github.com/fogfish/scud"
+	"github.com/fogfish/swarm"
 )
 
 //------------------------------------------------------------------------------
@@ -39,6 +41,8 @@ type Sink struct {
 }
 
 type SinkProps struct {
+	Agent *string
+
 	// Category of event to process. It is used to create a WebSocket route.
 	Category string
 
@@ -49,7 +53,18 @@ type SinkProps struct {
 	Gateway awsapigatewayv2.WebSocketApi
 }
 
+func (props *SinkProps) assert() {
+	if props.Function == nil {
+		panic("Function is not defined.")
+	}
+	if props.Gateway == nil {
+		panic("Gateway is not defined.")
+	}
+}
+
 func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
+	props.assert()
+
 	sink := &Sink{Construct: constructs.NewConstruct(scope, id)}
 
 	sink.Handler = scud.NewFunction(sink.Construct, jsii.String("Func"), props.Function)
@@ -58,11 +73,31 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 		jsii.String(props.Category),
 		nil,
 	)
+
 	sink.Handler.AddEnvironment(
 		jsii.String(EnvConfigSourceWebSocketUrl),
 		jsii.String(aws.ToString(props.Gateway.ApiEndpoint())+"/"+stage),
 		nil,
 	)
+
+	if props.Agent != nil {
+		sink.Handler.AddEnvironment(
+			jsii.String(swarm.EnvConfigAgent),
+			props.Agent,
+			nil,
+		)
+	}
+
+	if ttf := timeToFlight(props.Function); ttf != nil {
+		tsf := ttf.ToSeconds(nil)
+		tsi := int(aws.ToFloat64(tsf))
+
+		sink.Handler.AddEnvironment(
+			jsii.String(swarm.EnvConfigTimeToFlight),
+			jsii.String(strconv.Itoa(tsi)),
+			nil,
+		)
+	}
 
 	it := integrations.NewWebSocketLambdaIntegration(jsii.String(props.Category), sink.Handler,
 		&integrations.WebSocketLambdaIntegrationProps{},
@@ -74,9 +109,26 @@ func NewSink(scope constructs.Construct, id *string, props *SinkProps) *Sink {
 		},
 	)
 
-	props.Gateway.GrantManageConnections(sink.Handler)
-
 	return sink
+}
+
+func timeToFlight(props scud.FunctionProps) awscdk.Duration {
+	if props == nil {
+		return nil
+	}
+
+	switch v := props.(type) {
+	case *scud.FunctionGoProps:
+		if v.FunctionProps != nil && v.Timeout != nil {
+			return v.Timeout
+		}
+	case *scud.ContainerGoProps:
+		if v.DockerImageFunctionProps != nil && v.Timeout != nil {
+			return v.Timeout
+		}
+	}
+
+	return nil
 }
 
 //------------------------------------------------------------------------------
@@ -99,6 +151,26 @@ func NewBroker(scope constructs.Construct, id *string, props *BrokerProps) *Brok
 	broker := &Broker{Construct: constructs.NewConstruct(scope, id)}
 
 	return broker
+}
+
+// Grant permission to write events to the WebSocket
+func (broker *Broker) GrantWrite(f awslambda.Function) {
+	broker.Gateway.GrantManageConnections(f)
+
+	f.AddEnvironment(
+		jsii.String(EnvConfigTargetWebSocketUrl),
+		jsii.String(aws.ToString(broker.Gateway.ApiEndpoint())+"/"+stage),
+		nil,
+	)
+}
+
+// Grant permission to read events from the EventBus.
+func (broker *Broker) GrantRead(f awslambda.Function) {
+	f.AddEnvironment(
+		jsii.String(EnvConfigSourceWebSocketUrl),
+		jsii.String(aws.ToString(broker.Gateway.ApiEndpoint())+"/"+stage),
+		nil,
+	)
 }
 
 type AuthorizerApiKeyProps struct {

@@ -25,14 +25,14 @@ type Client struct {
 
 type bridge struct{ *kernel.Bridge }
 
-func (s bridge) Run() { lambda.Start(s.run) }
+func (s bridge) Run(context.Context) { lambda.Start(s.run) }
 
 func (s bridge) run(ctx context.Context, events events.SQSEvent) error {
 	bag := make([]swarm.Bag, len(events.Records))
 	for i, evt := range events.Records {
 		bag[i] = swarm.Bag{
 			Category: attr(&evt, "Category"),
-			Digest:   evt.ReceiptHandle,
+			Digest:   swarm.Digest(evt.ReceiptHandle),
 			Object:   []byte(evt.Body),
 		}
 	}

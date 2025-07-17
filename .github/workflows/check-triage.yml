@@ -6,10 +6,11 @@ on:
       - synchronize
 
 jobs:
-  label:
+  labeler:
     permissions:
       contents: read
       pull-requests: write
+      issues: write
 
     runs-on: ubuntu-latest
     steps:

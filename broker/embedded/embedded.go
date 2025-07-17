@@ -25,7 +25,7 @@ type Client struct {
 	once    sync.Once
 
 	// Channels + inflight buffer
-	bags map[string]*swarm.Bag
+	bags map[swarm.Digest]*swarm.Bag
 	recv <-chan *swarm.Bag
 	emit chan<- *swarm.Bag
 }
@@ -36,7 +36,7 @@ func (cli *Client) Close() error {
 }
 
 func (cli *Client) Enq(ctx context.Context, bag swarm.Bag) error {
-	bag.Digest = guid.G(guid.Clock).String()
+	bag.Digest = swarm.Digest(guid.G(guid.Clock).String())
 
 	select {
 	case cli.emit <- &bag:
@@ -46,12 +46,12 @@ func (cli *Client) Enq(ctx context.Context, bag swarm.Bag) error {
 	}
 }
 
-func (cli *Client) Ack(ctx context.Context, digest string) error {
+func (cli *Client) Ack(ctx context.Context, digest swarm.Digest) error {
 	delete(cli.bags, digest)
 	return nil
 }
 
-func (cli *Client) Err(ctx context.Context, digest string, err error) error {
+func (cli *Client) Err(ctx context.Context, digest swarm.Digest, err error) error {
 	if bag, has := cli.bags[digest]; has {
 		delete(cli.bags, digest)
 
