@@ -126,34 +126,3 @@ func (Bytes) Decode(bag swarm.Bag) ([]byte, error) {
 
 // Create bytes identity codec
 func ForBytes(cat string) Bytes { return Bytes(cat) }
-
-//------------------------------------------------------------------------------
-
-// Base64 encoding for bytes, sent as JSON
-type BytesJB64 string
-
-type packet struct {
-	Octets []byte `json:"p,omitempty"`
-}
-
-func (c BytesJB64) Category() string { return string(c) }
-
-func (c BytesJB64) Encode(obj []byte) (swarm.Bag, error) {
-	msg, err := json.Marshal(packet{Octets: obj})
-	if err != nil {
-		return swarm.Bag{}, err
-	}
-
-	return swarm.Bag{
-		Category: string(c),
-		Object:   msg,
-	}, nil
-}
-func (BytesJB64) Decode(x []byte) ([]byte, error) {
-	var pckt packet
-	err := json.Unmarshal(x, &pckt)
-	return pckt.Octets, err
-}
-
-// Creates bytes codec for Base64 encapsulated into Json "packat"
-func ForBytesJB64(cat string) BytesJB64 { return BytesJB64(cat) }
