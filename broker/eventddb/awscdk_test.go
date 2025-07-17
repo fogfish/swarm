@@ -79,7 +79,7 @@ func TestGrantRead(t *testing.T) {
 		&eventddb.SinkProps{
 			Agent: jsii.String("test:agent"),
 			Function: &scud.FunctionGoProps{
-				SourceCodeModule: "github.com/fogfish/swarm/broker/events3",
+				SourceCodeModule: "github.com/fogfish/swarm/broker/eventddb",
 				SourceCodeLambda: "examples/dequeue/typed",
 				FunctionProps: &awslambda.FunctionProps{
 					Timeout: awscdk.Duration_Seconds(jsii.Number(30)),
@@ -119,7 +119,7 @@ func TestGrantWrite(t *testing.T) {
 		&eventddb.SinkProps{
 			Agent: jsii.String("test:agent"),
 			Function: &scud.FunctionGoProps{
-				SourceCodeModule: "github.com/fogfish/swarm/broker/events3",
+				SourceCodeModule: "github.com/fogfish/swarm/broker/eventddb",
 				SourceCodeLambda: "examples/dequeue/typed",
 				FunctionProps: &awslambda.FunctionProps{
 					Timeout: awscdk.Duration_Seconds(jsii.Number(30)),

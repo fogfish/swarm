@@ -20,6 +20,10 @@
  - 'enqueue/*'
  - 'enqueue/**/*'
 
+"[#] embedded":
+ - 'broker/embedded/*'
+ - 'broker/embedded/**/*'
+
 "[#] eventbridge":
  - 'broker/eventbridge/*'
  - 'broker/eventbridge/**/*'
