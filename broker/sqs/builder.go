@@ -22,8 +22,11 @@ import (
 	"github.com/fogfish/swarm/kernel"
 )
 
-// Environment variable to config event source
+// Environment define name of source SQS queue
 const EnvConfigSourceSQS = "CONFIG_SWARM_SOURCE_SQS"
+
+// Environment define name of target SQS queue
+const EnvConfigTargetSQS = "CONFIG_SWARM_TARGET_SQS"
 
 func Must[T any](v T, err error) T {
 	if err != nil {
@@ -59,7 +62,7 @@ func Emitter() *EmitterBuilder {
 	return b
 }
 
-func (b *EmitterBuilder) Build(queue string) (*kernel.EmitterCore, error) {
+func (b *EmitterBuilder) Build(queue string) (*kernel.EmitterIO, error) {
 	client, err := b.build(queue)
 	if err != nil {
 		return nil, err
@@ -75,7 +78,7 @@ func Listener() *ListenerBuilder {
 	return b
 }
 
-func (b *ListenerBuilder) Build(queue string) (*kernel.ListenerCore, error) {
+func (b *ListenerBuilder) Build(queue string) (*kernel.ListenerIO, error) {
 	client, err := b.build(queue)
 	if err != nil {
 		return nil, err

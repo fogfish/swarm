@@ -9,15 +9,15 @@
 package main
 
 import (
-	"context"
 	"log/slog"
 	"os"
 
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/websocket"
-	"github.com/fogfish/swarm/emit"
 	"github.com/fogfish/swarm/listen"
 )
+
+type UserEvent = swarm.Event[swarm.Meta, User]
 
 type User struct {
 	Action string `json:"action"`
@@ -32,24 +32,23 @@ func main() {
 		),
 	)
 
-	a := &actor{emit: emit.NewTyped[User](q.Emitter)}
-	go a.handle(listen.Typed[User](q.Listener))
+	emit := swarm.LogDeadLetters(websocket.EmitEvent[UserEvent](q.Emitter))
+
+	a := &actor{emit: emit}
+	go a.handle(listen.Event[UserEvent](q.Listener))
 
 	q.Await()
 }
 
 type actor struct {
-	emit *emit.EmitterTyped[User]
+	emit chan<- UserEvent
 }
 
-func (a *actor) handle(rcv <-chan swarm.Msg[User], ack chan<- swarm.Msg[User]) {
+func (a *actor) handle(rcv <-chan UserEvent, ack chan<- UserEvent) {
 	for msg := range rcv {
-		slog.Info("Event user", "data", msg.Object)
+		slog.Info("Event user", "evt", msg)
 
-		if err := a.emit.Enq(context.Background(), msg.Object, msg.Digest); err != nil {
-			ack <- msg.Fail(err)
-			continue
-		}
+		a.emit <- msg
 
 		ack <- msg
 	}

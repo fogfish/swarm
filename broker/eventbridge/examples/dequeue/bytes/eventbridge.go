@@ -13,17 +13,16 @@ import (
 
 	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/eventbridge"
-	"github.com/fogfish/swarm/kernel/encoding"
-	"github.com/fogfish/swarm/listen"
 )
 
 func main() {
 	q := eventbridge.Must(eventbridge.Listener().Build())
 
-	//
-	go actor("user").handle(listen.Bytes(q, encoding.ForBytesJB64("User")))
-	go actor("note").handle(listen.Bytes(q, encoding.ForBytesJB64("Note")))
-	go actor("like").handle(listen.Bytes(q, encoding.ForBytesJB64("Like")))
+	// Note: AWS EventBridge is not capable transmitting pure []byte, it works only with JSON.
+	//       The broker implements eventbridge specific codec to encapsulate []byte int JSON before transmission.
+	go actor("user").handle(eventbridge.RecvBytes(q, "User"))
+	go actor("note").handle(eventbridge.RecvBytes(q, "Note"))
+	go actor("like").handle(eventbridge.RecvBytes(q, "Like"))
 
 	q.Await()
 }

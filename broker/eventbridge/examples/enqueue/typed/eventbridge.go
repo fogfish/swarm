@@ -30,7 +30,11 @@ type Like struct {
 }
 
 func main() {
-	q := eventbridge.Must(eventbridge.Emitter().Build("swarm-example-eventbridge"))
+	q := eventbridge.Must(
+		eventbridge.Emitter().
+			WithKernel(swarm.WithAgent("eventbridge:example/typed")).
+			Build("swarm-example-eventbridge"),
+	)
 
 	user := swarm.LogDeadLetters(emit.Typed[*User](q))
 	note := swarm.LogDeadLetters(emit.Typed[*Note](q))

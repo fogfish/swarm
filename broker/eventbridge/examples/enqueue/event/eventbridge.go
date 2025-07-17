@@ -22,7 +22,11 @@ type EventNote struct {
 }
 
 func main() {
-	q := eventbridge.Must(eventbridge.Emitter().Build("swarm-example-eventbridge"))
+	q := eventbridge.Must(
+		eventbridge.Emitter().
+			WithKernel(swarm.WithAgent("eventbridge:example/event")).
+			Build("swarm-example-eventbridge"),
+	)
 
 	bus := swarm.LogDeadLetters(emit.Event[Event](q))
 

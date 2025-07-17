@@ -31,14 +31,14 @@ type DynamoDBEvent struct {
 	Records []json.RawMessage `json:"Records"`
 }
 
-func (s bridge) Run() { lambda.Start(s.run) }
+func (s bridge) Run(context.Context) { lambda.Start(s.run) }
 
 func (s bridge) run(ctx context.Context, events DynamoDBEvent) error {
 	bag := make([]swarm.Bag, len(events.Records))
 	for i, obj := range events.Records {
 		bag[i] = swarm.Bag{
 			Category: Category,
-			Digest:   guid.G(guid.Clock).String(),
+			Digest:   swarm.Digest(guid.G(guid.Clock).String()),
 			Object:   obj,
 		}
 	}

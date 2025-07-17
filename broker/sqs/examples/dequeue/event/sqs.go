@@ -53,34 +53,34 @@ func main() {
 	q.Await()
 }
 
-func create(rcv <-chan swarm.Msg[EvtCreatedUser], ack chan<- swarm.Msg[EvtCreatedUser]) {
-	for msg := range rcv {
-		v, _ := json.MarshalIndent(msg.Object, "+ |", " ")
+func create(rcv <-chan EvtCreatedUser, ack chan<- EvtCreatedUser) {
+	for evt := range rcv {
+		v, _ := json.MarshalIndent(evt, "+ |", " ")
 		fmt.Printf("create user > \n %s\n", v)
-		ack <- msg
+		ack <- evt
 	}
 }
 
-func update(rcv <-chan swarm.Msg[EvtUpdatedUser], ack chan<- swarm.Msg[EvtUpdatedUser]) {
-	for msg := range rcv {
-		v, _ := json.MarshalIndent(msg.Object, "~ |", " ")
+func update(rcv <-chan EvtUpdatedUser, ack chan<- EvtUpdatedUser) {
+	for evt := range rcv {
+		v, _ := json.MarshalIndent(evt, "~ |", " ")
 		fmt.Printf("update user > \n %s\n", v)
-		ack <- msg
+		ack <- evt
 	}
 }
 
-func remove(rcv <-chan swarm.Msg[EvtRemovedUser], ack chan<- swarm.Msg[EvtRemovedUser]) {
-	for msg := range rcv {
-		v, _ := json.MarshalIndent(msg.Object, "- |", " ")
+func remove(rcv <-chan EvtRemovedUser, ack chan<- EvtRemovedUser) {
+	for evt := range rcv {
+		v, _ := json.MarshalIndent(evt, "- |", " ")
 		fmt.Printf("remove user > \n %s\n", v)
-		ack <- msg
+		ack <- evt
 	}
 }
 
-func common(rcv <-chan swarm.Msg[EvtNote], ack chan<- swarm.Msg[EvtNote]) {
+func common(rcv <-chan EvtNote, ack chan<- EvtNote) {
 	for msg := range rcv {
 		prefix := ""
-		switch string(msg.Object.Meta.Type) {
+		switch string(msg.Meta.Type) {
 		case "note:EventCreateNote":
 			prefix = "+ |"
 		case "note:EventUpdateNote":
@@ -89,7 +89,7 @@ func common(rcv <-chan swarm.Msg[EvtNote], ack chan<- swarm.Msg[EvtNote]) {
 			prefix = "- |"
 		}
 
-		v, _ := json.MarshalIndent(msg.Object, prefix, " ")
+		v, _ := json.MarshalIndent(msg.Data, prefix, " ")
 		fmt.Printf("common note > \n %s\n", v)
 		ack <- msg
 	}

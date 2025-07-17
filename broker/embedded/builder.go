@@ -73,7 +73,7 @@ func (b *builder[T]) WithKernel(opts ...opts.Option[swarm.Config]) T {
 func (b *builder[T]) build() (*Client, error) {
 	client := &Client{
 		config: swarm.NewConfig(),
-		bags:   make(map[string]*swarm.Bag),
+		bags:   make(map[swarm.Digest]*swarm.Bag),
 	}
 	client.context, client.cancel = context.WithCancel(context.Background())
 

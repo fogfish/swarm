@@ -60,14 +60,14 @@ func (cli *Client) Enq(ctx context.Context, bag swarm.Bag) error {
 	return nil
 }
 
-func (cli *Client) Ack(ctx context.Context, digest string) error {
+func (cli *Client) Ack(ctx context.Context, digest swarm.Digest) error {
 	ctx, cancel := context.WithTimeout(ctx, cli.config.NetworkTimeout)
 	defer cancel()
 
 	_, err := cli.service.DeleteMessage(ctx,
 		&sqs.DeleteMessageInput{
 			QueueUrl:      cli.queue,
-			ReceiptHandle: aws.String(digest),
+			ReceiptHandle: aws.String(string(digest)),
 		},
 	)
 	if err != nil {
@@ -77,7 +77,7 @@ func (cli *Client) Ack(ctx context.Context, digest string) error {
 	return nil
 }
 
-func (cli *Client) Err(ctx context.Context, digest string, err error) error {
+func (cli *Client) Err(ctx context.Context, digest swarm.Digest, err error) error {
 	// Note: do nothing, AWS SQS makes the magic
 	return nil
 }
@@ -110,7 +110,7 @@ func (cli Client) Ask(ctx context.Context) ([]swarm.Bag, error) {
 	for i, msg := range result.Messages {
 		bag[i] = swarm.Bag{
 			Category: attr(&msg, "Category"),
-			Digest:   aws.ToString(msg.ReceiptHandle),
+			Digest:   swarm.Digest(aws.ToString(msg.ReceiptHandle)),
 			Object:   []byte(aws.ToString(msg.Body)),
 		}
 	}
