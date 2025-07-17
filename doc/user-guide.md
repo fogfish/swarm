@@ -70,7 +70,7 @@ type Note struct {
 }
 
 // Spawn a new instance of the messaging broker
-q := sqs.Channels().MustClient("aws-sqs-queue-name")
+q := sqs.Emitter().Build("aws-sqs-queue-name")
 
 // creates pair Golang channels dedicated for publishing
 // messages of type [Note] through the messaging broker. The first channel
@@ -102,7 +102,7 @@ type Note struct {
 }
 
 // Spawn a new instance of the messaging broker
-q := sqs.Channels().MustClient("aws-sqs-queue-name")
+q := sqs.Listener().Build("aws-sqs-queue-name")
 
 // Create pair Golang channels dedicated for consuming
 // messages of type Note from the messaging broker. The first channel
@@ -124,12 +124,15 @@ q.Await()
 
 ## Configure messaging broker
 
-The library uses the builder pattern to construct broker interfaces. Each broker exposes a `Channels()` method, which returns a broker-specific builder interface. This builder provides broker-specific options, including a `WithKernel(...)` method to configure a generic messaging kernel.
+The library uses the builder pattern to construct broker interfaces. Each broker exposes a `Listener()`, `Emitter()` and `Endpoint()` methods, which returns a broker-specific builder interface. This builder provides broker-specific options, including a `WithKernel(...)` method to configure a generic messaging kernel.
+* `Listener()` return builder for I/O kernel to receive messages;
+* `Emitter()` return builder for I/O kernel to emit messages; 
+* `Endpoint()` creates duplex I/O kernel supporting both receive & emit.
 
 For details on kernel configuration, refer to [config.go](./config.go).
 
 ```go
-sqs.Channels().
+sqs.Endpoint().
   WithBatchSize(5).
   WithKernel(
     swarm.WithSource("name-of-my-component"),
@@ -137,7 +140,7 @@ sqs.Channels().
     swarm.WithPollFrequency(10 * time.Second),
     /* ... */
   ).
-  NewClient("name-of-the-queue")
+  Build("name-of-the-queue")
 ```
 
 ## Message Delivery Guarantees
@@ -151,11 +154,11 @@ The library implements asymmetric approaches for message handling. In the **emit
 ```go
 // Spawn a new instance of the messaging broker using At Most Once policy.
 // The policy defines the capacity of Golang channel.
-q := sqs.Channels().
+q := sqs.Endpoint().
   WithKernel(
     swarm.WithPolicyAtMostOnce(1000),
   ).
-  MustClient("name-of-the-queue")
+  Build("name-of-the-queue")
 
 // emit channels has capacity 1000
 enq, dlq := emit.Typed[Note](q)
@@ -175,11 +178,11 @@ In the **listen** path, buffered Golang channels are used to deliver messages to
 // At Least Once policy is the default one, no needs to explicitly declare it.
 // Use it only if you need to define other capacity for listen channel than
 // the default one, which creates unbuffered channel
-q := sqs.Channels().
+q := sqs.Endpoint().
   WithKernel(
     swarm.WithPolicyAtLeastOnce(1000),
   ).
-  MustClient("name-of-the-queue")
+  Build("name-of-the-queue")
 
 // both channels are unbuffered
 enq, dlq := emit.Typed[Note](q)
@@ -190,7 +193,21 @@ deq, ack := listen.Typed[Note](q)
 
 **Exactly Once** is not supported by the library yet.
 
-// TODO: custom capacity.
+The library's kernel support configuration options to fine-tune the I/O policies, controlling the behaviour:
+
+```go
+// Configures capacity for emit channel at broker
+WithEmitCapacity()
+
+// Configures capacity for dead letter channel at broker
+WithDeadLetterCapacity()
+
+// Configures capacity for receive channel at broker
+WithRecvCapacity()
+
+// Configures capacity for acknowledge channel at broker
+WithAckCapacity())
+```
 
 ## Delayed Guarantee vs Guarantee
 

@@ -195,7 +195,7 @@ Writing distributed, event-driven systems in Go today is harder than it should b
 `swarm` makes asynchronous, distributed messaging in Go **idiomatic, testable, and portable** by expressing queueing/event-driven systems through Go channels instead of vendor-specific APIs.
 
 [User Guide](./doc/user-guide.md) |
-[Playground](https://goplay.tools/snippet/RLxmdLZ49SC) |
+[Playground](https://go.dev/play/p/B4C9fcNmWYW) |
 [Getting started](#getting-started) | 
 [Examples](./broker/) |
 [Philosophy](./doc/pattern.md)
@@ -226,8 +226,8 @@ func main() {
   q := sqs.Endpoint().Build("aws-sqs-queue-name")
 
   // create Golang channels
-  rcv, ack := listen.Typed[Order](q)
-  out := swarm.LogDeadLetters(emit.Typed[Order](q))
+  rcv, ack := listen.Typed[Order](q.Listener)
+  out := swarm.LogDeadLetters(emit.Typed[Order](q.Emitter))
 
   // Send messages
   out <- Order{ID: "123", Amount: 100.0}
@@ -248,7 +248,7 @@ func processOrder(order Order) {
 }
 ```
 **That's it!** You're now using distributed messaging with native Go channels.
-- Try it by coping the code above and run `go mod init test && go get github.com/fogfish/swarm`
+- Try this code in [playground](https://go.dev/play/p/B4C9fcNmWYW) 
 - Continue to [Getting Started](#getting-started) for advanced configuration
 - See more examples by browsing [/broker/*/examples/](./broker/)
 - Check the design pattern [Distributed event-driven Golang channels](./doc/pattern.md) for deep-dive into library philosophy. 
@@ -265,7 +265,7 @@ tbd.
 
 `swarm` is a Go library that solves the complexity of distributed, event-driven systems by abstracting external messaging queues (like AWS SQS, AWS EventBridge, RabbitMQ, Kafka, etc.) behind **type-safe Go channels**. 
 
-By aligning with Go’s native concurrency model, `swarm` encourages developers to think in terms of **message flows rather than request-response cycles**, which reflects the asynchronous and unreliable reality of distributed systems. This mindset shift leads to more resilient, scalable, and maintainable architectures — where complexity is not hidden, but made explicit and manageable.  
+By aligning with Go's native concurrency model, `swarm` encourages developers to think in terms of **message flows rather than request-response cycles**, which reflects the asynchronous and unreliable reality of distributed systems. This mindset shift leads to more resilient, scalable, and maintainable architectures — where complexity is not hidden, but made explicit and manageable.  
 
 * **Immediate Productivity**: Use Go channel patterns you already know, no need to learn new APIs.
 * **Smooth Testing**: Write unit tests with in-memory channels; switch to real systems for integration.
