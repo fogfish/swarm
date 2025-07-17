@@ -20,6 +20,45 @@ import (
 	"github.com/fogfish/swarm/kernel"
 )
 
+func TestBuilder(t *testing.T) {
+	t.Run("Listener", func(t *testing.T) {
+		q, err := Listener().Build()
+
+		it.Then(t).Should(
+			it.Nil(err),
+		).ShouldNot(
+			it.Nil(q),
+		)
+
+		q.Close()
+	})
+
+	t.Run("ListenerWithKernel", func(t *testing.T) {
+		q, err := Listener().
+			WithKernel(swarm.WithLogStdErr()).
+			Build()
+
+		it.Then(t).Should(
+			it.Nil(err),
+		).ShouldNot(
+			it.Nil(q),
+		)
+
+		q.Close()
+	})
+
+	t.Run("MustListener", func(t *testing.T) {
+		q := Must(Listener().Build())
+
+		it.Then(t).ShouldNot(
+			it.Nil(q),
+		)
+
+		q.Close()
+	})
+
+}
+
 func TestReader(t *testing.T) {
 	var bag []swarm.Bag
 	cfg := swarm.NewConfig()
