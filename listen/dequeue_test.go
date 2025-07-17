@@ -75,7 +75,7 @@ func TestDequeueEvent(t *testing.T) {
 		k.Close()
 	}()
 
-	var evt swarm.Msg[Evt]
+	var evt Evt
 	rcv, ack := dequeue.Event[Evt](k)
 
 	go func() {
@@ -85,11 +85,11 @@ func TestDequeueEvent(t *testing.T) {
 	k.Await()
 
 	it.Then(t).Should(
-		it.Equal(evt.Category, "User"),
+		// it.Equal(evt.Category, "User"),
 		it.Equal(evt.Digest, "1"),
-		it.Equal(evt.Object.Meta.Type, "User"),
-		it.Equal(evt.Object.Data.ID, "id"),
-		it.Equal(evt.Object.Data.Text, "user"),
+		it.Equal(evt.Meta.Type, "User"),
+		it.Equal(evt.Data.ID, "id"),
+		it.Equal(evt.Data.Text, "user"),
 	)
 }
 
@@ -137,11 +137,11 @@ func mockCathode[T any](cat string, obj T) cathode[T] {
 
 func (c cathode[T]) Close() error { return nil }
 
-func (c cathode[T]) Ack(ctx context.Context, digest string) error {
+func (c cathode[T]) Ack(ctx context.Context, digest swarm.Digest) error {
 	return nil
 }
 
-func (c cathode[T]) Err(ctx context.Context, digest string, err error) error {
+func (c cathode[T]) Err(ctx context.Context, digest swarm.Digest, err error) error {
 	return nil
 }
 

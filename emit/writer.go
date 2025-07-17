@@ -21,11 +21,11 @@ import (
 type EmitterTyped[T any] struct {
 	cat    string
 	codec  kernel.Encoder[T]
-	kernel *kernel.EmitterCore
+	kernel *kernel.EmitterIO
 }
 
 // Creates synchronous typed emitter
-func NewTyped[T any](q *kernel.EmitterCore, codec ...kernel.Encoder[T]) *EmitterTyped[T] {
+func NewTyped[T any](q *kernel.EmitterIO, codec ...kernel.Encoder[T]) *EmitterTyped[T] {
 	var c kernel.Encoder[T]
 	if len(codec) == 0 {
 		c = encoding.ForTyped[T]()
@@ -43,19 +43,13 @@ func NewTyped[T any](q *kernel.EmitterCore, codec ...kernel.Encoder[T]) *Emitter
 // Synchronously enqueue message to broker.
 // It guarantees message to be send after return
 func (q *EmitterTyped[T]) Enq(ctx context.Context, object T, cat ...string) error {
-	msg, err := q.codec.Encode(object)
+	bag, err := q.codec.Encode(object)
 	if err != nil {
 		return err
 	}
 
-	category := q.cat
 	if len(cat) > 0 {
-		category = cat[0]
-	}
-
-	bag := swarm.Bag{
-		Category: category,
-		Object:   msg,
+		bag.Category = cat[0]
 	}
 
 	err = q.kernel.Emitter.Enq(ctx, bag)
@@ -73,11 +67,11 @@ func (q *EmitterTyped[T]) Enq(ctx context.Context, object T, cat ...string) erro
 type EmitterEvent[M, T any] struct {
 	cat    string
 	codec  kernel.Encoder[swarm.Event[M, T]]
-	kernel *kernel.EmitterCore
+	kernel *kernel.EmitterIO
 }
 
 // Creates synchronous event emitter
-func NewEvent[E swarm.Event[M, T], M, T any](q *kernel.EmitterCore, codec ...kernel.Encoder[swarm.Event[M, T]]) *EmitterEvent[M, T] {
+func NewEvent[E swarm.Event[M, T], M, T any](q *kernel.EmitterIO, codec ...kernel.Encoder[swarm.Event[M, T]]) *EmitterEvent[M, T] {
 	var c kernel.Encoder[swarm.Event[M, T]]
 	if len(codec) == 0 {
 		c = encoding.ForEvent[E](q.Config.Realm, q.Config.Agent)
@@ -95,19 +89,13 @@ func NewEvent[E swarm.Event[M, T], M, T any](q *kernel.EmitterCore, codec ...ker
 // Synchronously enqueue event to broker.
 // It guarantees event to be send after return.
 func (q *EmitterEvent[M, T]) Enq(ctx context.Context, object swarm.Event[M, T], cat ...string) error {
-	msg, err := q.codec.Encode(object)
+	bag, err := q.codec.Encode(object)
 	if err != nil {
 		return err
 	}
 
-	category := q.cat
 	if len(cat) > 0 {
-		category = cat[0]
-	}
-
-	bag := swarm.Bag{
-		Category: category,
-		Object:   msg,
+		bag.Category = cat[0]
 	}
 
 	err = q.kernel.Emitter.Enq(ctx, bag)
@@ -125,11 +113,11 @@ func (q *EmitterEvent[M, T]) Enq(ctx context.Context, object swarm.Event[M, T], 
 type EmitterBytes struct {
 	cat    string
 	codec  kernel.Encoder[[]byte]
-	kernel *kernel.EmitterCore
+	kernel *kernel.EmitterIO
 }
 
 // Creates synchronous emitter
-func NewBytes(q *kernel.EmitterCore, codec kernel.Encoder[[]byte]) *EmitterBytes {
+func NewBytes(q *kernel.EmitterIO, codec kernel.Encoder[[]byte]) *EmitterBytes {
 	return &EmitterBytes{
 		cat:    codec.Category(),
 		codec:  codec,
@@ -140,19 +128,13 @@ func NewBytes(q *kernel.EmitterCore, codec kernel.Encoder[[]byte]) *EmitterBytes
 // Synchronously enqueue bytes to broker.
 // It guarantees message to be send after return
 func (q *EmitterBytes) Enq(ctx context.Context, object []byte, cat ...string) error {
-	msg, err := q.codec.Encode(object)
+	bag, err := q.codec.Encode(object)
 	if err != nil {
 		return err
 	}
 
-	category := q.cat
 	if len(cat) > 0 {
-		category = cat[0]
-	}
-
-	bag := swarm.Bag{
-		Category: category,
-		Object:   msg,
+		bag.Category = cat[0]
 	}
 
 	err = q.kernel.Emitter.Enq(ctx, bag)

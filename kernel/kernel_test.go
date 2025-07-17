@@ -60,7 +60,7 @@ func (b *mockFactory) ListenerCore(ack chan string, seq []swarm.Bag) *mockListen
 	return newMockCathode(ack, seq)
 }
 
-func (b *mockFactory) Emitter(emitter Emitter, cfg config) *EmitterCore {
+func (b *mockFactory) Emitter(emitter Emitter, cfg config) *EmitterIO {
 	enqueuer := newEmitter(emitter, cfg.kernel)
 	enqueuer.ctrlPreempt = b.ctrlPreempt
 
@@ -72,7 +72,7 @@ func (b *mockFactory) Emitter(emitter Emitter, cfg config) *EmitterCore {
 	return enqueuer
 }
 
-func (b *mockFactory) Listener(cathode Listener, cfg config) *ListenerCore {
+func (b *mockFactory) Listener(cathode Listener, cfg config) *ListenerIO {
 	dequeuer := newListener(cathode, cfg.kernel)
 	// auto close is essential for testing
 	go func() {
@@ -89,8 +89,8 @@ func (b *mockFactory) Bag(n int) []swarm.Bag {
 		val := strconv.Itoa(i + 1)
 		seq = append(seq,
 			swarm.Bag{
-				Category:  "test",
-				Digest:    val,
+				Category:  "string",
+				Digest:    swarm.Digest(val),
 				IOContext: "context",
 				Object:    fmt.Appendf(nil, `"%s"`, val), // JSON is expected
 			},
@@ -118,12 +118,12 @@ func newMockBridge(cfg config, seq []swarm.Bag) *mockBridge {
 	}
 }
 
-func (s *mockBridge) Ack(ctx context.Context, digest string) error {
+func (s *mockBridge) Ack(ctx context.Context, digest swarm.Digest) error {
 	if err := s.Bridge.Ack(ctx, digest); err != nil {
 		return err
 	}
 
-	s.ack = append(s.ack, digest)
+	s.ack = append(s.ack, string(digest))
 	return nil
 }
 
@@ -188,13 +188,13 @@ func (c *mockListener) Close() error {
 	return nil
 }
 
-func (c *mockListener) Ack(ctx context.Context, digest string) error {
-	c.ack <- digest
+func (c *mockListener) Ack(ctx context.Context, digest swarm.Digest) error {
+	c.ack <- string(digest)
 	return nil
 }
 
-func (c *mockListener) Err(ctx context.Context, digest string, err error) error {
-	c.ack <- digest
+func (c *mockListener) Err(ctx context.Context, digest swarm.Digest, err error) error {
+	c.ack <- string(digest)
 	return nil
 }
 

@@ -9,11 +9,11 @@
 package kernel
 
 type Kernel struct {
-	Emitter  *EmitterCore
-	Listener *ListenerCore
+	Emitter  *EmitterIO
+	Listener *ListenerIO
 }
 
-func New(emitter *EmitterCore, listener *ListenerCore) *Kernel {
+func New(emitter *EmitterIO, listener *ListenerIO) *Kernel {
 	return &Kernel{
 		Emitter:  emitter,
 		Listener: listener,

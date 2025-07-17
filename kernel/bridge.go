@@ -24,7 +24,7 @@ import (
 // all messages are Asked and Acked by the kernel.
 type Bridge struct {
 	timeToFlight time.Duration
-	inflight     map[string]struct{}
+	inflight     map[swarm.Digest]struct{}
 
 	// I/O channels coordinating the flow of messages between Dispatch & Ask.
 	// inputCh is used by Dispatch to send messages to Ask,
@@ -63,7 +63,7 @@ func (s *Bridge) Close() error {
 //		}
 //	)
 func (s *Bridge) Dispatch(ctx context.Context, seq []swarm.Bag) error {
-	s.inflight = map[string]struct{}{}
+	s.inflight = map[swarm.Digest]struct{}{}
 	for _, bag := range seq {
 		s.inflight[bag.Digest] = struct{}{}
 	}
@@ -101,7 +101,7 @@ func (s *Bridge) Ask(ctx context.Context) ([]swarm.Bag, error) {
 }
 
 // Acknowledge processed message, allowing lambda handler progress
-func (s *Bridge) Ack(ctx context.Context, digest string) error {
+func (s *Bridge) Ack(ctx context.Context, digest swarm.Digest) error {
 	delete(s.inflight, digest)
 	if len(s.inflight) == 0 {
 		select {
@@ -117,7 +117,7 @@ func (s *Bridge) Ack(ctx context.Context, digest string) error {
 }
 
 // Acknowledge error, allowing lambda handler progress
-func (s *Bridge) Err(ctx context.Context, digest string, err error) error {
+func (s *Bridge) Err(ctx context.Context, digest swarm.Digest, err error) error {
 	delete(s.inflight, digest)
 	select {
 	case <-ctx.Done():
