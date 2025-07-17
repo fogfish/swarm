@@ -9,9 +9,6 @@
 package main
 
 import (
-	"time"
-
-	"github.com/fogfish/swarm"
 	"github.com/fogfish/swarm/broker/eventsqs"
 	"github.com/fogfish/swarm/examples/traceroute/core"
 	"github.com/fogfish/swarm/examples/traceroute/pipe"
@@ -20,7 +17,7 @@ import (
 
 func main() {
 	k := eventsqs.Must(
-		eventsqs.Listener().WithKernel(swarm.WithTimeToFlight(20 * time.Second)).Build(),
+		eventsqs.Listener().Build(),
 	)
 
 	go recv(listen.Event[core.ReqTrace](k))
