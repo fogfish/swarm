@@ -26,7 +26,7 @@ Follow these instructions step-by-step **without skipping or altering their orde
    * Switch current working directory into the broker 
 
 4.1. **Update `go.mod` for each broker**
-   * Update **only the version of `github.com/fogfish/swarm`** in its `go.mod` and `go.sum` by running `go get github.com/fogfish/swarm@{set the latest version here}`
+   * Update **only the version of `github.com/fogfish/swarm`** in its `go.mod` and `go.sum` by running `go get github.com/fogfish/swarm@{set the latest version here}` and then `go mod tidy`
    * Do **not** update or tidy other dependencies.
 
 4.2. **Bump the PATCH version of each broker**
