@@ -8,7 +8,7 @@ require (
 	github.com/fogfish/it/v2 v2.2.2
 	github.com/fogfish/logger/x/xlog v0.0.1
 	github.com/fogfish/opts v0.0.5
-	github.com/fogfish/swarm v0.24.0
+	github.com/fogfish/swarm v0.24.1
 )
 
 require (
