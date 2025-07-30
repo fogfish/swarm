@@ -84,7 +84,9 @@ func (c Event[M, T]) Encode(obj swarm.Event[M, T]) (swarm.Bag, error) {
 	}
 
 	return swarm.Bag{
-		Category: string(cat),
+		// Note: the message category MUST BE always derived from the Type.
+		//       Metadata type NOT NOT override it.
+		Category: string(c.cat),
 		Object:   msg,
 	}, nil
 }
